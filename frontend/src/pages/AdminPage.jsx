@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 
 function AdminPage() {
+  if (localStorage.getItem("isAdmin") !== "true") {
+    return <h2>Access Denied</h2>;
+  }
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
@@ -12,6 +15,17 @@ function AdminPage() {
       setLoading(false);
     });
   }, []);
+
+  const handleVerify = async (qrToken) => {
+    try {
+      await axios.put(`http://localhost:8080/api/register/verify/${qrToken}`);
+      alert("Verified successfully");
+      window.location.reload();
+    } catch (err) {
+      alert("Verification failed");
+      console.error(err);
+    }
+  };
 
   const filtered =
     filter === "ALL"
@@ -78,6 +92,7 @@ function AdminPage() {
                 <th style={styles.th}>Subjects</th>
                 <th style={styles.th}>Status</th>
                 <th style={styles.th}>Date</th>
+                <th style={styles.th}>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -105,6 +120,27 @@ function AdminPage() {
                   </td>
                   <td style={styles.td}>
                     {new Date(reg.registeredAt).toLocaleDateString()}
+                  </td>
+                  <td style={styles.td}>
+                    {reg.status === "SUBMITTED" ? (
+                      <button
+                        onClick={() => handleVerify(reg.qrToken)}
+                        style={{
+                          padding: "5px 10px",
+                          borderRadius: "6px",
+                          border: "none",
+                          background: "#22c55e",
+                          color: "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Verify
+                      </button>
+                    ) : (
+                      <span style={{ color: "green", fontWeight: "600" }}>
+                        Verified
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}
