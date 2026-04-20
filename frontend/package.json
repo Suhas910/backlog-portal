@@ -5,13 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:e2e": "vite --host 127.0.0.1 --port 4173",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run --e2e --browser electron",
+    "test:e2e": "start-server-and-test dev:e2e http://127.0.0.1:4173 cy:run"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
     "axios": "^1.15.0",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.1",
@@ -22,10 +28,12 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "cypress": "^15.14.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "start-server-and-test": "^3.0.2",
     "vite": "^8.0.4"
   }
 }

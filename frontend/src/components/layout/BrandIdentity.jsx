@@ -1,0 +1,23 @@
+import logo from "../../assets/MSRIT.png";
+
+export default function BrandIdentity({ compact = false }) {
+  return (
+    <div className="flex items-center gap-3">
+      <img
+        src={logo}
+        alt="Ramaiah Institute of Technology"
+        className={compact ? "h-10 w-auto" : "h-12 w-auto"}
+      />
+      <div className="leading-none">
+        <p
+          className={`${
+            compact ? "text-base" : "text-lg sm:text-xl"
+          } font-extrabold tracking-[0.06em] text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.35)]`}
+          style={{ fontFamily: '"Sora", "Inter", sans-serif' }}
+        >
+          Backlog Registration
+        </p>
+      </div>
+    </div>
+  );
+}

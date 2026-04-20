@@ -1,9 +1,14 @@
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, ArrowRight, CheckCircle2, Download, LoaderCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import msritLogo from "../assets/MSRIT.png";
+import BrandIdentity from "../components/layout/BrandIdentity";
+import MagneticCta from "../components/ui/MagneticCta";
+import api from "../lib/api";
+import MobileActionBar from "../components/layout/MobileActionBar";
 
 function RegistrationPage() {
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     usn: "",
     name: "",
@@ -18,8 +23,14 @@ function RegistrationPage() {
   const [subjectsError, setSubjectsError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [regId, setRegId] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  // whenever year or semester changes, fetch subjects
+  const availableYears = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return [currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1, currentYear];
+  }, []);
+
   useEffect(() => {
     if (!formData.yearOfJoining || !formData.semester) {
       setSubjects([]);
@@ -30,12 +41,11 @@ function RegistrationPage() {
     }
 
     let ignoreResponse = false;
-
     setLoadingSubjects(true);
     setSubjectsError("");
 
-    axios
-      .get(`/api/subjects`, {
+    api
+      .get("/subjects", {
         params: {
           year: formData.yearOfJoining,
           semester: formData.semester,
@@ -79,37 +89,52 @@ function RegistrationPage() {
 
   const handleSubjectToggle = (subjectId) => {
     setSelectedSubjects((prev) =>
-      prev.includes(subjectId)
-        ? prev.filter((id) => id !== subjectId)
-        : [...prev, subjectId],
+      prev.includes(subjectId) ? prev.filter((id) => id !== subjectId) : [...prev, subjectId],
     );
   };
 
   const handleSubmit = async () => {
-    if (!formData.usn || !formData.name || !formData.email) {
-      alert("Please fill in all required fields");
-      return;
-    }
-    if (selectedSubjects.length === 0) {
-      alert("Please select at least one subject");
+    if (currentStep === 1) {
+      if (!formData.usn || !formData.name || !formData.email) {
+        setSubmitError("Please fill in all required fields.");
+        return;
+      }
+      if (!formData.yearOfJoining || !formData.semester) {
+        setSubmitError("Please select year and semester.");
+        return;
+      }
+      setSubmitError("");
+      setCurrentStep(2);
       return;
     }
 
+    if (selectedSubjects.length === 0) {
+      setSubmitError("Please select at least one subject.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError("");
+
     try {
-      const res = await axios.post("/api/register", {
+      const res = await api.post("/register", {
         rollNo: formData.usn,
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
-        yearOfJoining: parseInt(formData.yearOfJoining),
-        currentSemester: parseInt(formData.semester),
+        yearOfJoining: parseInt(formData.yearOfJoining, 10),
+        currentSemester: parseInt(formData.semester, 10),
         subjectIds: selectedSubjects,
       });
       setRegId(res.data.regId);
       setSubmitted(true);
-    } catch (err) {
-      alert("Submission failed. Please try again.");
-      console.error(err);
+    } catch (error) {
+      setSubmitError(
+        error.response?.data?.message || "Submission failed. Please review details and try again.",
+      );
+      console.error(error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -117,246 +142,312 @@ function RegistrationPage() {
     window.open(`/api/pdf/${regId}`, "_blank");
   };
 
-  // success screen
   if (submitted) {
     return (
-      <div className="relative isolate min-h-screen overflow-hidden bg-[var(--bg)] px-4 py-10 sm:px-6 lg:px-8">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(36,42,82,0.1),transparent_35%),radial-gradient(circle_at_85%_10%,rgba(237,20,91,0.12),transparent_40%),linear-gradient(to_bottom,rgba(36,42,82,0.03),transparent_45%)]" />
-        <div className="relative mx-auto w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6 text-left shadow-[var(--shadow)] sm:p-8">
-          <p className="mb-2 inline-flex rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
+      <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto w-full max-w-2xl rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft sm:p-8"
+        >
+          <p className="mb-2 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
             Submission Complete
           </p>
-          <h2 className="mb-3 font-[var(--heading)] text-3xl font-semibold text-[var(--text-h)]">
-            Registration Submitted
-          </h2>
-          <p className="mb-2 text-[var(--text)]">
+          <h2 className="mb-3 text-3xl font-semibold text-[var(--color-secondary)]">Registration Submitted</h2>
+          <p className="mb-2 text-[var(--text-main)]">
             Your registration ID is: <strong>{regId}</strong>
           </p>
-          <p className="mb-6 text-[var(--text)]">
-            Please download your form, print it, and get it signed by your
-            Proctor and HOD.
+          <p className="mb-6 text-[var(--text-main)]">
+            Please download your form, print it, and get it signed by your Proctor and HOD.
           </p>
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white shadow-[var(--shadow)] transition-transform duration-200 motion-safe:hover:scale-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-              onClick={handleDownloadPdf}
-            >
-            Download PDF
-            </button>
+            <MagneticCta onClick={handleDownloadPdf} className="gap-2">
+              <Download size={16} /> Download PDF
+            </MagneticCta>
             <Link
               to="/"
-              className="inline-flex items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)] px-5 py-3 text-sm font-semibold text-[var(--text-h)] shadow-[var(--shadow)] transition-colors duration-200 hover:border-[var(--cta)] hover:text-[var(--cta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              className="inline-flex items-center justify-center rounded-full border border-[var(--stroke)] bg-[var(--surface-1)] px-5 py-3 text-sm font-semibold text-[var(--color-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
             >
-              Back to Home
+              <ArrowLeft size={16} /> Back to Home
             </Link>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="relative isolate min-h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(36,42,82,0.1),transparent_35%),radial-gradient(circle_at_85%_10%,rgba(237,20,91,0.12),transparent_40%),linear-gradient(to_bottom,rgba(36,42,82,0.03),transparent_45%)]" />
-      <div className="relative mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/20 bg-[var(--brand-secondary)] px-4 py-4 text-white shadow-[var(--shadow)] sm:px-6">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <img
-              src={msritLogo}
-              alt="Ramaiah Institute of Technology"
-              className="h-11 w-auto sm:h-12"
-            />
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--cta)]">
-                Ramaiah Institute of Technology
-              </p>
-              <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-white/80 sm:text-xs">
-                Autonomous Institute, Affiliated to VTU
-              </p>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
-                Student Flow
-              </p>
-              <h1 className="font-[var(--heading)] text-2xl font-semibold text-white sm:text-3xl">
-                Backlog Registration
-              </h1>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[var(--surface-1)] text-[var(--text-main)]">
+      <a
+        href="#registration-main"
+        className="sr-only left-4 top-4 z-[60] rounded-md bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed"
+      >
+        Skip to registration form
+      </a>
+
+      <div id="registration-main" className="mx-auto w-full max-w-6xl px-4 py-8 pb-24 sm:px-6 lg:px-8 md:pb-8">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
+          <BrandIdentity compact />
           <Link
             to="/"
-            className="inline-flex items-center rounded-xl border border-white/25 bg-white px-4 py-2 text-sm font-medium text-[var(--brand-secondary)] shadow-[var(--shadow)] transition-colors duration-200 hover:border-[var(--cta)] hover:text-[var(--cta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-secondary)]"
+            aria-label="Back to home page"
+            className="inline-flex items-center rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
           >
-            Home
+            <ArrowLeft size={15} className="mr-1" /> Home
           </Link>
         </header>
 
-        <div className="rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-5 shadow-[var(--shadow)] opacity-0 motion-safe:animate-[heroFade_600ms_ease-out_forwards] sm:p-8">
-          <p className="mb-6 max-w-3xl text-sm leading-relaxed text-[var(--text)] sm:text-base">
-            Fill in your details and choose backlog subjects for your current
-            semester. Required fields are marked with *.
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-8"
+        >
+          <div className="mb-8 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
+                  currentStep >= 1
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "bg-[var(--surface-muted)] text-[var(--text-main)]"
+                }`}
+              >
+                1
+              </div>
+              <span className="text-sm font-semibold text-[var(--text-main)]">Student Details</span>
+            </div>
+            <div
+              className={`h-1 flex-1 rounded-full ${
+                currentStep >= 2 ? "bg-[var(--color-primary)]" : "bg-[var(--surface-muted)]"
+              }`}
+            />
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${
+                  currentStep >= 2
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "bg-[var(--surface-muted)] text-[var(--text-main)]"
+                }`}
+              >
+                2
+              </div>
+              <span className="text-sm font-semibold text-[var(--text-main)]">Select Subjects</span>
+            </div>
+          </div>
+
+          <p className="mb-6 max-w-3xl text-sm leading-relaxed text-[var(--text-main)] sm:text-base">
+            {currentStep === 1
+              ? "Fill in your details first. In the next step, you will select your backlog subjects."
+              : "Select one or more backlog subjects for your chosen semester."}
           </p>
 
-          <section className="mb-8 border-t border-[var(--border)] pt-6">
-            <h2 className="mb-4 font-[var(--heading)] text-xl font-semibold text-[var(--text-h)]">
-              Student Details
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
-                  USN *
-                </label>
-              <input
-                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 placeholder:text-[var(--text)]/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                name="usn"
-                placeholder="e.g. 1CS22CS001"
-                value={formData.usn}
-                onChange={handleChange}
-              />
-              </div>
+          {currentStep === 1 ? (
+            <section className="mb-6 border-t border-[var(--stroke)] pt-6">
+              <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">Student Details</h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="usn" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                    USN *
+                  </label>
+                  <input
+                    id="usn"
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                    name="usn"
+                    placeholder="e.g. 1CS22CS001"
+                    value={formData.usn}
+                    onChange={handleChange}
+                    data-cy="reg-usn"
+                  />
+                </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
-                  Full Name *
-                </label>
-              <input
-                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 placeholder:text-[var(--text)]/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                name="name"
-                placeholder="Your full name"
-                value={formData.name}
-                onChange={handleChange}
-              />
-              </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="name" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                    Full Name *
+                  </label>
+                  <input
+                    id="name"
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                    name="name"
+                    placeholder="Your full name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    data-cy="reg-name"
+                  />
+                </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
-                  Email *
-                </label>
-              <input
-                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 placeholder:text-[var(--text)]/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                name="email"
-                placeholder="your@email.com"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="email" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                    Email *
+                  </label>
+                  <input
+                    id="email"
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                    name="email"
+                    placeholder="your@email.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    data-cy="reg-email"
+                  />
+                </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
-                  Phone
-                </label>
-              <input
-                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 placeholder:text-[var(--text)]/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                name="phone"
-                placeholder="10 digit number"
-                value={formData.phone}
-                onChange={handleChange}
-              />
-              </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="phone" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                    Phone
+                  </label>
+                  <input
+                    id="phone"
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                    name="phone"
+                    placeholder="10 digit number"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    data-cy="reg-phone"
+                  />
+                </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
-                  Year of Joining *
-                </label>
-              <select
-                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                name="yearOfJoining"
-                value={formData.yearOfJoining}
-                onChange={handleChange}
-              >
-                <option value="">Select year</option>
-                <option value="2022">2022</option>
-                <option value="2023">2023</option>
-                <option value="2024">2024</option>
-              </select>
-              </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="yearOfJoining" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                    Year of Joining *
+                  </label>
+                  <select
+                    id="yearOfJoining"
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                    name="yearOfJoining"
+                    value={formData.yearOfJoining}
+                    onChange={handleChange}
+                    data-cy="reg-year"
+                  >
+                    <option value="">Select year</option>
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
-                  Semester *
-                </label>
-              <select
-                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                name="semester"
-                value={formData.semester}
-                onChange={handleChange}
-              >
-                <option value="">Select semester</option>
-                <option value="1">Semester 1</option>
-                <option value="2">Semester 2</option>
-                <option value="3">Semester 3</option>
-                <option value="4">Semester 4</option>
-                <option value="5">Semester 5</option>
-                <option value="6">Semester 6</option>
-                <option value="7">Semester 7</option>
-                <option value="8">Semester 8</option>
-              </select>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="semester" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                    Semester *
+                  </label>
+                  <select
+                    id="semester"
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                    name="semester"
+                    value={formData.semester}
+                    onChange={handleChange}
+                    data-cy="reg-semester"
+                  >
+                    <option value="">Select semester</option>
+                    <option value="1">Semester 1</option>
+                    <option value="2">Semester 2</option>
+                    <option value="3">Semester 3</option>
+                    <option value="4">Semester 4</option>
+                    <option value="5">Semester 5</option>
+                    <option value="6">Semester 6</option>
+                    <option value="7">Semester 7</option>
+                    <option value="8">Semester 8</option>
+                  </select>
+                </div>
               </div>
-            </div>
-          </section>
-
-          <section className="mb-6 border-t border-[var(--border)] pt-6">
-            <h2 className="mb-4 font-[var(--heading)] text-xl font-semibold text-[var(--text-h)]">
-              Select Backlog Subjects
-            </h2>
-          {!formData.yearOfJoining || !formData.semester ? (
-              <p className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-4 py-3 text-sm">
-              Select your year and semester above to see subjects.
-            </p>
-          ) : loadingSubjects ? (
-              <p className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-4 py-3 text-sm">
-                Loading subjects...
-              </p>
-          ) : subjectsError ? (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {subjectsError}
-              </p>
-          ) : subjects.length === 0 ? (
-              <p className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-4 py-3 text-sm">
-              No subjects found for this year and semester.
-            </p>
+            </section>
           ) : (
-            subjects.map((subject) => (
-              <div
-                key={subject.id}
-                  className={`mb-2 rounded-xl border p-3 transition-transform duration-200 motion-safe:hover:translate-y-[-2px] ${
-                    selectedSubjects.includes(subject.id)
-                      ? "border-[var(--accent-border)] bg-[var(--accent-bg)]"
-                      : "border-[var(--border)] bg-[var(--social-bg)]"
-                  }`}
-              >
-                  <div className="flex items-center gap-2">
-                    <input
-                  type="checkbox"
-                  id={`subject-${subject.id}`}
-                  checked={selectedSubjects.includes(subject.id)}
-                  onChange={() => handleSubjectToggle(subject.id)}
-                      className="h-4 w-4 accent-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-                />
-                <label
-                  htmlFor={`subject-${subject.id}`}
-                      className="flex flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-[var(--text-h)] sm:text-base"
-                >
-                  <span>{subject.subjectName}</span>
-                      <span className="text-xs text-[var(--text)] sm:text-sm">
-                    {subject.department.deptName}
-                  </span>
-                </label>
+            <section className="mb-6 border-t border-[var(--stroke)] pt-6">
+              <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">Select Backlog Subjects</h2>
+              {loadingSubjects ? (
+                <p className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+                  <LoaderCircle size={16} className="animate-spin" /> Loading subjects...
+                </p>
+              ) : subjectsError ? (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {subjectsError}
+                </p>
+              ) : subjects.length === 0 ? (
+                <p className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+                  No subjects found for this year and semester.
+                </p>
+              ) : (
+                subjects.map((subject) => (
+                  <div
+                    key={subject.id}
+                    className={`mb-2 rounded-xl border p-3 transition-transform duration-200 motion-safe:hover:translate-y-[-2px] ${
+                      selectedSubjects.includes(subject.id)
+                        ? "border-[var(--color-primary)]/45 bg-[rgba(145,25,28,0.08)]"
+                        : "border-[var(--stroke)] bg-[var(--surface-muted)]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id={`subject-${subject.id}`}
+                        checked={selectedSubjects.includes(subject.id)}
+                        onChange={() => handleSubjectToggle(subject.id)}
+                        className="h-4 w-4 accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                      />
+                      <label
+                        htmlFor={`subject-${subject.id}`}
+                        className="flex flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-[var(--text-main)] sm:text-base"
+                      >
+                        <span>{subject.subjectName}</span>
+                        <span className="text-xs text-[var(--text-main)] sm:text-sm">{subject.department.deptName}</span>
+                      </label>
+                    </div>
                   </div>
-              </div>
-            ))
+                ))
+              )}
+            </section>
           )}
-          </section>
 
-          <button
-            type="button"
-            className="w-full rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white shadow-[var(--shadow)] transition-transform duration-200 motion-safe:hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-          onClick={handleSubmit}
-          disabled={selectedSubjects.length === 0}
-        >
-          Submit Registration
-          </button>
-        </div>
+          {submitError ? (
+            <p
+              role="alert"
+              aria-live="polite"
+              className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+              {submitError}
+            </p>
+          ) : null}
+
+          <div className="flex gap-3">
+            {currentStep === 2 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentStep(1);
+                  setSubmitError("");
+                }}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-5 py-3 text-sm font-semibold text-[var(--color-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+              >
+                <ArrowLeft size={16} /> Back
+              </button>
+            ) : null}
+
+            <MagneticCta
+              type="button"
+              onClick={handleSubmit}
+              disabled={currentStep === 2 && (selectedSubjects.length === 0 || submitting)}
+              className={`gap-2 rounded-xl ${currentStep === 2 ? "w-full" : "flex-1"} disabled:cursor-not-allowed disabled:opacity-60`}
+              data-cy="reg-submit"
+              aria-label={currentStep === 1 ? "Continue to subject selection" : "Submit registration"}
+            >
+              {currentStep === 1 ? (
+                <>
+                  Continue <ArrowRight size={16} />
+                </>
+              ) : submitting ? (
+                <>
+                  <LoaderCircle size={16} className="animate-spin" /> Submitting...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={16} /> Submit Registration
+                </>
+              )}
+            </MagneticCta>
+          </div>
+        </motion.div>
       </div>
+
+      <MobileActionBar />
     </div>
   );
 }
