@@ -1,6 +1,7 @@
 package com.college.backlog.controller;
 
 import com.college.backlog.model.Registration;
+import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.service.RegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,9 @@ public class RegistrationController {
 
     @Autowired
     private RegistrationService registrationService;
+
+    @Autowired
+    private RegistrationRepository registrationRepository;
 
     @PostMapping
     public Map<String, String> register(@RequestBody Map<String, Object> body) {
@@ -40,4 +44,43 @@ public class RegistrationController {
             "status", reg.getStatus()
         );
     }
+
+    @PutMapping("/verify/{qrToken}")
+public Map<String, String> verifyRegistration(@PathVariable String qrToken) {
+    Registration reg = registrationRepository.findByQrToken(qrToken)
+        .orElseThrow(() -> new RuntimeException("Invalid QR token"));
+
+    reg.setStatus("VERIFIED");
+    registrationRepository.save(reg);
+
+    return Map.of(
+        "regId", reg.getRegId(),
+        "studentName", reg.getStudent().getName(),
+        "rollNo", reg.getStudent().getRollNo(),
+        "status", "VERIFIED"
+    );
+}
+
+    @GetMapping("/verify/{qrToken}")
+public Map<String, Object> getRegistrationByToken(@PathVariable String qrToken) {
+    Registration reg = registrationRepository.findByQrToken(qrToken)
+        .orElseThrow(() -> new RuntimeException("Invalid QR token"));
+
+    List<String> subjectNames = reg.getSubjects()
+        .stream()
+        .map(s -> s.getSubjectName())
+        .toList();
+
+    return Map.of(
+        "regId", reg.getRegId(),
+        "studentName", reg.getStudent().getName(),
+        "rollNo", reg.getStudent().getRollNo(),
+        "email", reg.getStudent().getEmail(),
+        "semester", reg.getStudent().getCurrentSemester(),
+        "yearOfJoining", reg.getStudent().getYearOfJoining(),
+        "subjects", subjectNames,
+        "status", reg.getStatus(),
+        "registeredAt", reg.getRegisteredAt().toString()
+    );
+}
 }

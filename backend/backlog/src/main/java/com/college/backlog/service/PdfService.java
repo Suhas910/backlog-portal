@@ -116,7 +116,7 @@ public class PdfService {
         doc.add(sigTable);
 
         // ── QR Code ──
-        String qrContent = "REG:" + reg.getRegId() + "|USN:" + reg.getStudent().getRollNo() + "|TOKEN:" + reg.getQrToken();
+        String qrContent = "http://localhost:5173/verify/" + reg.getQrToken();
         byte[] qrBytes = generateQrCode(qrContent, 150);
 
         Image qrImage = new Image(ImageDataFactory.create(qrBytes))
