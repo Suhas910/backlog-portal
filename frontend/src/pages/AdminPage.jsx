@@ -4,25 +4,41 @@ import { Link } from "react-router-dom";
 import msritLogo from "../assets/MSRIT.png";
 
 function AdminPage() {
-  const isAdmin = localStorage.getItem("isAdmin") === "true";
+  const isAdmin = sessionStorage.getItem("adminRole") === "ADMIN";
+  const adminToken = sessionStorage.getItem("adminToken");
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!isAdmin || !adminToken) {
       return;
     }
 
-    axios.get("http://localhost:8080/api/admin/registrations").then((res) => {
-      setRegistrations(res.data);
-      setLoading(false);
-    });
-  }, [isAdmin]);
+    axios
+      .get("http://localhost:8080/api/admin/registrations", {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      })
+      .then((res) => {
+        setRegistrations(res.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        sessionStorage.removeItem("adminRole");
+        sessionStorage.removeItem("adminToken");
+        window.location.href = "/admin/login";
+      });
+  }, [isAdmin, adminToken]);
 
   const handleVerify = async (qrToken) => {
     try {
-      await axios.put(`http://localhost:8080/api/register/verify/${qrToken}`);
+      await axios.put(
+        `http://localhost:8080/api/register/verify/${qrToken}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      );
       alert("Verified successfully");
       window.location.reload();
     } catch (err) {
@@ -40,7 +56,7 @@ function AdminPage() {
   const pendingCount = registrations.filter((r) => r.status === "SUBMITTED").length;
   const verifiedCount = registrations.filter((r) => r.status === "VERIFIED").length;
 
-  if (!isAdmin) {
+  if (!isAdmin || !adminToken) {
     return (
       <div className="relative isolate min-h-screen overflow-hidden bg-[var(--bg)] px-4 py-10 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(36,42,82,0.1),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(237,20,91,0.12),transparent_40%),linear-gradient(to_bottom,rgba(36,42,82,0.03),transparent_45%)]" />
@@ -66,10 +82,16 @@ function AdminPage() {
           <div className="flex items-center gap-3 sm:gap-4">
             <img
               src={msritLogo}
-              alt="MSRIT"
-              className="h-10 w-auto rounded-md bg-white p-1.5 sm:h-11"
+              alt="Ramaiah Institute of Technology"
+              className="h-11 w-auto sm:h-12"
             />
             <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--cta)]">
+                Ramaiah Institute of Technology
+              </p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-white/80 sm:text-xs">
+                Autonomous Institute, Affiliated to VTU
+              </p>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
                 Admin Flow
               </p>
@@ -89,7 +111,8 @@ function AdminPage() {
             <button
               type="button"
               onClick={() => {
-                localStorage.removeItem("isAdmin");
+                sessionStorage.removeItem("adminRole");
+                sessionStorage.removeItem("adminToken");
                 window.location.href = "/admin/login";
               }}
               className="inline-flex items-center rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--shadow)] transition-transform duration-200 motion-safe:hover:scale-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-secondary)]"

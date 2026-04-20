@@ -2,35 +2,118 @@ package com.college.backlog.controller;
 
 import com.college.backlog.model.User;
 import com.college.backlog.repository.UserRepository;
+import com.college.backlog.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AuthController {
+
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final long LOCK_DURATION_SECONDS = 900;
+
+    private final ConcurrentHashMap<String, Integer> failedAttempts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Instant> lockedUntil = new ConcurrentHashMap<>();
 
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtService jwtService;
+
     @PostMapping("/login")
     public Map<String, String> login(@RequestBody Map<String, String> body) {
 
-        String username = body.get("username");
-        String password = body.get("password");
+        String username = body.getOrDefault("username", "").trim();
+        String password = body.getOrDefault("password", "");
+
+        if (username.isEmpty() || password.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username and password are required");
+        }
+
+        if (isLocked(username)) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many failed login attempts");
+        }
 
         User user = userRepository.findById(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> invalidCredentials(username));
 
-        if (!user.getPassword().equals(password)) {
-            throw new RuntimeException("Invalid password");
+        if (!matchesPassword(user, password)) {
+            registerFailure(username);
+            throw invalidCredentials(username);
         }
+
+        clearFailures(username);
+        String token = jwtService.generateToken(user.getUsername(), user.getRole());
 
         return Map.of(
                 "message", "Login success",
-                "role", user.getRole()
+                "role", user.getRole(),
+                "token", token
         );
+    }
+
+    private boolean matchesPassword(User user, String rawPassword) {
+        String storedPassword = user.getPassword();
+
+        if (storedPassword == null || storedPassword.isBlank()) {
+            return false;
+        }
+
+        if (isBcryptHash(storedPassword)) {
+            return passwordEncoder.matches(rawPassword, storedPassword);
+        }
+
+        boolean plainMatch = storedPassword.equals(rawPassword);
+        if (plainMatch) {
+            user.setPassword(passwordEncoder.encode(rawPassword));
+            userRepository.save(user);
+        }
+        return plainMatch;
+    }
+
+    private boolean isBcryptHash(String value) {
+        return value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
+    }
+
+    private ResponseStatusException invalidCredentials(String username) {
+        return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
+    }
+
+    private boolean isLocked(String username) {
+        Instant lockExpiry = lockedUntil.get(username);
+        if (lockExpiry == null) {
+            return false;
+        }
+        if (Instant.now().isAfter(lockExpiry)) {
+            lockedUntil.remove(username);
+            failedAttempts.remove(username);
+            return false;
+        }
+        return true;
+    }
+
+    private void registerFailure(String username) {
+        int attempts = failedAttempts.merge(username, 1, Integer::sum);
+        if (attempts >= MAX_FAILED_ATTEMPTS) {
+            lockedUntil.put(username, Instant.now().plusSeconds(LOCK_DURATION_SECONDS));
+            failedAttempts.remove(username);
+        }
+    }
+
+    private void clearFailures(String username) {
+        failedAttempts.remove(username);
+        lockedUntil.remove(username);
     }
 }

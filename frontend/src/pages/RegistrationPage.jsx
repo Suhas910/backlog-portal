@@ -15,40 +15,63 @@ function RegistrationPage() {
   const [subjects, setSubjects] = useState([]);
   const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [subjectsError, setSubjectsError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [regId, setRegId] = useState("");
 
   // whenever year or semester changes, fetch subjects
   useEffect(() => {
-    if (formData.yearOfJoining && formData.semester) {
-      axios
-        .get(`http://localhost:8080/api/subjects`, {
-          params: {
-            year: formData.yearOfJoining,
-            semester: formData.semester,
-          },
-        })
-        .then((res) => {
-          setSubjects(res.data);
-          setSelectedSubjects([]);
-          setLoadingSubjects(false);
-        });
+    if (!formData.yearOfJoining || !formData.semester) {
+      setSubjects([]);
+      setSelectedSubjects([]);
+      setSubjectsError("");
+      setLoadingSubjects(false);
+      return;
     }
+
+    let ignoreResponse = false;
+
+    setLoadingSubjects(true);
+    setSubjectsError("");
+
+    axios
+      .get(`/api/subjects`, {
+        params: {
+          year: formData.yearOfJoining,
+          semester: formData.semester,
+        },
+      })
+      .then((res) => {
+        if (ignoreResponse) return;
+        setSubjects(Array.isArray(res.data) ? res.data : []);
+        setSelectedSubjects([]);
+      })
+      .catch((err) => {
+        if (ignoreResponse) return;
+        setSubjects([]);
+        setSelectedSubjects([]);
+        setSubjectsError("Unable to load subjects. Please try again.");
+        console.error("Failed to fetch subjects", err);
+      })
+      .finally(() => {
+        if (ignoreResponse) return;
+        setLoadingSubjects(false);
+      });
+
+    return () => {
+      ignoreResponse = true;
+    };
   }, [formData.yearOfJoining, formData.semester]);
 
   const handleChange = (e) => {
     const next = { ...formData, [e.target.name]: e.target.value };
 
-    if (
-      ["yearOfJoining", "semester"].includes(e.target.name) &&
-      next.yearOfJoining &&
-      next.semester
-    ) {
-      setLoadingSubjects(true);
-    } else if (["yearOfJoining", "semester"].includes(e.target.name)) {
-      setSubjects([]);
-      setSelectedSubjects([]);
-      setLoadingSubjects(false);
+    if (["yearOfJoining", "semester"].includes(e.target.name)) {
+      setSubjectsError("");
+      if (!next.yearOfJoining || !next.semester) {
+        setSubjects([]);
+        setSelectedSubjects([]);
+      }
     }
 
     setFormData(next);
@@ -73,7 +96,7 @@ function RegistrationPage() {
     }
 
     try {
-      const res = await axios.post("http://localhost:8080/api/register", {
+      const res = await axios.post("/api/register", {
         rollNo: formData.usn,
         name: formData.name,
         email: formData.email,
@@ -91,7 +114,7 @@ function RegistrationPage() {
   };
 
   const handleDownloadPdf = () => {
-    window.open(`http://localhost:8080/api/pdf/${regId}`, "_blank");
+    window.open(`/api/pdf/${regId}`, "_blank");
   };
 
   // success screen
@@ -141,10 +164,16 @@ function RegistrationPage() {
           <div className="flex items-center gap-3 sm:gap-4">
             <img
               src={msritLogo}
-              alt="MSRIT"
-              className="h-10 w-auto rounded-md bg-white p-1.5 sm:h-11"
+              alt="Ramaiah Institute of Technology"
+              className="h-11 w-auto sm:h-12"
             />
             <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--cta)]">
+                Ramaiah Institute of Technology
+              </p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-white/80 sm:text-xs">
+                Autonomous Institute, Affiliated to VTU
+              </p>
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
                 Student Flow
               </p>
@@ -276,6 +305,10 @@ function RegistrationPage() {
           ) : loadingSubjects ? (
               <p className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-4 py-3 text-sm">
                 Loading subjects...
+              </p>
+          ) : subjectsError ? (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {subjectsError}
               </p>
           ) : subjects.length === 0 ? (
               <p className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-4 py-3 text-sm">

@@ -9,12 +9,15 @@ function HomePage() {
           <div className="flex items-center gap-3 text-left sm:gap-4">
             <img
               src={msritLogo}
-              alt="MSRIT"
-              className="h-10 w-auto rounded-md bg-white p-1.5 sm:h-12"
+              alt="Ramaiah Institute of Technology"
+              className="h-12 w-auto sm:h-14"
             />
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--cta)]">
-                Ramaiah Inspired Theme
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--cta)]">
+                Ramaiah Institute of Technology
+              </p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-white/85 sm:text-xs">
+                Autonomous Institute, Affiliated to VTU
               </p>
               <p className="text-base font-semibold text-white sm:text-lg">
                 Backlog Registration Portal

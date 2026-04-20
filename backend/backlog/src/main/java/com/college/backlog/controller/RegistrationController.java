@@ -10,7 +10,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/register")
-@CrossOrigin(origins = "http://localhost:5173")
 public class RegistrationController {
 
     @Autowired

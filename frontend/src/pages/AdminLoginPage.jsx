@@ -14,9 +14,14 @@ function AdminLoginPage() {
         password,
       });
 
-      if (res.data.role === "ADMIN") {
-        localStorage.setItem("isAdmin", "true");
+      if (res.data.role === "ADMIN" && res.data.token) {
+        sessionStorage.setItem("adminRole", "ADMIN");
+        sessionStorage.setItem("adminToken", res.data.token);
         window.location.href = "/admin";
+      } else {
+        sessionStorage.removeItem("adminRole");
+        sessionStorage.removeItem("adminToken");
+        alert("Unauthorized role");
       }
     } catch {
       alert("Login failed");
@@ -30,9 +35,12 @@ function AdminLoginPage() {
         <div className="mb-6 text-left">
           <img
             src={msritLogo}
-            alt="MSRIT"
-            className="mb-3 h-10 w-auto rounded-md border border-[var(--border)] bg-white p-1.5"
+            alt="Ramaiah Institute of Technology"
+            className="mb-2 h-11 w-auto"
           />
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--cta)]">
+            Ramaiah Institute of Technology
+          </p>
           <p className="mb-2 inline-flex rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
             Restricted Access
           </p>

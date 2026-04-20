@@ -5,6 +5,7 @@ import msritLogo from "../assets/MSRIT.png";
 
 function VerifyPage() {
   const { qrToken } = useParams();
+  const adminToken = sessionStorage.getItem("adminToken");
   const [registration, setRegistration] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,9 +27,18 @@ function VerifyPage() {
   }, [qrToken]);
 
   const handleVerify = async () => {
+    if (!adminToken) {
+      setError("Admin login required to verify registrations.");
+      return;
+    }
+
     setVerifying(true);
     try {
-      await axios.put(`http://localhost:8080/api/register/verify/${qrToken}`);
+      await axios.put(
+        `http://localhost:8080/api/register/verify/${qrToken}`,
+        {},
+        { headers: { Authorization: `Bearer ${adminToken}` } },
+      );
       setVerified(true);
       setRegistration((prev) => ({ ...prev, status: "VERIFIED" }));
     } catch {
@@ -64,10 +74,13 @@ function VerifyPage() {
           <div className="flex items-center gap-3 sm:gap-4">
             <img
               src={msritLogo}
-              alt="MSRIT"
-              className="h-10 w-auto rounded-md border border-[var(--border)] bg-white p-1.5 sm:h-11"
+              alt="Ramaiah Institute of Technology"
+              className="h-11 w-auto sm:h-12"
             />
             <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--cta)]">
+                Ramaiah Institute of Technology
+              </p>
               <p className="mb-2 inline-flex rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
                 Verification Portal
               </p>
