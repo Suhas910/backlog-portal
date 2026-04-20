@@ -1,155 +1,176 @@
-import { useState, useEffect } from "react"
-import { useParams } from "react-router-dom"
-import axios from "axios"
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import axios from "axios";
+import msritLogo from "../assets/MSRIT.png";
 
 function VerifyPage() {
-  const { qrToken } = useParams()
-  const [registration, setRegistration] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [verified, setVerified] = useState(false)
-  const [verifying, setVerifying] = useState(false)
+  const { qrToken } = useParams();
+  const [registration, setRegistration] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [verified, setVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    axios.get(`http://localhost:8080/api/register/verify/${qrToken}`)
-      .then(res => {
-        setRegistration(res.data)
-        setLoading(false)
-        if (res.data.status === "VERIFIED") setVerified(true)
+    axios
+      .get(`http://localhost:8080/api/register/verify/${qrToken}`)
+      .then((res) => {
+        setRegistration(res.data);
+        setLoading(false);
+        if (res.data.status === "VERIFIED") setVerified(true);
       })
       .catch(() => {
-        setError("Invalid or expired QR code.")
-        setLoading(false)
-      })
-  }, [qrToken])
+        setError("Invalid or expired QR code.");
+        setLoading(false);
+      });
+  }, [qrToken]);
 
   const handleVerify = async () => {
-    setVerifying(true)
+    setVerifying(true);
     try {
-      await axios.put(`http://localhost:8080/api/register/verify/${qrToken}`)
-      setVerified(true)
-      setRegistration(prev => ({ ...prev, status: "VERIFIED" }))
+      await axios.put(`http://localhost:8080/api/register/verify/${qrToken}`);
+      setVerified(true);
+      setRegistration((prev) => ({ ...prev, status: "VERIFIED" }));
     } catch {
-      setError("Verification failed. Please try again.")
+      setError("Verification failed. Please try again.");
     }
-    setVerifying(false)
+    setVerifying(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--bg)] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-[var(--border)] bg-[var(--bg)] p-6 shadow-[var(--shadow)]">
+          <p className="text-sm text-[var(--text)]">Loading verification details...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (loading) return <div style={styles.container}><p>Loading...</p></div>
-  if (error) return <div style={styles.container}><p style={{ color: "red" }}>{error}</p></div>
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[var(--bg)] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-3xl rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-bg)] p-6 shadow-[var(--shadow)]">
+          <p className="text-sm font-medium text-[var(--accent)]">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-
-        {/* Header */}
-        <div style={styles.header}>
-          <h2 style={styles.title}>Backlog Registration Verification</h2>
-          <span style={{
-            ...styles.badge,
-            background: verified ? "#d1fae5" : "#fef3c7",
-            color: verified ? "#065f46" : "#92400e"
-          }}>
-            {verified ? "✓ VERIFIED" : "⏳ SUBMITTED"}
+    <div className="min-h-screen bg-[var(--bg)] px-4 py-8 text-[var(--text)] sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-4xl rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-5 shadow-[var(--shadow)] opacity-0 motion-safe:animate-[heroFade_600ms_ease-out_forwards] sm:p-8">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img
+              src={msritLogo}
+              alt="MSRIT"
+              className="h-10 w-auto rounded-md border border-[var(--border)] bg-white p-1.5 sm:h-11"
+            />
+            <div>
+              <p className="mb-2 inline-flex rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
+                Verification Portal
+              </p>
+              <h1 className="text-2xl font-semibold text-[var(--text-h)] sm:text-3xl">
+                Backlog Registration Verification
+              </h1>
+            </div>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold tracking-[0.08em] ${
+              verified
+                ? "bg-[var(--accent-bg)] text-[var(--accent)]"
+                : "bg-[var(--social-bg)] text-[var(--text-h)]"
+            }`}
+          >
+            {verified ? "VERIFIED" : "SUBMITTED"}
           </span>
         </div>
 
-        {/* Student Details */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Student Details</h3>
-          <div style={styles.detailsGrid}>
-            <div style={styles.detailRow}>
-              <span style={styles.label}>USN</span>
-              <span style={styles.value}>{registration.rollNo}</span>
+        <section className="mb-6 border-t border-[var(--border)] pt-6">
+          <h2 className="mb-4 text-xl font-semibold text-[var(--text-h)]">Student Details</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">USN</p>
+              <p className="mt-1 text-sm text-[var(--text-h)]">{registration.rollNo}</p>
             </div>
-            <div style={styles.detailRow}>
-              <span style={styles.label}>Name</span>
-              <span style={styles.value}>{registration.studentName}</span>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Name</p>
+              <p className="mt-1 text-sm text-[var(--text-h)]">{registration.studentName}</p>
             </div>
-            <div style={styles.detailRow}>
-              <span style={styles.label}>Email</span>
-              <span style={styles.value}>{registration.email}</span>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Email</p>
+              <p className="mt-1 break-all text-sm text-[var(--text-h)]">{registration.email}</p>
             </div>
-            <div style={styles.detailRow}>
-              <span style={styles.label}>Year of Joining</span>
-              <span style={styles.value}>{registration.yearOfJoining}</span>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Year of Joining</p>
+              <p className="mt-1 text-sm text-[var(--text-h)]">{registration.yearOfJoining}</p>
             </div>
-            <div style={styles.detailRow}>
-              <span style={styles.label}>Semester</span>
-              <span style={styles.value}>{registration.semester}</span>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Semester</p>
+              <p className="mt-1 text-sm text-[var(--text-h)]">{registration.semester}</p>
             </div>
-            <div style={styles.detailRow}>
-              <span style={styles.label}>Registration ID</span>
-              <span style={styles.value}>{registration.regId}</span>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Registration ID</p>
+              <p className="mt-1 text-sm text-[var(--text-h)]">{registration.regId}</p>
             </div>
-            <div style={styles.detailRow}>
-              <span style={styles.label}>Registered At</span>
-              <span style={styles.value}>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] p-3 sm:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Registered At</p>
+              <p className="mt-1 text-sm text-[var(--text-h)]">
                 {new Date(registration.registeredAt).toLocaleString()}
-              </span>
+              </p>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Subjects */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Registered Subjects</h3>
+        <section className="mb-6 border-t border-[var(--border)] pt-6">
+          <h2 className="mb-4 text-xl font-semibold text-[var(--text-h)]">Registered Subjects</h2>
           {registration.subjects.map((subject, index) => (
-            <div key={index} style={styles.subjectRow}>
-              <span style={styles.subjectNumber}>{index + 1}</span>
+            <div
+              key={index}
+              className="mb-2 flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-3 py-2.5 transition-transform duration-200 motion-safe:hover:translate-y-[-2px]"
+            >
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-semibold text-white">
+                {index + 1}
+              </span>
               <span>{subject}</span>
             </div>
           ))}
-        </div>
+        </section>
 
-        {/* Verify Button */}
         {!verified ? (
-          <div style={styles.section}>
-            <p style={{ color: "#666", marginBottom: "1rem" }}>
+          <section className="border-t border-[var(--border)] pt-6">
+            <p className="mb-4 text-sm text-[var(--text)]">
               Physical form received and signatures verified? Click below to mark as official.
             </p>
             <button
-              style={styles.verifyBtn}
+              type="button"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white shadow-[var(--shadow)] transition-transform duration-200 motion-safe:hover:scale-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               onClick={handleVerify}
               disabled={verifying}
             >
               {verifying ? "Verifying..." : "Mark as Verified"}
             </button>
-          </div>
+          </section>
         ) : (
-          <div style={{
-            ...styles.section,
-            background: "#d1fae5",
-            borderRadius: "8px",
-            padding: "1rem",
-            textAlign: "center"
-          }}>
-            <p style={{ color: "#065f46", fontWeight: "600", margin: 0 }}>
-              ✓ This registration has been officially verified
+          <section className="rounded-xl border border-[var(--accent-border)] bg-[var(--accent-bg)] p-4 text-center">
+            <p className="text-sm font-semibold text-[var(--accent)]">
+              This registration has been officially verified.
             </p>
-          </div>
+          </section>
         )}
 
+        <div className="mt-6 text-center">
+          <Link
+            to="/"
+            className="text-sm font-medium text-[var(--cta)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+          >
+            Back to home
+          </Link>
+        </div>
       </div>
     </div>
-  )
+  );
 }
 
-const styles = {
-  container: { minHeight: "100vh", background: "#f0f2f5", padding: "2rem" },
-  card: { maxWidth: "600px", margin: "0 auto", background: "white", borderRadius: "12px", padding: "2rem", boxShadow: "0 2px 12px rgba(0,0,0,0.1)" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" },
-  title: { fontSize: "1.3rem", fontWeight: "700", margin: 0 },
-  badge: { padding: "4px 12px", borderRadius: "20px", fontWeight: "600", fontSize: "0.85rem" },
-  section: { borderTop: "1px solid #eee", paddingTop: "1.5rem", marginBottom: "1.5rem" },
-  sectionTitle: { fontSize: "1rem", fontWeight: "600", marginBottom: "1rem" },
-  detailsGrid: { display: "flex", flexDirection: "column", gap: "8px" },
-  detailRow: { display: "flex", gap: "1rem" },
-  label: { fontWeight: "500", color: "#666", minWidth: "140px", fontSize: "0.9rem" },
-  value: { color: "#111", fontSize: "0.9rem" },
-  subjectRow: { display: "flex", alignItems: "center", gap: "12px", padding: "8px 12px", background: "#f9f9f9", borderRadius: "6px", marginBottom: "6px" },
-  subjectNumber: { background: "#2563eb", color: "white", borderRadius: "50%", width: "24px", height: "24px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: "600" },
-  verifyBtn: { width: "100%", padding: "0.9rem", background: "#059669", color: "white", border: "none", borderRadius: "8px", fontSize: "1rem", fontWeight: "600", cursor: "pointer" }
-}
-
-export default VerifyPage
+export default VerifyPage;

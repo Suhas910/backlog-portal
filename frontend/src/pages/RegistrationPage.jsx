@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
+import msritLogo from "../assets/MSRIT.png";
 
 function RegistrationPage() {
   const [formData, setFormData] = useState({
@@ -19,7 +21,6 @@ function RegistrationPage() {
   // whenever year or semester changes, fetch subjects
   useEffect(() => {
     if (formData.yearOfJoining && formData.semester) {
-      setLoadingSubjects(true);
       axios
         .get(`http://localhost:8080/api/subjects`, {
           params: {
@@ -32,13 +33,25 @@ function RegistrationPage() {
           setSelectedSubjects([]);
           setLoadingSubjects(false);
         });
-    } else {
-      setSubjects([]);
     }
   }, [formData.yearOfJoining, formData.semester]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const next = { ...formData, [e.target.name]: e.target.value };
+
+    if (
+      ["yearOfJoining", "semester"].includes(e.target.name) &&
+      next.yearOfJoining &&
+      next.semester
+    ) {
+      setLoadingSubjects(true);
+    } else if (["yearOfJoining", "semester"].includes(e.target.name)) {
+      setSubjects([]);
+      setSelectedSubjects([]);
+      setLoadingSubjects(false);
+    }
+
+    setFormData(next);
   };
 
   const handleSubjectToggle = (subjectId) => {
@@ -84,80 +97,139 @@ function RegistrationPage() {
   // success screen
   if (submitted) {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h2 style={{ color: "green" }}>✓ Registration Submitted</h2>
-          <p>
+      <div className="relative isolate min-h-screen overflow-hidden bg-[var(--bg)] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(36,42,82,0.1),transparent_35%),radial-gradient(circle_at_85%_10%,rgba(237,20,91,0.12),transparent_40%),linear-gradient(to_bottom,rgba(36,42,82,0.03),transparent_45%)]" />
+        <div className="relative mx-auto w-full max-w-2xl rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-6 text-left shadow-[var(--shadow)] sm:p-8">
+          <p className="mb-2 inline-flex rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--accent)]">
+            Submission Complete
+          </p>
+          <h2 className="mb-3 font-[var(--heading)] text-3xl font-semibold text-[var(--text-h)]">
+            Registration Submitted
+          </h2>
+          <p className="mb-2 text-[var(--text)]">
             Your registration ID is: <strong>{regId}</strong>
           </p>
-          <p>
+          <p className="mb-6 text-[var(--text)]">
             Please download your form, print it, and get it signed by your
             Proctor and HOD.
           </p>
-          <button style={styles.primaryBtn} onClick={handleDownloadPdf}>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className="inline-flex items-center justify-center rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white shadow-[var(--shadow)] transition-transform duration-200 motion-safe:hover:scale-105 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              onClick={handleDownloadPdf}
+            >
             Download PDF
-          </button>
+            </button>
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--bg)] px-5 py-3 text-sm font-semibold text-[var(--text-h)] shadow-[var(--shadow)] transition-colors duration-200 hover:border-[var(--cta)] hover:text-[var(--cta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              Back to Home
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Backlog Registration</h1>
-        <p style={styles.subtitle}>
-          CS Department — Fill in your details below
-        </p>
+    <div className="relative isolate min-h-screen overflow-hidden bg-[var(--bg)] text-[var(--text)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(36,42,82,0.1),transparent_35%),radial-gradient(circle_at_85%_10%,rgba(237,20,91,0.12),transparent_40%),linear-gradient(to_bottom,rgba(36,42,82,0.03),transparent_45%)]" />
+      <div className="relative mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/20 bg-[var(--brand-secondary)] px-4 py-4 text-white shadow-[var(--shadow)] sm:px-6">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img
+              src={msritLogo}
+              alt="MSRIT"
+              className="h-10 w-auto rounded-md bg-white p-1.5 sm:h-11"
+            />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent)]">
+                Student Flow
+              </p>
+              <h1 className="font-[var(--heading)] text-2xl font-semibold text-white sm:text-3xl">
+                Backlog Registration
+              </h1>
+            </div>
+          </div>
+          <Link
+            to="/"
+            className="inline-flex items-center rounded-xl border border-white/25 bg-white px-4 py-2 text-sm font-medium text-[var(--brand-secondary)] shadow-[var(--shadow)] transition-colors duration-200 hover:border-[var(--cta)] hover:text-[var(--cta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--brand-secondary)]"
+          >
+            Home
+          </Link>
+        </header>
 
-        {/* Student Details */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Student Details</h3>
-          <div style={styles.grid}>
-            <div style={styles.field}>
-              <label style={styles.label}>USN *</label>
+        <div className="rounded-3xl border border-[var(--border)] bg-[var(--bg)] p-5 shadow-[var(--shadow)] opacity-0 motion-safe:animate-[heroFade_600ms_ease-out_forwards] sm:p-8">
+          <p className="mb-6 max-w-3xl text-sm leading-relaxed text-[var(--text)] sm:text-base">
+            Fill in your details and choose backlog subjects for your current
+            semester. Required fields are marked with *.
+          </p>
+
+          <section className="mb-8 border-t border-[var(--border)] pt-6">
+            <h2 className="mb-4 font-[var(--heading)] text-xl font-semibold text-[var(--text-h)]">
+              Student Details
+            </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
+                  USN *
+                </label>
               <input
-                style={styles.input}
+                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 placeholder:text-[var(--text)]/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 name="usn"
                 placeholder="e.g. 1CS22CS001"
                 value={formData.usn}
                 onChange={handleChange}
               />
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Full Name *</label>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
+                  Full Name *
+                </label>
               <input
-                style={styles.input}
+                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 placeholder:text-[var(--text)]/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 name="name"
                 placeholder="Your full name"
                 value={formData.name}
                 onChange={handleChange}
               />
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Email *</label>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
+                  Email *
+                </label>
               <input
-                style={styles.input}
+                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 placeholder:text-[var(--text)]/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 name="email"
                 placeholder="your@email.com"
                 value={formData.email}
                 onChange={handleChange}
               />
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Phone</label>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
+                  Phone
+                </label>
               <input
-                style={styles.input}
+                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 placeholder:text-[var(--text)]/70 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 name="phone"
                 placeholder="10 digit number"
                 value={formData.phone}
                 onChange={handleChange}
               />
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Year of Joining *</label>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
+                  Year of Joining *
+                </label>
               <select
-                style={styles.input}
+                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 name="yearOfJoining"
                 value={formData.yearOfJoining}
                 onChange={handleChange}
@@ -167,11 +239,14 @@ function RegistrationPage() {
                 <option value="2023">2023</option>
                 <option value="2024">2024</option>
               </select>
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Semester *</label>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text)]">
+                  Semester *
+                </label>
               <select
-                style={styles.input}
+                className="rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3.5 py-2.5 text-sm text-[var(--text-h)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 name="semester"
                 value={formData.semester}
                 onChange={handleChange}
@@ -186,122 +261,71 @@ function RegistrationPage() {
                 <option value="7">Semester 7</option>
                 <option value="8">Semester 8</option>
               </select>
+              </div>
             </div>
-          </div>
-        </div>
+          </section>
 
-        {/* Subject Selection */}
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Select Backlog Subjects</h3>
+          <section className="mb-6 border-t border-[var(--border)] pt-6">
+            <h2 className="mb-4 font-[var(--heading)] text-xl font-semibold text-[var(--text-h)]">
+              Select Backlog Subjects
+            </h2>
           {!formData.yearOfJoining || !formData.semester ? (
-            <p style={{ color: "#888" }}>
+              <p className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-4 py-3 text-sm">
               Select your year and semester above to see subjects.
             </p>
           ) : loadingSubjects ? (
-            <p>Loading subjects...</p>
+              <p className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-4 py-3 text-sm">
+                Loading subjects...
+              </p>
           ) : subjects.length === 0 ? (
-            <p style={{ color: "#888" }}>
+              <p className="rounded-xl border border-[var(--border)] bg-[var(--social-bg)] px-4 py-3 text-sm">
               No subjects found for this year and semester.
             </p>
           ) : (
             subjects.map((subject) => (
               <div
                 key={subject.id}
-                style={{
-                  ...styles.subjectRow,
-                  background: selectedSubjects.includes(subject.id)
-                    ? "#e8f4e8"
-                    : "#f9f9f9",
-                }}
+                  className={`mb-2 rounded-xl border p-3 transition-transform duration-200 motion-safe:hover:translate-y-[-2px] ${
+                    selectedSubjects.includes(subject.id)
+                      ? "border-[var(--accent-border)] bg-[var(--accent-bg)]"
+                      : "border-[var(--border)] bg-[var(--social-bg)]"
+                  }`}
               >
-                <input
+                  <div className="flex items-center gap-2">
+                    <input
                   type="checkbox"
                   id={`subject-${subject.id}`}
                   checked={selectedSubjects.includes(subject.id)}
                   onChange={() => handleSubjectToggle(subject.id)}
+                      className="h-4 w-4 accent-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 />
                 <label
                   htmlFor={`subject-${subject.id}`}
-                  style={{
-                    marginLeft: "12px",
-                    fontSize: "1rem",
-                    cursor: "pointer",
-                    flex: 1,
-                    display: "flex",
-                    justifyContent: "space-between",
-                  }}
+                      className="flex flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-[var(--text-h)] sm:text-base"
                 >
                   <span>{subject.subjectName}</span>
-                  <span style={{ color: "#888", fontSize: "0.85rem" }}>
+                      <span className="text-xs text-[var(--text)] sm:text-sm">
                     {subject.department.deptName}
                   </span>
                 </label>
+                  </div>
               </div>
             ))
           )}
-        </div>
+          </section>
 
-        {/* Submit */}
-        <button
-          style={styles.primaryBtn}
+          <button
+            type="button"
+            className="w-full rounded-xl bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white shadow-[var(--shadow)] transition-transform duration-200 motion-safe:hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           onClick={handleSubmit}
           disabled={selectedSubjects.length === 0}
         >
           Submit Registration
-        </button>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-
-const styles = {
-  container: { minHeight: "100vh", background: "#f0f2f5", padding: "2rem" },
-  card: {
-    maxWidth: "700px",
-    margin: "0 auto",
-    background: "white",
-    borderRadius: "12px",
-    padding: "2rem",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.1)",
-  },
-  title: { fontSize: "1.8rem", fontWeight: "700", marginBottom: "4px" },
-  subtitle: { color: "#666", marginBottom: "2rem" },
-  section: {
-    marginBottom: "2rem",
-    borderTop: "1px solid #eee",
-    paddingTop: "1.5rem",
-  },
-  sectionTitle: { fontSize: "1.1rem", fontWeight: "600", marginBottom: "1rem" },
-  grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" },
-  field: { display: "flex", flexDirection: "column", gap: "4px" },
-  label: { fontSize: "0.85rem", fontWeight: "500", color: "#444" },
-  input: {
-    padding: "0.6rem 0.8rem",
-    border: "1px solid #ddd",
-    borderRadius: "6px",
-    fontSize: "0.95rem",
-  },
-  subjectRow: {
-    display: "flex",
-    alignItems: "center",
-    padding: "0.8rem 1rem",
-    borderRadius: "8px",
-    marginBottom: "0.5rem",
-    cursor: "pointer",
-    border: "1px solid #eee",
-  },
-  primaryBtn: {
-    width: "100%",
-    padding: "0.9rem",
-    background: "#2563eb",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: "1rem",
-    fontWeight: "600",
-    cursor: "pointer",
-    marginTop: "1rem",
-  },
-};
 
 export default RegistrationPage;
