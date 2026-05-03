@@ -19,7 +19,12 @@ public class Subject {
     @Column(name = "subject_name")
     private String subjectName;
 
+    @Column(name = "course_code")
+    private String courseCode;
+
     private int semester;
+
+    private int credits;
 
     @Column(name = "year_of_joining")
     private int yearOfJoining;
