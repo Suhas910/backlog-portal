@@ -183,10 +183,10 @@ export default function HeroSection() {
               borderRadius: "2rem",
               padding: isDark ? "3px" : "0",
               background: isDark
-                ? "linear-gradient(135deg, rgba(237,20,91,0.7), rgba(36,42,82,0.95), rgba(145,25,28,0.6))"
+                ? "linear-gradient(135deg, rgba(15,27,58,0.95), rgba(28,41,76,0.92), rgba(45,25,70,0.84))"
                 : "transparent",
               boxShadow: isDark
-                ? "0 0 60px rgba(237,20,91,0.12), 0 24px 60px rgba(0,0,0,0.5)"
+                ? "0 0 60px rgba(20,37,79,0.22), 0 24px 60px rgba(0,0,0,0.35)"
                 : "0 16px 48px rgba(36,42,82,0.13)",
             }}
           >
@@ -195,9 +195,7 @@ export default function HeroSection() {
                 borderRadius: isDark ? "calc(2rem - 3px)" : "2rem",
                 overflow: "hidden",
                 position: "relative",
-                background: isDark
-                  ? "linear-gradient(135deg, #1a2040 0%, #242A52 55%, #2d1a3a 100%)"
-                  : "#f0f0f5",
+                background: isDark ? "#121b34" : "#f0f0f5",
               }}
             >
               <img
@@ -209,8 +207,10 @@ export default function HeroSection() {
                   objectFit: "cover",
                   objectPosition: "center top",
                   display: "block",
-                  opacity: isDark ? 0.9 : 1,
-                  filter: isDark ? "brightness(0.8) saturate(1.1)" : "none",
+                  opacity: isDark ? 0.98 : 1,
+                  filter: isDark
+                    ? "brightness(0.95) saturate(1.2) contrast(1.02)"
+                    : "none",
                 }}
               />
               {isDark && (
@@ -219,7 +219,8 @@ export default function HeroSection() {
                     position: "absolute",
                     inset: 0,
                     background:
-                      "linear-gradient(135deg, rgba(26,32,64,0.55) 0%, rgba(36,42,82,0.35) 50%, rgba(237,20,91,0.18) 100%)",
+                      "linear-gradient(180deg, rgba(14,28,57,0.24) 0%, rgba(26,40,74,0.32) 45%, rgba(37,27,68,0.45) 100%)",
+                    mixBlendMode: "screen",
                     pointerEvents: "none",
                   }}
                 />
