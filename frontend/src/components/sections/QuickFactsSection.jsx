@@ -38,9 +38,14 @@ const item = {
 
 export default function QuickFactsSection() {
   return (
-    <section id="quick-facts" className="bg-[var(--surface-muted)] px-4 py-16 sm:px-6 lg:px-8">
+    <section
+      id="quick-facts"
+      className="bg-[var(--surface-1)] px-4 py-16 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-7xl">
-        <h2 className="font-serif text-3xl text-[var(--color-primary)] sm:text-4xl">What to Do</h2>
+        <h2 className="font-serif text-3xl text-[var(--color-primary)] sm:text-4xl">
+          What to Do
+        </h2>
         <p className="mt-3 max-w-2xl text-[var(--text-main)]">
           Follow these three simple steps to complete your backlog registration.
         </p>
@@ -63,8 +68,12 @@ export default function QuickFactsSection() {
                 <div className="mb-4 inline-flex rounded-xl bg-[var(--color-secondary)] p-2 text-white">
                   <Icon size={18} />
                 </div>
-                  <h3 className="text-lg font-semibold text-[var(--text-main)]">{fact.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--text-main)]">{fact.text}</p>
+                <h3 className="text-lg font-semibold text-[var(--text-main)]">
+                  {fact.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--text-main)]">
+                  {fact.text}
+                </p>
               </motion.article>
             );
           })}
