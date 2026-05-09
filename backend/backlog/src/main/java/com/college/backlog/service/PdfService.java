@@ -2,10 +2,6 @@ package com.college.backlog.service;
 
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.Subject;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.kernel.colors.DeviceRgb;
@@ -21,8 +17,6 @@ import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.*;
 import org.springframework.stereotype.Service;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
@@ -71,7 +65,6 @@ public class PdfService {
         addSubjectsTable(doc, regular, bold, reg);
         addSignatureRow(doc, regular, bold);
         addNote(doc, regular, bold);
-        addQrCode(doc, reg);
 
         doc.close();
         return baos.toByteArray();
@@ -320,30 +313,27 @@ public class PdfService {
 
         int totalCredits = 0;
 
-        for (int i = 1; i <= 15; i++) {
-            Subject s = (i <= subjects.size()) ? subjects.get(i - 1) : null;
+        for (int i = 0; i < subjects.size(); i++) {
+            Subject s = subjects.get(i);
 
             // credits — "Audit" subjects have 0 credits in the model, display "Audit"
-            String creditsDisplay = "";
-            if (s != null) {
-                creditsDisplay = s.getCredits() == 0 ? "Audit" : String.valueOf(s.getCredits());
-                if (s.getCredits() > 0) totalCredits += s.getCredits();
-            }
+            String creditsDisplay = s.getCredits() == 0 ? "Audit" : String.valueOf(s.getCredits());
+            if (s.getCredits() > 0) totalCredits += s.getCredits();
 
             // Sl. No — centred
             t.addCell(new Cell()
-                    .add(new Paragraph(String.valueOf(i))
+                    .add(new Paragraph(String.valueOf(i + 1))
                             .setFont(regular).setFontSize(FS_TABLE_DATA)
                             .setTextAlignment(TextAlignment.CENTER).setMargin(1.5f))
                     .setBorder(new SolidBorder(BLACK, 0.4f))
                     .setMinHeight(13f));
 
-            t.addCell(dataCell(s != null ? String.valueOf(s.getSemester())  : "", regular));
-            t.addCell(dataCell(s != null ? nvl(s.getCourseCode())           : "", regular));
-            t.addCell(dataCell(s != null ? nvl(s.getSubjectName())          : "", regular));
-            t.addCell(dataCellCentre(creditsDisplay,                             regular));
-            t.addCell(dataCell("",                                               regular)); // final grade
-            t.addCell(dataCell("",                                               regular)); // remarks
+            t.addCell(dataCell(String.valueOf(s.getSemester()), regular));
+            t.addCell(dataCell(nvl(s.getCourseCode()), regular));
+            t.addCell(dataCell(nvl(s.getSubjectName()), regular));
+            t.addCell(dataCellCentre(creditsDisplay, regular));
+            t.addCell(dataCell("", regular)); // final grade
+            t.addCell(dataCell("", regular)); // remarks
         }
 
         // total row
@@ -373,7 +363,7 @@ public class PdfService {
         Table t = new Table(UnitValue.createPercentArray(new float[]{33.33f, 33.33f, 33.33f}))
                 .useAllAvailableWidth()
                 .setBorder(Border.NO_BORDER)
-                .setMarginTop(18f).setMarginBottom(10f);
+                .setMarginTop(30f).setMarginBottom(10f);
 
         for (String role : new String[]{ "Student", "Proctor", "HOD" }) {
             Paragraph p = new Paragraph()
@@ -397,24 +387,6 @@ public class PdfService {
                 "Student shall submit the duly signed copy of this form to the "
                 + "Department Office and Proctor").setFont(regular));
         doc.add(note);
-    }
-
-    // =========================================================================
-    //  10. QR CODE
-    // =========================================================================
-    private void addQrCode(Document doc, Registration reg) throws Exception {
-        if (reg == null || reg.getQrToken() == null) return;
-
-        String qrContent = "http://localhost:5173/verify/" + reg.getQrToken();
-        byte[] qrBytes   = generateQrBytes(qrContent, 150);
-
-        doc.add(new Paragraph("Scan to verify registration")
-                .setTextAlignment(TextAlignment.CENTER)
-                .setFontSize(7f).setMarginTop(8f));
-
-        doc.add(new Image(ImageDataFactory.create(qrBytes))
-                .setWidth(75).setHeight(75)
-                .setHorizontalAlignment(HorizontalAlignment.CENTER));
     }
 
     // =========================================================================
@@ -461,12 +433,4 @@ public class PdfService {
         }
     }
 
-    private byte[] generateQrBytes(String content, int size) throws Exception {
-        QRCodeWriter  qr     = new QRCodeWriter();
-        BitMatrix     matrix = qr.encode(content, BarcodeFormat.QR_CODE, size, size);
-        BufferedImage image  = MatrixToImageWriter.toBufferedImage(matrix);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ImageIO.write(image, "PNG", out);
-        return out.toByteArray();
-    }
 }

@@ -21,7 +21,6 @@ public class AdminController {
 
         return registrations.stream().map(reg -> Map.of(
             "regId", reg.getRegId(),
-            "qrToken", reg.getQrToken(),
             "rollNo", reg.getStudent().getRollNo(),
             "studentName", reg.getStudent().getName(),
             "semester", reg.getStudent().getCurrentSemester(),

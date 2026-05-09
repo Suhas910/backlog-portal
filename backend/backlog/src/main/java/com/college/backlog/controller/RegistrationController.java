@@ -39,20 +39,19 @@ public class RegistrationController {
 
         return Map.of(
             "regId", reg.getRegId(),
-            "qrToken", reg.getQrToken(),
             "status", reg.getStatus()
         );
     }
 
-    @PutMapping("/verify/{qrToken}")
-public Map<String, String> verifyRegistration(@PathVariable String qrToken) {
-    Registration reg = registrationRepository.findByQrToken(qrToken)
-        .orElseThrow(() -> new RuntimeException("Invalid QR token"));
+    @PutMapping("/verify/{regId}")
+    public Map<String, String> verifyRegistration(@PathVariable String regId) {
+        Registration reg = registrationRepository.findByRegId(regId)
+            .orElseThrow(() -> new RuntimeException("Registration not found with ID: " + regId));
 
-    reg.setStatus("VERIFIED");
-    registrationRepository.save(reg);
+        reg.setStatus("VERIFIED");
+        registrationRepository.save(reg);
 
-    return Map.of(
+        return Map.of(
         "regId", reg.getRegId(),
         "studentName", reg.getStudent().getName(),
         "rollNo", reg.getStudent().getRollNo(),
@@ -60,12 +59,12 @@ public Map<String, String> verifyRegistration(@PathVariable String qrToken) {
     );
 }
 
-    @GetMapping("/verify/{qrToken}")
-public Map<String, Object> getRegistrationByToken(@PathVariable String qrToken) {
-    Registration reg = registrationRepository.findByQrToken(qrToken)
-        .orElseThrow(() -> new RuntimeException("Invalid QR token"));
+    @GetMapping("/verify/{regId}")
+    public Map<String, Object> getRegistrationById(@PathVariable String regId) {
+        Registration reg = registrationRepository.findByRegId(regId)
+            .orElseThrow(() -> new RuntimeException("Registration not found with ID: " + regId));
 
-    List<String> subjectNames = reg.getSubjects()
+        List<String> subjectNames = reg.getSubjects()
         .stream()
         .map(s -> s.getSubjectName())
         .toList();
@@ -78,8 +77,8 @@ public Map<String, Object> getRegistrationByToken(@PathVariable String qrToken) 
         "semester", reg.getStudent().getCurrentSemester(),
         "yearOfJoining", reg.getStudent().getYearOfJoining(),
         "subjects", subjectNames,
-        "status", reg.getStatus(),
-        "registeredAt", reg.getRegisteredAt().toString()
+            "status", reg.getStatus(),
+            "registeredAt", reg.getRegisteredAt().toString()
     );
 }
 }

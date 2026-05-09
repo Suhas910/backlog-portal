@@ -15,7 +15,10 @@ import java.util.List;
 public class Registration {
 
     @Id
-    @Column(name = "reg_id")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "reg_id", unique = true)
     private String regId;
 
     @ManyToOne
@@ -25,7 +28,10 @@ public class Registration {
     @ManyToMany
     @JoinTable(
         name = "registration_subjects",
-        joinColumns = @JoinColumn(name = "reg_id"),
+        joinColumns = @JoinColumn(
+            name = "reg_id", // Use the column name that exists in the database
+            referencedColumnName = "reg_id" // Explicitly link to the 'reg_id' (UUID) column
+        ),
         inverseJoinColumns = @JoinColumn(name = "subject_id")
     )
     private List<Subject> subjects;
@@ -34,7 +40,4 @@ public class Registration {
     private LocalDateTime registeredAt;
 
     private String status;
-
-    @Column(name = "qr_token")
-    private String qrToken;
 }

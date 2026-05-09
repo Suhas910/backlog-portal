@@ -22,7 +22,7 @@ public class PdfController {
     @GetMapping("/{regId}")
     public ResponseEntity<byte[]> downloadPdf(@PathVariable String regId) throws Exception {
 
-        Registration reg = registrationRepository.findById(regId)
+        Registration reg = registrationRepository.findByRegId(regId)
             .orElseThrow(() -> new RuntimeException("Registration not found"));
 
         byte[] pdfBytes = pdfService.generateRegistrationPdf(reg);

@@ -47,7 +47,6 @@ public class RegistrationService {
         reg.setSubjects(subjects);
         reg.setRegisteredAt(LocalDateTime.now());
         reg.setStatus("SUBMITTED");
-        reg.setQrToken(UUID.randomUUID().toString());
 
         return registrationRepository.save(reg);
     }
