@@ -20,7 +20,6 @@ describe("Student registration flow", () => {
       statusCode: 200,
       body: {
         regId: "REG-2026-1001",
-        qrToken: "token-123",
         status: "SUBMITTED",
       },
     }).as("registerStudent");

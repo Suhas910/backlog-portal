@@ -14,7 +14,6 @@ describe("Admin verification flow", () => {
       body: [
         {
           regId: "REG-2026-1001",
-          qrToken: "token-abc",
           rollNo: "1CS22CS001",
           studentName: "Student One",
           semester: 4,
@@ -26,7 +25,7 @@ describe("Admin verification flow", () => {
       ],
     }).as("getRegistrations");
 
-    cy.intercept("PUT", "/api/register/verify/token-abc", {
+    cy.intercept("PUT", "/api/register/verify/REG-2026-1001", {
       statusCode: 200,
       body: {
         regId: "REG-2026-1001",

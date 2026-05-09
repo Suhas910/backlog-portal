@@ -30,7 +30,6 @@ This project uses the redesigned UI with a strict color palette, keyboard-visibl
 - Registration page
 - Admin login page
 - Admin dashboard
-- QR verification page
 
 ## Notes
 

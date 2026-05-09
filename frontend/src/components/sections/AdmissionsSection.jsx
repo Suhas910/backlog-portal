@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { CheckCircle2, Download, FilePenLine, QrCode } from "lucide-react";
+import { CheckCircle2, Download, FilePenLine, FileUp } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const steps = [
@@ -14,9 +14,9 @@ const steps = [
     text: "Download the generated PDF and complete physical signatures.",
   },
   {
-    icon: QrCode,
-    title: "Scan & Verify",
-    text: "Use the token route to verify records during document handover.",
+    icon: FileUp,
+    title: "Submit for Verification",
+    text: "Submit the signed form to the department for admin verification.",
   },
   {
     icon: CheckCircle2,
@@ -44,7 +44,8 @@ export default function AdmissionsSection() {
             How to Complete Your Registration
           </h2>
           <p className="mt-4 max-w-xl text-[var(--text-main)]">
-            A step-by-step process designed for simplicity. Complete all steps to successfully submit your backlog registration.
+            A step-by-step process designed for simplicity. Complete all steps
+            to successfully submit your backlog registration.
           </p>
           <Link
             to="/register"
@@ -69,8 +70,12 @@ export default function AdmissionsSection() {
                 <div className="mb-2 inline-flex rounded-lg bg-[var(--color-secondary)] p-2 text-white">
                   <Icon size={16} />
                 </div>
-                  <h3 className="text-sm font-semibold text-[var(--text-main)]">{step.title}</h3>
-                <p className="mt-1 text-sm text-[var(--text-main)]">{step.text}</p>
+                <h3 className="text-sm font-semibold text-[var(--text-main)]">
+                  {step.title}
+                </h3>
+                <p className="mt-1 text-sm text-[var(--text-main)]">
+                  {step.text}
+                </p>
               </motion.div>
             );
           })}

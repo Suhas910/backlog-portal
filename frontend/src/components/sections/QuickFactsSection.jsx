@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ClipboardCheck, FileCheck2, QrCode } from "lucide-react";
+import { ClipboardCheck, FileCheck2, FileUp } from "lucide-react";
 
 const facts = [
   {
@@ -15,9 +15,9 @@ const facts = [
     col: "lg:col-span-1",
   },
   {
-    icon: QrCode,
-    title: "Submit & Verify",
-    text: "Bring the signed slip and submit it for verification.",
+    icon: FileUp,
+    title: "Submit for Approval",
+    text: "Bring the signed slip to the department office for final approval.",
     col: "lg:col-span-1",
   },
 ];
