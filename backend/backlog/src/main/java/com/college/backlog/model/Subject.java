@@ -1,15 +1,9 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "subjects")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Subject {
 
     @Id
@@ -32,4 +26,37 @@ public class Subject {
     @ManyToOne
     @JoinColumn(name = "dept_id")
     private Department department;
+
+    public Subject() {}
+
+    public Subject(Long id, String subjectName, String courseCode, int semester, int credits, int yearOfJoining, Department department) {
+        this.id = id;
+        this.subjectName = subjectName;
+        this.courseCode = courseCode;
+        this.semester = semester;
+        this.credits = credits;
+        this.yearOfJoining = yearOfJoining;
+        this.department = department;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getSubjectName() { return subjectName; }
+    public void setSubjectName(String subjectName) { this.subjectName = subjectName; }
+
+    public String getCourseCode() { return courseCode; }
+    public void setCourseCode(String courseCode) { this.courseCode = courseCode; }
+
+    public int getSemester() { return semester; }
+    public void setSemester(int semester) { this.semester = semester; }
+
+    public int getCredits() { return credits; }
+    public void setCredits(int credits) { this.credits = credits; }
+
+    public int getYearOfJoining() { return yearOfJoining; }
+    public void setYearOfJoining(int yearOfJoining) { this.yearOfJoining = yearOfJoining; }
+
+    public Department getDepartment() { return department; }
+    public void setDepartment(Department department) { this.department = department; }
 }

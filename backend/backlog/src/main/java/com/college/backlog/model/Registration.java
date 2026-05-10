@@ -1,17 +1,11 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
 @Table(name = "registrations")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Registration {
 
     @Id
@@ -29,8 +23,8 @@ public class Registration {
     @JoinTable(
         name = "registration_subjects",
         joinColumns = @JoinColumn(
-            name = "reg_id", // Use the column name that exists in the database
-            referencedColumnName = "reg_id" // Explicitly link to the 'reg_id' (UUID) column
+            name = "reg_id",
+            referencedColumnName = "reg_id"
         ),
         inverseJoinColumns = @JoinColumn(name = "subject_id")
     )
@@ -40,4 +34,33 @@ public class Registration {
     private LocalDateTime registeredAt;
 
     private String status;
+
+    public Registration() {}
+
+    public Registration(Long id, String regId, Student student, List<Subject> subjects, LocalDateTime registeredAt, String status) {
+        this.id = id;
+        this.regId = regId;
+        this.student = student;
+        this.subjects = subjects;
+        this.registeredAt = registeredAt;
+        this.status = status;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getRegId() { return regId; }
+    public void setRegId(String regId) { this.regId = regId; }
+
+    public Student getStudent() { return student; }
+    public void setStudent(Student student) { this.student = student; }
+
+    public List<Subject> getSubjects() { return subjects; }
+    public void setSubjects(List<Subject> subjects) { this.subjects = subjects; }
+
+    public LocalDateTime getRegisteredAt() { return registeredAt; }
+    public void setRegisteredAt(LocalDateTime registeredAt) { this.registeredAt = registeredAt; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

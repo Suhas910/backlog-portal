@@ -1,15 +1,9 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "departments")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Department {
 
     @Id
@@ -21,4 +15,21 @@ public class Department {
 
     @Column(name = "contact_email")
     private String contactEmail;
+
+    public Department() {}
+
+    public Department(Long id, String deptName, String contactEmail) {
+        this.id = id;
+        this.deptName = deptName;
+        this.contactEmail = contactEmail;
+    }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getDeptName() { return deptName; }
+    public void setDeptName(String deptName) { this.deptName = deptName; }
+
+    public String getContactEmail() { return contactEmail; }
+    public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
 }

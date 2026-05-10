@@ -2,16 +2,14 @@ package com.college.backlog.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.security.Key;
 import java.util.Date;
-import java.util.Map;
+import java.util.function.Function;
 
 @Service
 public class JwtService {
@@ -19,37 +17,26 @@ public class JwtService {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
-    @Value("${app.jwt.expiration-ms:3600000}")
+    @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
 
-    public String generateToken(String username, String role) {
-        Date now = new Date();
-        Date expiry = new Date(now.getTime() + jwtExpirationMs);
+    private SecretKey getSigningKey() {
+        // Use a secure key generation for production environments
+        byte[] keyBytes = jwtSecret.getBytes();
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 
+    public String generateToken(String username, String role) {
         return Jwts.builder()
                 .subject(username)
-                .claims(Map.of("role", role))
-                .issuedAt(now)
-                .expiration(expiry)
-                .signWith(getSigningKey())
+                .claim("role", role)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
 
-    public String extractUsername(String token) {
-        return parseAllClaims(token).getSubject();
-    }
-
-    public String extractRole(String token) {
-        return parseAllClaims(token).get("role", String.class);
-    }
-
-    public boolean isTokenValid(String token, String expectedUsername) {
-        Claims claims = parseAllClaims(token);
-        boolean notExpired = claims.getExpiration().after(new Date());
-        return notExpired && expectedUsername.equals(claims.getSubject());
-    }
-
-    private Claims parseAllClaims(String token) {
+    private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -57,18 +44,33 @@ public class JwtService {
                 .getPayload();
     }
 
-    private SecretKey getSigningKey() {
-        byte[] keyBytes;
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    public String getUsernameFromToken(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public String getRoleFromToken(String token) {
+        return extractClaim(token, claims -> (String) claims.get("role"));
+    }
+
+    private Date getExpirationDateFromToken(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    private boolean isTokenExpired(String token) {
+        return getExpirationDateFromToken(token).before(new Date());
+    }
+
+    public boolean validateToken(String token) {
         try {
-            keyBytes = Decoders.BASE64.decode(jwtSecret);
-        } catch (Exception ignored) {
-            keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+            extractAllClaims(token);
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
         }
-
-        if (keyBytes.length < 32) {
-            keyBytes = Arrays.copyOf(keyBytes, 32);
-        }
-
-        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

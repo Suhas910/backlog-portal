@@ -27,7 +27,11 @@ function VerifyPage() {
 
   useEffect(() => {
     api
-      .get(`/register/verify/${qrToken}`)
+
+
+    .get(`/register/verify/${qrToken}`, {
+        headers: getAdminHeaders(),
+      })
       .then((res) => {
         setRegistration(res.data);
         setLoading(false);
@@ -40,10 +44,13 @@ function VerifyPage() {
   }, [qrToken]);
 
   const handleVerify = async () => {
-
     setVerifying(true);
     try {
-      await api.put(`/register/verify/${qrToken}`, {}, { headers: getAdminHeaders() });
+      await api.put(
+        `/register/verify/${qrToken}`,
+        {},
+        { headers: getAdminHeaders() },
+      );
       setVerified(true);
       setRegistration((prev) => ({ ...prev, status: "VERIFIED" }));
     } catch {
@@ -57,7 +64,9 @@ function VerifyPage() {
       <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto inline-flex w-full max-w-3xl items-center gap-2 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft">
           <LoaderCircle size={16} className="animate-spin" />
-          <p className="text-sm text-[var(--text-main)]">Loading verification details...</p>
+          <p className="text-sm text-[var(--text-main)]">
+            Loading verification details...
+          </p>
         </div>
       </div>
     );
@@ -120,34 +129,62 @@ function VerifyPage() {
         </div>
 
         <section className="mb-6 border-t border-[var(--stroke)] pt-6">
-          <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">Student Details</h2>
+          <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">
+            Student Details
+          </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]">USN</p>
-              <p className="mt-1 text-sm text-[var(--text-main)]">{registration.rollNo}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">
+                USN
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-main)]">
+                {registration.rollNo}
+              </p>
             </div>
             <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Name</p>
-              <p className="mt-1 text-sm text-[var(--text-main)]">{registration.studentName}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Name
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-main)]">
+                {registration.studentName}
+              </p>
             </div>
             <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Email</p>
-              <p className="mt-1 break-all text-sm text-[var(--text-main)]">{registration.email}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Email
+              </p>
+              <p className="mt-1 break-all text-sm text-[var(--text-main)]">
+                {registration.email}
+              </p>
             </div>
             <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Year of Joining</p>
-              <p className="mt-1 text-sm text-[var(--text-main)]">{registration.yearOfJoining}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Academic Year Offering/Batch
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-main)]">
+                {registration.yearOfJoining}
+              </p>
             </div>
             <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Semester</p>
-              <p className="mt-1 text-sm text-[var(--text-main)]">{registration.semester}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Semester
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-main)]">
+                {registration.semester}
+              </p>
             </div>
             <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Registration ID</p>
-              <p className="mt-1 text-sm text-[var(--text-main)]">{registration.regId}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Registration ID
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-main)]">
+                {registration.regId}
+              </p>
             </div>
             <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3 sm:col-span-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em]">Registered At</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Registered At
+              </p>
               <p className="mt-1 text-sm text-[var(--text-main)]">
                 {new Date(registration.registeredAt).toLocaleString()}
               </p>
@@ -156,7 +193,9 @@ function VerifyPage() {
         </section>
 
         <section className="mb-6 border-t border-[var(--stroke)] pt-6">
-          <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">Registered Subjects</h2>
+          <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">
+            Registered Subjects
+          </h2>
           {registration.subjects.map((subject, index) => (
             <div
               key={index}
@@ -173,7 +212,8 @@ function VerifyPage() {
         {!verified ? (
           <section className="border-t border-[var(--stroke)] pt-6">
             <p className="mb-4 text-sm text-[var(--text-main)]">
-              Physical form received and signatures verified? Click below to mark as official.
+              Physical form received and signatures verified? Click below to
+              mark as official.
             </p>
             <MagneticCta
               onClick={handleVerify}
@@ -182,7 +222,11 @@ function VerifyPage() {
               data-cy="verify-submit"
               aria-label="Mark registration as verified"
             >
-              {verifying ? <LoaderCircle size={16} className="animate-spin" /> : <BadgeCheck size={16} />}
+              {verifying ? (
+                <LoaderCircle size={16} className="animate-spin" />
+              ) : (
+                <BadgeCheck size={16} />
+              )}
               {verifying ? "Verifying..." : "Mark as Verified"}
             </MagneticCta>
           </section>
