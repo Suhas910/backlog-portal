@@ -84,6 +84,10 @@ function RegistrationPage() {
         setSubmitError("Please fill in all required fields.");
         return;
       }
+      if (!formData.email.toLowerCase().endsWith("@msrit.edu")) {
+        setSubmitError("Email must be a valid @msrit.edu address.");
+        return;
+      }
       setSubmitError("");
       setCurrentStep(2);
       return;
@@ -263,7 +267,7 @@ function RegistrationPage() {
                     id="email"
                     className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                     name="email"
-                    placeholder="your@email.com"
+                  placeholder="usn@msrit.edu"
                     value={formData.email}
                     onChange={handleChange}
                     data-cy="reg-email"

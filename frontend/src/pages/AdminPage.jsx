@@ -44,7 +44,11 @@ function AdminPage() {
   const handleVerify = async (qrToken) => {
     setVerifyingToken(qrToken);
     try {
-      await api.put(`/register/verify/${qrToken}`, {}, { headers: getAdminHeaders() });
+      await api.put(
+        `/register/verify/${qrToken}`,
+        {},
+        { headers: getAdminHeaders() },
+      );
       setRegistrations((current) =>
         current.map((reg) =>
           reg.qrToken === qrToken ? { ...reg, status: "VERIFIED" } : reg,
@@ -63,15 +67,23 @@ function AdminPage() {
       : registrations.filter((r) => r.status === filter);
 
   const totalCount = registrations.length;
-  const pendingCount = registrations.filter((r) => r.status === "SUBMITTED").length;
-  const verifiedCount = registrations.filter((r) => r.status === "VERIFIED").length;
+  const pendingCount = registrations.filter(
+    (r) => r.status === "SUBMITTED",
+  ).length;
+  const verifiedCount = registrations.filter(
+    (r) => r.status === "VERIFIED",
+  ).length;
 
   if (!isAdmin || !adminToken) {
     return (
       <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
         <div className="mx-auto w-full max-w-2xl rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-8 text-center shadow-soft">
-          <h1 className="mb-2 text-3xl font-semibold text-[var(--color-secondary)]">Access Denied</h1>
-          <p className="mb-5 text-[var(--text-main)]">You must login as an admin to view this page.</p>
+          <h1 className="mb-2 text-3xl font-semibold text-[var(--color-secondary)]">
+            Access Denied
+          </h1>
+          <p className="mb-5 text-[var(--text-main)]">
+            You must login as an admin to view this page.
+          </p>
           <Link
             to="/admin/login"
             className="inline-flex items-center justify-center rounded-full bg-[var(--color-cta)] px-5 py-3 text-sm font-semibold text-white"
@@ -126,44 +138,51 @@ function AdminPage() {
             <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
               <Users size={13} /> Total
             </p>
-            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">{totalCount}</p>
+            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">
+              {totalCount}
+            </p>
           </div>
           <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
             <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
               <CircleDashed size={13} /> Pending
             </p>
-            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">{pendingCount}</p>
+            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">
+              {pendingCount}
+            </p>
           </div>
           <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
             <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
               <Shield size={13} /> Verified
             </p>
-            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">{verifiedCount}</p>
+            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">
+              {verifiedCount}
+            </p>
           </div>
         </section>
 
         <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft sm:p-6">
           <div className="mb-4 flex flex-wrap gap-2">
-          {["ALL", "SUBMITTED", "VERIFIED"].map((f) => (
-            <button
-              type="button"
-              key={f}
-              onClick={() => setFilter(f)}
+            {["ALL", "SUBMITTED", "VERIFIED"].map((f) => (
+              <button
+                type="button"
+                key={f}
+                onClick={() => setFilter(f)}
                 className={`rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.06em] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)] ${
                   filter === f
                     ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                     : "border-[var(--stroke)] bg-[var(--surface-1)] text-[var(--color-secondary)]"
                 }`}
-              data-cy={`admin-filter-${f.toLowerCase()}`}
-            >
-              {f}
-            </button>
-          ))}
+                data-cy={`admin-filter-${f.toLowerCase()}`}
+              >
+                {f}
+              </button>
+            ))}
           </div>
 
           {loading ? (
             <p className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
-              <LoaderCircle size={16} className="animate-spin" /> Loading registrations...
+              <LoaderCircle size={16} className="animate-spin" /> Loading
+              registrations...
             </p>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-[var(--stroke)]">
@@ -187,22 +206,28 @@ function AdminPage() {
                       key={reg.regId}
                       className="border-t border-[var(--stroke)] align-top"
                     >
-                      <td className="px-4 py-3 text-[var(--text-main)]">{reg.rollNo}</td>
-                      <td className="px-4 py-3 text-[var(--text-main)]">{reg.studentName}</td>
+                      <td className="px-4 py-3 text-[var(--text-main)]">
+                        {reg.rollNo}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--text-main)]">
+                        {reg.studentName}
+                      </td>
                       <td className="px-4 py-3">{reg.semester}</td>
                       <td className="px-4 py-3">{reg.subjects.join(", ")}</td>
                       <td className="px-4 py-3">
-                    <span
+                        <span
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${
                             reg.status === "VERIFIED"
                               ? "bg-[rgba(145,25,28,0.1)] text-[var(--color-primary)]"
                               : "bg-[var(--surface-muted)] text-[var(--color-secondary)]"
                           }`}
-                    >
-                      {reg.status}
-                    </span>
+                        >
+                          {reg.status}
+                        </span>
                       </td>
-                      <td className="px-4 py-3">{new Date(reg.registeredAt).toLocaleDateString()}</td>
+                      <td className="px-4 py-3">
+                        {new Date(reg.registeredAt).toLocaleDateString()}
+                      </td>
                       <td className="px-4 py-3">
                         {reg.status === "SUBMITTED" ? (
                           <MagneticCta
@@ -212,14 +237,19 @@ function AdminPage() {
                             data-cy="admin-verify"
                           >
                             {verifyingToken === reg.qrToken ? (
-                              <LoaderCircle size={14} className="animate-spin" />
+                              <LoaderCircle
+                                size={14}
+                                className="animate-spin"
+                              />
                             ) : (
                               <BadgeCheck size={14} />
                             )}
                             Verify
                           </MagneticCta>
                         ) : (
-                          <span className="text-xs font-semibold text-[var(--color-primary)]">Verified</span>
+                          <span className="text-xs font-semibold text-[var(--color-primary)]">
+                            Verified
+                          </span>
                         )}
                       </td>
                     </motion.tr>

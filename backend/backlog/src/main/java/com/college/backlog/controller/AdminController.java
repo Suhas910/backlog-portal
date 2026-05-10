@@ -17,7 +17,7 @@ public class AdminController {
 
     @GetMapping("/registrations")
     public List<Map<String, Object>> getAllRegistrations() {
-        List<Registration> registrations = registrationRepository.findAll();
+        List<Registration> registrations = registrationRepository.findAllByOrderByRegisteredAtDesc();
 
         return registrations.stream().map(reg -> Map.of(
             "regId", reg.getRegId(),
