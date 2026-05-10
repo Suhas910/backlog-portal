@@ -16,7 +16,10 @@ import api, { getAdminHeaders } from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 function AdminPage() {
-  const isAdmin = sessionStorage.getItem("adminRole") === "ADMIN";
+  const adminRole = sessionStorage.getItem("adminRole");
+  const isAdmin = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(
+    adminRole,
+  );
   const adminToken = sessionStorage.getItem("adminToken");
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,10 +37,14 @@ function AdminPage() {
         setRegistrations(res.data);
         setLoading(false);
       })
-      .catch(() => {
-        sessionStorage.removeItem("adminRole");
-        sessionStorage.removeItem("adminToken");
-        window.location.href = "/admin/login";
+      .catch((error) => {
+        console.error("Failed to fetch dashboard data:", error);
+        // Only redirect to login on strict authentication errors
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          sessionStorage.removeItem("adminRole");
+          sessionStorage.removeItem("adminToken");
+          window.location.href = "/admin/login";
+        }
       });
   }, [isAdmin, adminToken]);
 

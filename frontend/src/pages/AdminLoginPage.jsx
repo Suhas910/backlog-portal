@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Lock, LoaderCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Lock,
+  LoaderCircle,
+  GraduationCap,
+  Briefcase,
+  Building2,
+} from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
@@ -10,10 +17,18 @@ import MobileActionBar from "../components/layout/MobileActionBar";
 function AdminLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [step, setStep] = useState(1);
+  const [roleTitle, setRoleTitle] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const handleRoleSelect = (title) => {
+    setRoleTitle(title);
+    setStep(2);
+    setError("");
+  };
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -30,10 +45,11 @@ function AdminLoginPage() {
         password,
       });
 
-      if (res.data.role === "ADMIN" && res.data.token) {
-        sessionStorage.setItem("adminRole", "ADMIN");
+      const validRoles = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
+      if (validRoles.includes(res.data.role) && res.data.token) {
+        sessionStorage.setItem("adminRole", res.data.role);
         sessionStorage.setItem("adminToken", res.data.token);
-        
+
         const redirectUrl = searchParams.get("redirect");
         if (redirectUrl) {
           navigate(redirectUrl);
@@ -72,52 +88,141 @@ function AdminLoginPage() {
           <p className="mb-2 mt-4 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
             Restricted Access
           </p>
-          <h1 className="text-3xl font-semibold text-[var(--color-secondary)]">Admin Login</h1>
+          <h1 className="text-3xl font-semibold text-[var(--color-secondary)]">
+            {step === 1 ? "Select Designation" : "Staff Login"}
+          </h1>
           <p className="mt-2 text-sm text-[var(--text-main)]">
-            Sign in to verify and manage backlog registrations.
+            {step === 1
+              ? "Please select your designation to continue."
+              : `Sign in as ${roleTitle} to manage registrations.`}
           </p>
         </div>
 
-        <div className="space-y-4">
-          <label htmlFor="admin-username" className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
-            Username
-          </label>
-          <input
-            id="admin-username"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-            data-cy="admin-username"
-          />
+        {step === 1 ? (
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => handleRoleSelect("Principal / Registrar / COE")}
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+                <GraduationCap size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-secondary)]">
+                  Principal / Registrar / COE
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                  High-level overview and final approvals
+                </p>
+              </div>
+            </button>
 
-          <label htmlFor="admin-password" className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
-            Password
-          </label>
-          <input
-            id="admin-password"
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-            data-cy="admin-password"
-          />
+            <button
+              onClick={() => handleRoleSelect("Head of Department (HOD)")}
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+                <Briefcase size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-secondary)]">
+                  Head of Department (HOD)
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                  Department level verification and tracking
+                </p>
+              </div>
+            </button>
 
-          {error ? (
-            <p role="alert" aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
-          ) : null}
+            <button
+              onClick={() => handleRoleSelect("Department Office")}
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+                <Building2 size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-secondary)]">
+                  Department Office
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                  Manage physical form submissions
+                </p>
+              </div>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <label
+              htmlFor="admin-username"
+              className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+            >
+              Username
+            </label>
+            <input
+              id="admin-username"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              data-cy="admin-username"
+            />
 
-          <MagneticCta
-            onClick={handleLogin}
-            className="mt-2 w-full gap-2 rounded-xl"
-            disabled={loading}
-            data-cy="admin-login-submit"
-            aria-label="Admin login"
-          >
-            {loading ? <LoaderCircle size={16} className="animate-spin" /> : <Lock size={16} />} Login
-          </MagneticCta>
-        </div>
+            <label
+              htmlFor="admin-password"
+              className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+            >
+              Password
+            </label>
+            <input
+              id="admin-password"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              data-cy="admin-password"
+            />
+
+            {error ? (
+              <p
+                role="alert"
+                aria-live="polite"
+                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              >
+                {error}
+              </p>
+            ) : null}
+
+            <MagneticCta
+              onClick={handleLogin}
+              className="mt-2 w-full gap-2 rounded-xl"
+              disabled={loading}
+              data-cy="admin-login-submit"
+              aria-label="Admin login"
+            >
+              {loading ? (
+                <LoaderCircle size={16} className="animate-spin" />
+              ) : (
+                <Lock size={16} />
+              )}{" "}
+              Login
+            </MagneticCta>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep(1);
+                setUsername("");
+                setPassword("");
+                setError("");
+              }}
+              className="mt-4 flex w-full items-center justify-center gap-2 text-sm font-medium text-[var(--text-main)] hover:text-[var(--color-primary)]"
+            >
+              <ArrowLeft size={14} /> Back to role selection
+            </button>
+          </div>
+        )}
 
         <div className="mt-4 text-center">
           <Link
