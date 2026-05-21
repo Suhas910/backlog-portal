@@ -30,6 +30,7 @@ function AdminPage() {
 
   // New filter states
   const [allSubjects, setAllSubjects] = useState([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [subjectFilter, setSubjectFilter] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
@@ -40,11 +41,36 @@ function AdminPage() {
       return;
     }
 
-    api
-      .get("/admin/all-subjects", { headers: getAdminHeaders() })
-      .then((res) => setAllSubjects(res.data))
-      .catch((err) => console.error("Failed to fetch subjects list", err));
+    setLoadingSubjects(true);
+    const subjectParams = new URLSearchParams();
+    if (searchFilter) subjectParams.append("searchQuery", searchFilter);
+    if (startDateFilter) subjectParams.append("startDate", startDateFilter);
+    if (endDateFilter) subjectParams.append("endDate", endDateFilter);
 
+    api
+      .get(`/admin/subjects-for-filter?${subjectParams.toString()}`, {
+        headers: getAdminHeaders(),
+      })
+      .then((res) => {
+        setAllSubjects(res.data);
+        // If the currently selected subject filter is no longer in the new list, reset it.
+        if (
+          subjectFilter &&
+          !res.data.some((s) => String(s.id) === subjectFilter)
+        ) {
+          setSubjectFilter("");
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch subjects list for filter", err);
+        setAllSubjects([]);
+      })
+      .finally(() => {
+        setLoadingSubjects(false);
+      });
+  }, [isAdmin, adminToken, searchFilter, startDateFilter, endDateFilter]);
+
+  useEffect(() => {
     const params = new URLSearchParams();
     if (subjectFilter) params.append("subjectId", subjectFilter);
     if (searchFilter) params.append("searchQuery", searchFilter);
@@ -222,8 +248,11 @@ function AdminPage() {
                 value={subjectFilter}
                 onChange={(e) => setSubjectFilter(e.target.value)}
                 className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                disabled={loadingSubjects}
               >
-                <option value="">All Subjects</option>
+                <option value="">
+                  {loadingSubjects ? "Loading..." : "All Subjects"}
+                </option>
                 {allSubjects.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.subjectName} ({s.courseCode})

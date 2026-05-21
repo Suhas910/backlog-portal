@@ -2,13 +2,23 @@ package com.college.backlog.service;
 
 import com.college.backlog.controller.dto.SubjectCreateRequest;
 import com.college.backlog.exception.ResourceNotFoundException;
-import com.college.backlog.model.Department;
-import com.college.backlog.model.Subject;
+import com.college.backlog.model.*;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.SubjectRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class SubjectService {
@@ -19,6 +29,9 @@ public class SubjectService {
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private EntityManager entityManager;
+
     @Transactional
     public Subject createSubject(SubjectCreateRequest request) {
         Department department = departmentRepository.findById(request.getDeptId())
@@ -28,5 +41,38 @@ public class SubjectService {
                 request.getSemester(), request.getCredits(), request.getYearOfJoining(), department);
 
         return subjectRepository.save(subject);
+    }
+
+    public List<Subject> findDistinctSubjectsByRegistrationFilters(String searchQuery, LocalDate startDate, LocalDate endDate) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Subject> query = cb.createQuery(Subject.class);
+        Root<Registration> registrationRoot = query.from(Registration.class);
+        Join<Registration, Subject> subjectJoin = registrationRoot.join("subjects");
+
+        query.select(subjectJoin).distinct(true);
+
+        List<Predicate> predicates = new ArrayList<>();
+
+        if (searchQuery != null && !searchQuery.isBlank()) {
+            Join<Registration, Student> studentJoin = registrationRoot.join("student");
+            Predicate namePredicate = cb.like(cb.lower(studentJoin.get("name")), "%" + searchQuery.toLowerCase() + "%");
+            Predicate usnPredicate = cb.like(cb.lower(studentJoin.get("rollNo")), "%" + searchQuery.toLowerCase() + "%");
+            predicates.add(cb.or(namePredicate, usnPredicate));
+        }
+
+        if (startDate != null) {
+            predicates.add(cb.greaterThanOrEqualTo(registrationRoot.get("registeredAt"), startDate.atStartOfDay()));
+        }
+
+        if (endDate != null) {
+            predicates.add(cb.lessThanOrEqualTo(registrationRoot.get("registeredAt"), endDate.atTime(LocalTime.MAX)));
+        }
+
+        if (!predicates.isEmpty()) {
+            query.where(cb.and(predicates.toArray(new Predicate[0])));
+        }
+
+        query.orderBy(cb.asc(subjectJoin.get("subjectName")));
+        return entityManager.createQuery(query).getResultList();
     }
 }

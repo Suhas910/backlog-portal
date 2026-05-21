@@ -83,4 +83,17 @@ public class AdminController {
     public List<Subject> getAllSubjects() {
         return subjectRepository.findAll(Sort.by("subjectName"));
     }
+
+    @GetMapping("/subjects-for-filter")
+    @PreAuthorize("hasAuthority('DEPT_OFFICE') or hasAuthority('DEPT_HOD') or hasAuthority('DEPT_PRINCIPAL') or hasAuthority('ADMIN')")
+    public List<Subject> getSubjectsForFilter(
+            @RequestParam Optional<String> searchQuery,
+            @RequestParam Optional<LocalDate> startDate,
+            @RequestParam Optional<LocalDate> endDate
+    ) {
+        return subjectService.findDistinctSubjectsByRegistrationFilters(
+                searchQuery.orElse(null),
+                startDate.orElse(null),
+                endDate.orElse(null));
+    }
 }
