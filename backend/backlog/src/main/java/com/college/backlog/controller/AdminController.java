@@ -7,14 +7,20 @@ import com.college.backlog.model.Registration;
 import com.college.backlog.model.Subject;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.RegistrationRepository;
+import com.college.backlog.repository.SubjectRepository;
+import com.college.backlog.service.RegistrationSpecification;
 import com.college.backlog.service.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -30,10 +36,23 @@ public class AdminController {
     @Autowired
     private DepartmentRepository departmentRepository;
 
-    @GetMapping("/registrations")
-    public List<RegistrationSummaryResponse> getAllRegistrations() {
-        List<Registration> registrations = registrationRepository.findAllByOrderByRegisteredAtDesc();
+    @Autowired
+    private SubjectRepository subjectRepository;
 
+    @GetMapping("/registrations")
+    public List<RegistrationSummaryResponse> getFilteredRegistrations(
+            @RequestParam Optional<Long> subjectId,
+            @RequestParam Optional<String> searchQuery,
+            @RequestParam Optional<LocalDate> startDate,
+            @RequestParam Optional<LocalDate> endDate
+    ) {
+        Specification<Registration> spec = new RegistrationSpecification(
+                subjectId.orElse(null),
+                searchQuery.orElse(null),
+                startDate.orElse(null),
+                endDate.orElse(null));
+
+        List<Registration> registrations = registrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
         return registrations.stream().map(reg -> new RegistrationSummaryResponse(
             reg.getRegId(),
             reg.getStudent().getRollNo(),
@@ -57,5 +76,11 @@ public class AdminController {
     @PreAuthorize("hasAuthority('DEPT_OFFICE')")
     public List<Department> getDepartments() {
         return departmentRepository.findAll();
+    }
+
+    @GetMapping("/all-subjects")
+    @PreAuthorize("hasAuthority('DEPT_OFFICE') or hasAuthority('DEPT_HOD') or hasAuthority('DEPT_PRINCIPAL') or hasAuthority('ADMIN')")
+    public List<Subject> getAllSubjects() {
+        return subjectRepository.findAll(Sort.by("subjectName"));
     }
 }

@@ -28,27 +28,54 @@ function AdminPage() {
   const [filter, setFilter] = useState("ALL");
   const [verifyingRegId, setVerifyingRegId] = useState("");
 
+  // New filter states
+  const [allSubjects, setAllSubjects] = useState([]);
+  const [subjectFilter, setSubjectFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState("");
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+
   useEffect(() => {
     if (!isAdmin || !adminToken) {
       return;
     }
 
     api
-      .get("/admin/registrations", { headers: getAdminHeaders() })
+      .get("/admin/all-subjects", { headers: getAdminHeaders() })
+      .then((res) => setAllSubjects(res.data))
+      .catch((err) => console.error("Failed to fetch subjects list", err));
+
+    const params = new URLSearchParams();
+    if (subjectFilter) params.append("subjectId", subjectFilter);
+    if (searchFilter) params.append("searchQuery", searchFilter);
+    if (startDateFilter) params.append("startDate", startDateFilter);
+    if (endDateFilter) params.append("endDate", endDateFilter);
+
+    api
+      .get(`/admin/registrations?${params.toString()}`, {
+        headers: getAdminHeaders(),
+      })
       .then((res) => {
         setRegistrations(res.data);
         setLoading(false);
       })
       .catch((error) => {
         console.error("Failed to fetch dashboard data:", error);
-        // Only redirect to login on strict authentication errors
         if (error.response?.status === 401 || error.response?.status === 403) {
           sessionStorage.removeItem("adminRole");
           sessionStorage.removeItem("adminToken");
           navigate("/admin/login");
         }
       });
-  }, [isAdmin, adminToken, navigate]);
+  }, [
+    isAdmin,
+    adminToken,
+    navigate,
+    subjectFilter,
+    searchFilter,
+    startDateFilter,
+    endDateFilter,
+  ]);
 
   const handleVerify = async (regId) => {
     setVerifyingRegId(regId);
@@ -174,6 +201,86 @@ function AdminPage() {
             <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">
               {verifiedCount}
             </p>
+          </div>
+        </section>
+
+        <section className="mb-6 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
+          <h3 className="mb-3 text-lg font-semibold text-[var(--color-secondary)]">
+            Filters
+          </h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Subject Filter */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="subject-filter"
+                className="text-xs font-semibold uppercase tracking-[0.08em]"
+              >
+                Filter by Subject
+              </label>
+              <select
+                id="subject-filter"
+                value={subjectFilter}
+                onChange={(e) => setSubjectFilter(e.target.value)}
+                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              >
+                <option value="">All Subjects</option>
+                {allSubjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.subjectName} ({s.courseCode})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search Filter */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="search-filter"
+                className="text-xs font-semibold uppercase tracking-[0.08em]"
+              >
+                Search by USN / Name
+              </label>
+              <input
+                id="search-filter"
+                type="text"
+                placeholder="Enter USN or name..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              />
+            </div>
+
+            {/* Date Filters */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="start-date-filter"
+                className="text-xs font-semibold uppercase tracking-[0.08em]"
+              >
+                Start Date
+              </label>
+              <input
+                id="start-date-filter"
+                type="date"
+                value={startDateFilter}
+                onChange={(e) => setStartDateFilter(e.target.value)}
+                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="end-date-filter"
+                className="text-xs font-semibold uppercase tracking-[0.08em]"
+              >
+                End Date
+              </label>
+              <input
+                id="end-date-filter"
+                type="date"
+                value={endDateFilter}
+                onChange={(e) => setEndDateFilter(e.target.value)}
+                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              />
+            </div>
           </div>
         </section>
 
