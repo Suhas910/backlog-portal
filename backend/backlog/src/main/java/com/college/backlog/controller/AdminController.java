@@ -9,11 +9,15 @@ import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.SubjectRepository;
 import com.college.backlog.service.RegistrationSpecification;
+import com.college.backlog.service.PdfService;
 import com.college.backlog.service.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +42,9 @@ public class AdminController {
 
     @Autowired
     private SubjectRepository subjectRepository;
+
+    @Autowired
+    private PdfService pdfService;
 
     @GetMapping("/registrations")
     public List<RegistrationSummaryResponse> getFilteredRegistrations(
@@ -95,5 +102,29 @@ public class AdminController {
                 searchQuery.orElse(null),
                 startDate.orElse(null),
                 endDate.orElse(null));
+    }
+
+    @GetMapping("/export-pdf")
+    @PreAuthorize("hasAuthority('DEPT_OFFICE') or hasAuthority('DEPT_HOD') or hasAuthority('DEPT_PRINCIPAL') or hasAuthority('ADMIN')")
+    public ResponseEntity<byte[]> exportRegistrationsPdf(
+            @RequestParam Optional<Long> subjectId,
+            @RequestParam Optional<String> searchQuery,
+            @RequestParam Optional<LocalDate> startDate,
+            @RequestParam Optional<LocalDate> endDate
+    ) throws Exception {
+        Specification<Registration> spec = new RegistrationSpecification(
+                subjectId.orElse(null),
+                searchQuery.orElse(null),
+                startDate.orElse(null),
+                endDate.orElse(null));
+
+        List<Registration> registrations = registrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
+        byte[] pdfBytes = pdfService.generateRegistrationsSummaryPdf(registrations);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDispositionFormData("attachment", "registrations-summary.pdf");
+
+        return ResponseEntity.ok().headers(headers).body(pdfBytes);
     }
 }

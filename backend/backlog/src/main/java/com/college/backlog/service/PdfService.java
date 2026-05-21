@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class PdfService {
@@ -66,6 +67,58 @@ public class PdfService {
         addSignatureRow(doc, regular, bold);
         addNote(doc, regular, bold);
 
+        doc.close();
+        return baos.toByteArray();
+    }
+
+    // =========================================================================
+    //  EXPORT SUMMARY PDF (ADMIN)
+    // =========================================================================
+    public byte[] generateRegistrationsSummaryPdf(List<Registration> registrations) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PdfWriter writer = new PdfWriter(baos);
+        PdfDocument pdfDoc = new PdfDocument(writer);
+        // Using landscape orientation to fit the table columns
+        Document doc = new Document(pdfDoc, PageSize.A4.rotate());
+        doc.setMargins(25f, 25f, 25f, 25f);
+
+        PdfFont bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+        PdfFont regular = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+
+        Paragraph title = new Paragraph("Registrations Summary Report")
+                .setFont(bold).setFontSize(14f)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(15f);
+        doc.add(title);
+
+        float[] columnWidths = { 4f, 13f, 20f, 6f, 32f, 10f, 15f };
+        Table table = new Table(UnitValue.createPercentArray(columnWidths)).useAllAvailableWidth();
+
+        String[] headers = { "Sl.", "USN", "Name", "Sem", "Subjects", "Status", "Date" };
+        for (String h : headers) {
+            table.addHeaderCell(new Cell().add(new Paragraph(h).setFont(bold).setFontSize(9f))
+                    .setBackgroundColor(new DeviceRgb(230, 230, 230))
+                    .setTextAlignment(TextAlignment.CENTER)
+                    .setVerticalAlignment(VerticalAlignment.MIDDLE));
+        }
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        int i = 1;
+        for (Registration reg : registrations) {
+            table.addCell(dataCellCentre(String.valueOf(i++), regular));
+            table.addCell(dataCellCentre(safe(reg, r -> r.getStudent().getRollNo()), regular));
+            table.addCell(dataCell(safe(reg, r -> r.getStudent().getName()), regular));
+            table.addCell(dataCellCentre(safe(reg, r -> String.valueOf(r.getStudent().getCurrentSemester())), regular));
+
+            String subjectsStr = reg.getSubjects() != null ? reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.joining(", ")) : "";
+            table.addCell(dataCell(subjectsStr, regular));
+            table.addCell(dataCellCentre(safe(reg, Registration::getStatus), regular));
+            
+            String dateStr = reg.getRegisteredAt() != null ? reg.getRegisteredAt().format(dtf) : "";
+            table.addCell(dataCellCentre(dateStr, regular));
+        }
+
+        doc.add(table);
         doc.close();
         return baos.toByteArray();
     }

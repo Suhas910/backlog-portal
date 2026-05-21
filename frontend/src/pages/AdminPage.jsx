@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   BadgeCheck,
   CircleDashed,
+  Download,
   LoaderCircle,
   LogOut,
   PlusCircle,
@@ -27,6 +28,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
   const [verifyingRegId, setVerifyingRegId] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   // New filter states
   const [allSubjects, setAllSubjects] = useState([]);
@@ -121,6 +123,42 @@ function AdminPage() {
     } finally {
       setVerifyingRegId("");
     }
+  };
+
+  const handleExportPdf = () => {
+    setIsExporting(true);
+    const params = new URLSearchParams();
+    if (subjectFilter) params.append("subjectId", subjectFilter);
+    if (searchFilter) params.append("searchQuery", searchFilter);
+    if (startDateFilter) params.append("startDate", startDateFilter);
+    if (endDateFilter) params.append("endDate", endDateFilter);
+
+    api
+      .get(`/admin/export-pdf?${params.toString()}`, {
+        headers: getAdminHeaders(),
+        responseType: "blob", // Important parameter for file downloads
+      })
+      .then((res) => {
+        const url = window.URL.createObjectURL(
+          new Blob([res.data], { type: "application/pdf" }),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute(
+          "download",
+          `registrations-summary-${Date.now()}.pdf`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+      })
+      .catch((err) => {
+        console.error("Failed to export PDF", err);
+        alert("Failed to export PDF. Please try again.");
+      })
+      .finally(() => {
+        setIsExporting(false);
+      });
   };
 
   const filtered =
@@ -314,22 +352,38 @@ function AdminPage() {
         </section>
 
         <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft sm:p-6">
-          <div className="mb-4 flex flex-wrap gap-2">
-            {["ALL", "SUBMITTED", "VERIFIED"].map((f) => (
-              <button
-                type="button"
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.06em] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)] ${
-                  filter === f
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                    : "border-[var(--stroke)] bg-[var(--surface-1)] text-[var(--color-secondary)]"
-                }`}
-                data-cy={`admin-filter-${f.toLowerCase()}`}
-              >
-                {f}
-              </button>
-            ))}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap gap-2">
+              {["ALL", "SUBMITTED", "VERIFIED"].map((f) => (
+                <button
+                  type="button"
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.06em] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)] ${
+                    filter === f
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
+                      : "border-[var(--stroke)] bg-[var(--surface-1)] text-[var(--color-secondary)]"
+                  }`}
+                  data-cy={`admin-filter-${f.toLowerCase()}`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={isExporting}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-secondary)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"
+            >
+              {isExporting ? (
+                <LoaderCircle size={14} className="animate-spin" />
+              ) : (
+                <Download size={14} />
+              )}
+              Export PDF
+            </button>
           </div>
 
           {loading ? (
