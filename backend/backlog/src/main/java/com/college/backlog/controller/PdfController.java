@@ -1,5 +1,6 @@
 package com.college.backlog.controller;
 
+import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.Registration;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.service.PdfService;
@@ -23,7 +24,7 @@ public class PdfController {
     public ResponseEntity<byte[]> downloadPdf(@PathVariable String regId) throws Exception {
 
         Registration reg = registrationRepository.findByRegId(regId)
-            .orElseThrow(() -> new RuntimeException("Registration not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
         byte[] pdfBytes = pdfService.generateRegistrationPdf(reg);
 

@@ -9,6 +9,7 @@ public class RegistrationRequest {
     private String phone;
     private int yearOfJoining;
     private int currentSemester;
+    private String branch;
     private List<Long> subjectIds;
 
     public RegistrationRequest() {}
@@ -30,6 +31,9 @@ public class RegistrationRequest {
 
     public int getCurrentSemester() { return currentSemester; }
     public void setCurrentSemester(int currentSemester) { this.currentSemester = currentSemester; }
+
+    public String getBranch() { return branch; }
+    public void setBranch(String branch) { this.branch = branch; }
 
     public List<Long> getSubjectIds() { return subjectIds; }
     public void setSubjectIds(List<Long> subjectIds) { this.subjectIds = subjectIds; }

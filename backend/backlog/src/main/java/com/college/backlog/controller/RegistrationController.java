@@ -3,6 +3,7 @@ package com.college.backlog.controller;
 import com.college.backlog.controller.dto.RegistrationDetailsResponse;
 import com.college.backlog.controller.dto.RegistrationRequest;
 import com.college.backlog.controller.dto.VerificationResponse;
+import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.Registration;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.service.RegistrationService;
@@ -26,8 +27,8 @@ public class RegistrationController {
     public Map<String, String> register(@RequestBody RegistrationRequest request) {
         Registration reg = registrationService.register(
             request.getRollNo(), request.getName(), request.getEmail(),
-            request.getPhone(), request.getYearOfJoining(),
-            request.getCurrentSemester(), request.getSubjectIds()
+            request.getPhone(), request.getYearOfJoining(), request.getCurrentSemester(),
+            request.getBranch(), request.getSubjectIds()
         );
 
         return Map.of(
@@ -39,7 +40,7 @@ public class RegistrationController {
     @PutMapping("/verify/{regId}")
     public VerificationResponse verifyRegistration(@PathVariable String regId) {
         Registration reg = registrationRepository.findByRegId(regId)
-            .orElseThrow(() -> new RuntimeException("Registration not found with ID: " + regId));
+            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
         reg.setStatus("VERIFIED");
         registrationRepository.save(reg);
@@ -55,7 +56,7 @@ public class RegistrationController {
     @GetMapping("/verify/{regId}")
     public RegistrationDetailsResponse getRegistrationById(@PathVariable String regId) {
         Registration reg = registrationRepository.findByRegId(regId)
-            .orElseThrow(() -> new RuntimeException("Registration not found with ID: " + regId));
+            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
         List<String> subjectNames = reg.getSubjects()
             .stream()

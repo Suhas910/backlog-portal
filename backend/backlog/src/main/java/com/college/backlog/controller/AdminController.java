@@ -1,11 +1,20 @@
 package com.college.backlog.controller;
 
+import com.college.backlog.controller.dto.SubjectCreateRequest;
+import com.college.backlog.controller.dto.RegistrationSummaryResponse;
+import com.college.backlog.model.Department;
 import com.college.backlog.model.Registration;
+import com.college.backlog.model.Subject;
+import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.RegistrationRepository;
+import com.college.backlog.service.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -15,20 +24,38 @@ public class AdminController {
     @Autowired
     private RegistrationRepository registrationRepository;
 
+    @Autowired
+    private SubjectService subjectService;
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
     @GetMapping("/registrations")
-    public List<Map<String, Object>> getAllRegistrations() {
+    public List<RegistrationSummaryResponse> getAllRegistrations() {
         List<Registration> registrations = registrationRepository.findAllByOrderByRegisteredAtDesc();
 
-        return registrations.stream().map(reg -> Map.of(
-            "regId", reg.getRegId(),
-            "rollNo", reg.getStudent().getRollNo(),
-            "studentName", reg.getStudent().getName(),
-            "semester", reg.getStudent().getCurrentSemester(),
-            "yearOfJoining", reg.getStudent().getYearOfJoining(),
-            "subjects", reg.getSubjects().stream()
-                .map(s -> s.getSubjectName()).collect(Collectors.toList()),
-            "status", reg.getStatus(),
-            "registeredAt", reg.getRegisteredAt().toString()
+        return registrations.stream().map(reg -> new RegistrationSummaryResponse(
+            reg.getRegId(),
+            reg.getStudent().getRollNo(),
+            reg.getStudent().getName(),
+            reg.getStudent().getCurrentSemester(),
+            reg.getStudent().getYearOfJoining(),
+            reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.toList()),
+            reg.getStatus(),
+            reg.getRegisteredAt().toString()
         )).collect(Collectors.toList());
+    }
+
+    @PostMapping("/subjects")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('DEPT_OFFICE')")
+    public Subject addSubject(@Valid @RequestBody SubjectCreateRequest request) {
+        return subjectService.createSubject(request);
+    }
+
+    @GetMapping("/departments")
+    @PreAuthorize("hasAuthority('DEPT_OFFICE')")
+    public List<Department> getDepartments() {
+        return departmentRepository.findAll();
     }
 }

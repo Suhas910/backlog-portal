@@ -5,6 +5,7 @@ import VerifyPage from "./pages/VerifyPage";
 import AdminPage from "./pages/AdminPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import { ThemeProvider } from "./context/ThemeContext";
+import AddSubjectPage from "./pages/AddSubjectPage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/verify/:qrToken" element={<VerifyPage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/add-subject" element={<AddSubjectPage />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

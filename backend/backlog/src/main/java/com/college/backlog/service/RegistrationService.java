@@ -22,7 +22,7 @@ public class RegistrationService {
 
     public Registration register(String rollNo, String name, String email,
                                   String phone, int yearOfJoining,
-                                  int currentSemester, List<Long> subjectIds) {
+                                  int currentSemester, String branch, List<Long> subjectIds) {
 
         // create or update student
         Student student = studentRepository.findByRollNo(rollNo)
@@ -33,7 +33,7 @@ public class RegistrationService {
         student.setPhone(phone);
         student.setYearOfJoining(yearOfJoining);
         student.setCurrentSemester(currentSemester);
-        student.setBranch("CSE");
+        student.setBranch(branch);
         student.setPasswordHash("");
         studentRepository.save(student);
 

@@ -6,17 +6,19 @@ import {
   CircleDashed,
   LoaderCircle,
   LogOut,
+  PlusCircle,
   Shield,
   Users,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 function AdminPage() {
-  const adminRole = sessionStorage.getItem("adminRole");
+  const adminRole = sessionStorage.getItem("adminRole") || "";
+  const navigate = useNavigate();
   const isAdmin = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(
     adminRole,
   );
@@ -24,7 +26,7 @@ function AdminPage() {
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
-  const [verifyingToken, setVerifyingToken] = useState("");
+  const [verifyingRegId, setVerifyingRegId] = useState("");
 
   useEffect(() => {
     if (!isAdmin || !adminToken) {
@@ -43,28 +45,28 @@ function AdminPage() {
         if (error.response?.status === 401 || error.response?.status === 403) {
           sessionStorage.removeItem("adminRole");
           sessionStorage.removeItem("adminToken");
-          window.location.href = "/admin/login";
+          navigate("/admin/login");
         }
       });
-  }, [isAdmin, adminToken]);
+  }, [isAdmin, adminToken, navigate]);
 
-  const handleVerify = async (qrToken) => {
-    setVerifyingToken(qrToken);
+  const handleVerify = async (regId) => {
+    setVerifyingRegId(regId);
     try {
       await api.put(
-        `/register/verify/${qrToken}`,
+        `/register/verify/${regId}`,
         {},
         { headers: getAdminHeaders() },
       );
       setRegistrations((current) =>
         current.map((reg) =>
-          reg.qrToken === qrToken ? { ...reg, status: "VERIFIED" } : reg,
+          reg.regId === regId ? { ...reg, status: "VERIFIED" } : reg,
         ),
       );
     } catch (err) {
       console.error(err);
     } finally {
-      setVerifyingToken("");
+      setVerifyingRegId("");
     }
   };
 
@@ -120,6 +122,14 @@ function AdminPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            {adminRole === "DEPT_OFFICE" && (
+              <Link
+                to="/admin/add-subject"
+                className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+              >
+                <PlusCircle size={14} /> Add Subject
+              </Link>
+            )}
             <Link
               to="/"
               className="inline-flex items-center gap-1 rounded-full border border-white/35 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
@@ -131,7 +141,7 @@ function AdminPage() {
               onClick={() => {
                 sessionStorage.removeItem("adminRole");
                 sessionStorage.removeItem("adminToken");
-                window.location.href = "/admin/login";
+                navigate("/admin/login");
               }}
               className="inline-flex items-center gap-1 rounded-full bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-white"
             >
@@ -238,12 +248,12 @@ function AdminPage() {
                       <td className="px-4 py-3">
                         {reg.status === "SUBMITTED" ? (
                           <MagneticCta
-                            onClick={() => handleVerify(reg.qrToken)}
+                            onClick={() => handleVerify(reg.regId)}
                             className="rounded-lg px-3 py-1.5 text-xs"
-                            disabled={verifyingToken === reg.qrToken}
+                            disabled={verifyingRegId === reg.regId}
                             data-cy="admin-verify"
                           >
-                            {verifyingToken === reg.qrToken ? (
+                            {verifyingRegId === reg.regId ? (
                               <LoaderCircle
                                 size={14}
                                 className="animate-spin"
