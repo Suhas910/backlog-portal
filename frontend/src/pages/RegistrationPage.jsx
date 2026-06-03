@@ -14,6 +14,7 @@ function RegistrationPage() {
     name: "",
     email: "",
     phone: "",
+    branch: "",
   });
   const [subjects, setSubjects] = useState([]);
   const [selectedSubjects, setSelectedSubjects] = useState([]);
@@ -68,8 +69,10 @@ function RegistrationPage() {
   }, [searchYear, searchSemester, currentStep]);
 
   const handleChange = (e) => {
-    const next = { ...formData, [e.target.name]: e.target.value };
-    setFormData(next);
+    let value = e.target.value;
+    if (e.target.name === "usn") value = value.toUpperCase();
+    if (e.target.name === "email") value = value.toLowerCase();
+    setFormData((prev) => ({ ...prev, [e.target.name]: value }));
   };
 
   const handleSubjectToggle = (subject) => {
@@ -80,7 +83,7 @@ function RegistrationPage() {
 
   const handleSubmit = async () => {
     if (currentStep === 1) {
-      if (!formData.usn || !formData.name || !formData.email) {
+      if (!formData.usn || !formData.name || !formData.email || !formData.branch) {
         setSubmitError("Please fill in all required fields.");
         return;
       }
@@ -107,6 +110,7 @@ function RegistrationPage() {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
+        branch: formData.branch,
         yearOfJoining: parseInt(searchYear || "0", 10),
         currentSemester: parseInt(searchSemester || "0", 10),
         subjectIds: selectedSubjects.map((s) => s.id),
@@ -240,6 +244,7 @@ function RegistrationPage() {
                     placeholder="e.g. 1CS22CS001"
                     value={formData.usn}
                     onChange={handleChange}
+                    maxLength={16}
                     data-cy="reg-usn"
                   />
                 </div>
@@ -255,6 +260,7 @@ function RegistrationPage() {
                     placeholder="Your full name"
                     value={formData.name}
                     onChange={handleChange}
+                    maxLength={60}
                     data-cy="reg-name"
                   />
                 </div>
@@ -270,6 +276,7 @@ function RegistrationPage() {
                   placeholder="usn@msrit.edu"
                     value={formData.email}
                     onChange={handleChange}
+                    maxLength={26}
                     data-cy="reg-email"
                   />
                 </div>
@@ -284,9 +291,39 @@ function RegistrationPage() {
                     name="phone"
                     placeholder="10 digit number"
                     value={formData.phone}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setFormData((prev) => ({ ...prev, phone: val }));
+                    }}
+                    inputMode="numeric"
+                    maxLength={10}
                     data-cy="reg-phone"
                   />
+                </div>
+
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <label htmlFor="branch" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                    Branch *
+                  </label>
+                  <select
+                    id="branch"
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                    name="branch"
+                    value={formData.branch}
+                    onChange={handleChange}
+                    data-cy="reg-branch"
+                  >
+                    <option value="">Select your branch</option>
+                    <option value="CS">Computer Science Engineering (CS)</option>
+                    <option value="IS">Information Science Engineering (IS)</option>
+                    <option value="ECE">Electronics & Communication Engineering (ECE)</option>
+                    <option value="EEE">Electrical & Electronics Engineering (EEE)</option>
+                    <option value="ME">Mechanical Engineering (ME)</option>
+                    <option value="CV">Civil Engineering (CV)</option>
+                    <option value="CH">Chemical Engineering (CH)</option>
+                    <option value="BT">Biotechnology (BT)</option>
+                    <option value="AI">Artificial Intelligence & ML (AI)</option>
+                  </select>
                 </div>
               </div>
             </section>
