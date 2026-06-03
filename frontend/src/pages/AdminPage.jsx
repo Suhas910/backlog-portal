@@ -10,6 +10,7 @@ import {
   PlusCircle,
   Shield,
   Users,
+  XCircle,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
@@ -28,6 +29,7 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
   const [verifyingRegId, setVerifyingRegId] = useState("");
+  const [rejectingRegId, setRejectingRegId] = useState("");
   const [isExporting, setIsExporting] = useState(false);
 
   // New filter states
@@ -110,18 +112,44 @@ function AdminPage() {
     try {
       await api.put(
         `/register/verify/${regId}`,
-        {},
+        { action: "VERIFIED" },
         { headers: getAdminHeaders() },
       );
+      const adminUsername = sessionStorage.getItem("adminUsername") || "";
       setRegistrations((current) =>
         current.map((reg) =>
-          reg.regId === regId ? { ...reg, status: "VERIFIED" } : reg,
+          reg.regId === regId
+            ? { ...reg, status: "VERIFIED", verifiedBy: adminUsername }
+            : reg,
         ),
       );
     } catch (err) {
       console.error(err);
     } finally {
       setVerifyingRegId("");
+    }
+  };
+
+  const handleReject = async (regId) => {
+    setRejectingRegId(regId);
+    try {
+      await api.put(
+        `/register/verify/${regId}`,
+        { action: "REJECTED" },
+        { headers: getAdminHeaders() },
+      );
+      const adminUsername = sessionStorage.getItem("adminUsername") || "";
+      setRegistrations((current) =>
+        current.map((reg) =>
+          reg.regId === regId
+            ? { ...reg, status: "REJECTED", verifiedBy: adminUsername }
+            : reg,
+        ),
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRejectingRegId("");
     }
   };
 
@@ -172,6 +200,9 @@ function AdminPage() {
   ).length;
   const verifiedCount = registrations.filter(
     (r) => r.status === "VERIFIED",
+  ).length;
+  const rejectedCount = registrations.filter(
+    (r) => r.status === "REJECTED",
   ).length;
 
   if (!isAdmin || !adminToken) {
@@ -232,6 +263,7 @@ function AdminPage() {
               onClick={() => {
                 sessionStorage.removeItem("adminRole");
                 sessionStorage.removeItem("adminToken");
+                sessionStorage.removeItem("adminUsername");
                 navigate("/admin/login");
               }}
               className="inline-flex items-center gap-1 rounded-full bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-white"
@@ -241,7 +273,7 @@ function AdminPage() {
           </div>
         </header>
 
-        <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <section className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
             <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
               <Users size={13} /> Total
@@ -264,6 +296,14 @@ function AdminPage() {
             </p>
             <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">
               {verifiedCount}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
+            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
+              <XCircle size={13} /> Rejected
+            </p>
+            <p className="mt-1 text-3xl font-semibold text-red-600">
+              {rejectedCount}
             </p>
           </div>
         </section>
@@ -354,7 +394,7 @@ function AdminPage() {
         <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-2">
-              {["ALL", "SUBMITTED", "VERIFIED"].map((f) => (
+              {["ALL", "SUBMITTED", "VERIFIED", "REJECTED"].map((f) => (
                 <button
                   type="button"
                   key={f}
@@ -402,6 +442,7 @@ function AdminPage() {
                     <th className="px-4 py-3">Subjects</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Verified By</th>
                     <th className="px-4 py-3">Action</th>
                   </tr>
                 </thead>
@@ -426,7 +467,9 @@ function AdminPage() {
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${
                             reg.status === "VERIFIED"
                               ? "bg-[rgba(145,25,28,0.1)] text-[var(--color-primary)]"
-                              : "bg-[var(--surface-muted)] text-[var(--color-secondary)]"
+                              : reg.status === "REJECTED"
+                                ? "bg-red-50 text-red-600"
+                                : "bg-[var(--surface-muted)] text-[var(--color-secondary)]"
                           }`}
                         >
                           {reg.status}
@@ -436,26 +479,52 @@ function AdminPage() {
                         {new Date(reg.registeredAt).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-3">
-                        {reg.status === "SUBMITTED" ? (
-                          <MagneticCta
-                            onClick={() => handleVerify(reg.regId)}
-                            className="rounded-lg px-3 py-1.5 text-xs"
-                            disabled={verifyingRegId === reg.regId}
-                            data-cy="admin-verify"
-                          >
-                            {verifyingRegId === reg.regId ? (
-                              <LoaderCircle
-                                size={14}
-                                className="animate-spin"
-                              />
-                            ) : (
-                              <BadgeCheck size={14} />
-                            )}
-                            Verify
-                          </MagneticCta>
+                        {reg.verifiedBy ? (
+                          <span className="text-xs text-[var(--text-main)]">
+                            {reg.verifiedBy}
+                          </span>
                         ) : (
+                          <span className="text-xs text-[var(--text-muted)]">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {reg.status === "SUBMITTED" ? (
+                          <div className="flex gap-1.5">
+                            <MagneticCta
+                              onClick={() => handleVerify(reg.regId)}
+                              className="rounded-lg px-3 py-1.5 text-xs"
+                              disabled={verifyingRegId === reg.regId || rejectingRegId === reg.regId}
+                              data-cy="admin-verify"
+                            >
+                              {verifyingRegId === reg.regId ? (
+                                <LoaderCircle size={14} className="animate-spin" />
+                              ) : (
+                                <BadgeCheck size={14} />
+                              )}
+                              Verify
+                            </MagneticCta>
+                            <button
+                              type="button"
+                              onClick={() => handleReject(reg.regId)}
+                              disabled={rejectingRegId === reg.regId || verifyingRegId === reg.regId}
+                              data-cy="admin-reject"
+                              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                            >
+                              {rejectingRegId === reg.regId ? (
+                                <LoaderCircle size={14} className="animate-spin" />
+                              ) : (
+                                <XCircle size={14} />
+                              )}
+                              Reject
+                            </button>
+                          </div>
+                        ) : reg.status === "VERIFIED" ? (
                           <span className="text-xs font-semibold text-[var(--color-primary)]">
                             Verified
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-red-600">
+                            Rejected
                           </span>
                         )}
                       </td>

@@ -35,6 +35,9 @@ public class Registration {
 
     private String status;
 
+    @Column(name = "verified_by")
+    private String verifiedBy;
+
     public Registration() {}
 
     public Registration(Long id, String regId, Student student, List<Subject> subjects, LocalDateTime registeredAt, String status) {
@@ -63,4 +66,7 @@ public class Registration {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getVerifiedBy() { return verifiedBy; }
+    public void setVerifiedBy(String verifiedBy) { this.verifiedBy = verifiedBy; }
 }

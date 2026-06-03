@@ -8,6 +8,7 @@ import com.college.backlog.model.Registration;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.service.RegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -38,11 +39,18 @@ public class RegistrationController {
     }
 
     @PutMapping("/verify/{regId}")
-    public VerificationResponse verifyRegistration(@PathVariable String regId) {
+    public VerificationResponse verifyRegistration(
+            @PathVariable String regId,
+            @RequestBody(required = false) Map<String, String> body,
+            Authentication authentication) {
         Registration reg = registrationRepository.findByRegId(regId)
             .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
-        reg.setStatus("VERIFIED");
+        String action = (body != null && "REJECTED".equals(body.get("action"))) ? "REJECTED" : "VERIFIED";
+        reg.setStatus(action);
+        if (authentication != null) {
+            reg.setVerifiedBy(authentication.getName());
+        }
         registrationRepository.save(reg);
 
         return new VerificationResponse(

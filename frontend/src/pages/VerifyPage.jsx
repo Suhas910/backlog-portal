@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, BadgeCheck, LoaderCircle, Moon, Sun } from "lucide-react";
+import { ArrowLeft, BadgeCheck, LoaderCircle, Moon, Sun, XCircle } from "lucide-react";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
@@ -16,7 +16,9 @@ function VerifyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [verified, setVerified] = useState(false);
+  const [rejected, setRejected] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
@@ -36,6 +38,7 @@ function VerifyPage() {
         setRegistration(res.data);
         setLoading(false);
         if (res.data.status === "VERIFIED") setVerified(true);
+        if (res.data.status === "REJECTED") setRejected(true);
       })
       .catch(() => {
         setError("Invalid or expired QR code.");
@@ -48,7 +51,7 @@ function VerifyPage() {
     try {
       await api.put(
         `/register/verify/${qrToken}`,
-        {},
+        { action: "VERIFIED" },
         { headers: getAdminHeaders() },
       );
       setVerified(true);
@@ -57,6 +60,22 @@ function VerifyPage() {
       setError("Verification failed. Please try again.");
     }
     setVerifying(false);
+  };
+
+  const handleReject = async () => {
+    setRejecting(true);
+    try {
+      await api.put(
+        `/register/verify/${qrToken}`,
+        { action: "REJECTED" },
+        { headers: getAdminHeaders() },
+      );
+      setRejected(true);
+      setRegistration((prev) => ({ ...prev, status: "REJECTED" }));
+    } catch {
+      setError("Rejection failed. Please try again.");
+    }
+    setRejecting(false);
   };
 
   if (loading) {
@@ -120,10 +139,12 @@ function VerifyPage() {
               className={`rounded-full px-3 py-1 text-xs font-semibold tracking-[0.08em] ${
                 verified
                   ? "bg-[rgba(145,25,28,0.1)] text-[var(--color-primary)]"
-                  : "bg-[var(--surface-muted)] text-[var(--text-main)]"
+                  : rejected
+                    ? "bg-red-50 text-red-600"
+                    : "bg-[var(--surface-muted)] text-[var(--text-main)]"
               }`}
             >
-              {verified ? "VERIFIED" : "SUBMITTED"}
+              {verified ? "VERIFIED" : rejected ? "REJECTED" : "SUBMITTED"}
             </span>
           </div>
         </div>
@@ -209,31 +230,54 @@ function VerifyPage() {
           ))}
         </section>
 
-        {!verified ? (
+        {!verified && !rejected ? (
           <section className="border-t border-[var(--stroke)] pt-6">
             <p className="mb-4 text-sm text-[var(--text-main)]">
-              Physical form received and signatures verified? Click below to
-              mark as official.
+              Physical form received and signatures verified? Mark as verified
+              or reject below.
             </p>
-            <MagneticCta
-              onClick={handleVerify}
-              disabled={verifying}
-              className="w-full gap-2 rounded-xl"
-              data-cy="verify-submit"
-              aria-label="Mark registration as verified"
-            >
-              {verifying ? (
-                <LoaderCircle size={16} className="animate-spin" />
-              ) : (
-                <BadgeCheck size={16} />
-              )}
-              {verifying ? "Verifying..." : "Mark as Verified"}
-            </MagneticCta>
+            <div className="flex gap-3">
+              <MagneticCta
+                onClick={handleVerify}
+                disabled={verifying || rejecting}
+                className="flex-1 gap-2 rounded-xl"
+                data-cy="verify-submit"
+                aria-label="Mark registration as verified"
+              >
+                {verifying ? (
+                  <LoaderCircle size={16} className="animate-spin" />
+                ) : (
+                  <BadgeCheck size={16} />
+                )}
+                {verifying ? "Verifying..." : "Mark as Verified"}
+              </MagneticCta>
+              <button
+                type="button"
+                onClick={handleReject}
+                disabled={rejecting || verifying}
+                data-cy="reject-submit"
+                aria-label="Reject registration"
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+              >
+                {rejecting ? (
+                  <LoaderCircle size={16} className="animate-spin" />
+                ) : (
+                  <XCircle size={16} />
+                )}
+                {rejecting ? "Rejecting..." : "Reject"}
+              </button>
+            </div>
           </section>
-        ) : (
+        ) : verified ? (
           <section className="rounded-xl border border-[var(--color-primary)]/30 bg-[rgba(145,25,28,0.08)] p-4 text-center">
             <p className="text-sm font-semibold text-[var(--color-primary)]">
               This registration has been officially verified.
+            </p>
+          </section>
+        ) : (
+          <section className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
+            <p className="text-sm font-semibold text-red-600">
+              This registration has been rejected.
             </p>
           </section>
         )}

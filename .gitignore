@@ -1,3 +1,6 @@
+# Claude local context
+CLAUDE.local.md
+
 # Backend
 backend/backlog/target/
 backend/backlog/.mvn/

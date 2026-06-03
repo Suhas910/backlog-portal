@@ -11,8 +11,9 @@ public class RegistrationSummaryResponse {
     private List<String> subjects;
     private String status;
     private String registeredAt;
+    private String verifiedBy;
 
-    public RegistrationSummaryResponse(String regId, String rollNo, String studentName, int semester, int yearOfJoining, List<String> subjects, String status, String registeredAt) {
+    public RegistrationSummaryResponse(String regId, String rollNo, String studentName, int semester, int yearOfJoining, List<String> subjects, String status, String registeredAt, String verifiedBy) {
         this.regId = regId;
         this.rollNo = rollNo;
         this.studentName = studentName;
@@ -21,6 +22,7 @@ public class RegistrationSummaryResponse {
         this.subjects = subjects;
         this.status = status;
         this.registeredAt = registeredAt;
+        this.verifiedBy = verifiedBy;
     }
 
     // Getters
@@ -32,4 +34,5 @@ public class RegistrationSummaryResponse {
     public List<String> getSubjects() { return subjects; }
     public String getStatus() { return status; }
     public String getRegisteredAt() { return registeredAt; }
+    public String getVerifiedBy() { return verifiedBy; }
 }

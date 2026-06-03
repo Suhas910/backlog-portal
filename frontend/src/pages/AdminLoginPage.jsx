@@ -49,6 +49,7 @@ function AdminLoginPage() {
       if (validRoles.includes(res.data.role) && res.data.token) {
         sessionStorage.setItem("adminRole", res.data.role);
         sessionStorage.setItem("adminToken", res.data.token);
+        sessionStorage.setItem("adminUsername", username);
 
         const redirectUrl = searchParams.get("redirect");
         if (redirectUrl) {

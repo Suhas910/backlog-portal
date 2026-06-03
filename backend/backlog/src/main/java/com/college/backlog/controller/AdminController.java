@@ -68,7 +68,8 @@ public class AdminController {
             reg.getStudent().getYearOfJoining(),
             reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.toList()),
             reg.getStatus(),
-            reg.getRegisteredAt().toString()
+            reg.getRegisteredAt().toString(),
+            reg.getVerifiedBy()
         )).collect(Collectors.toList());
     }
 
