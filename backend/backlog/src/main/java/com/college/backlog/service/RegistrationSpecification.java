@@ -13,12 +13,16 @@ import java.util.List;
 public class RegistrationSpecification implements Specification<Registration> {
 
     private final Long subjectId;
+    private final Long departmentId;
+    private final String subjectType;
     private final String searchQuery;
     private final LocalDate startDate;
     private final LocalDate endDate;
 
-    public RegistrationSpecification(Long subjectId, String searchQuery, LocalDate startDate, LocalDate endDate) {
+    public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate) {
         this.subjectId = subjectId;
+        this.departmentId = departmentId;
+        this.subjectType = subjectType;
         this.searchQuery = searchQuery;
         this.startDate = startDate;
         this.endDate = endDate;
@@ -27,13 +31,27 @@ public class RegistrationSpecification implements Specification<Registration> {
     @Override
     public Predicate toPredicate(Root<Registration> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
         List<Predicate> predicates = new ArrayList<>();
+        query.distinct(true);
 
-        if (subjectId != null) {
-            predicates.add(cb.equal(root.join("subjects").get("id"), subjectId));
+        if (subjectId != null || departmentId != null || (subjectType != null && !subjectType.isBlank())) {
+            Join<Registration, Subject> subjectJoin = root.join("subjects", JoinType.LEFT);
+            if (subjectId != null) {
+                predicates.add(cb.equal(subjectJoin.get("id"), subjectId));
+            }
+            if (departmentId != null) {
+                Predicate offeredBy = cb.equal(
+                        subjectJoin.join("department", JoinType.LEFT).get("id"), departmentId);
+                Predicate eligibleFor = cb.equal(
+                        subjectJoin.join("eligibleDepartments", JoinType.LEFT).get("id"), departmentId);
+                predicates.add(cb.or(offeredBy, eligibleFor));
+            }
+            if (subjectType != null && !subjectType.isBlank()) {
+                predicates.add(cb.equal(subjectJoin.get("subjectType"), subjectType.toUpperCase()));
+            }
         }
 
         if (searchQuery != null && !searchQuery.isBlank()) {
-            Join<Registration, Student> studentJoin = root.join("student");
+            Join<Registration, Student> studentJoin = root.join("student", JoinType.LEFT);
             Predicate namePredicate = cb.like(cb.lower(studentJoin.get("name")), "%" + searchQuery.toLowerCase() + "%");
             Predicate usnPredicate = cb.like(cb.lower(studentJoin.get("rollNo")), "%" + searchQuery.toLowerCase() + "%");
             predicates.add(cb.or(namePredicate, usnPredicate));

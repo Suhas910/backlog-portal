@@ -1,6 +1,8 @@
 package com.college.backlog.controller;
 
+import com.college.backlog.model.Department;
 import com.college.backlog.model.User;
+import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
@@ -23,8 +27,13 @@ public class AuthController {
     private final ConcurrentHashMap<String, Integer> failedAttempts = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Instant> lockedUntil = new ConcurrentHashMap<>();
 
+    private static final Set<String> DEPT_ROLES = Set.of("HOD", "DEPT_OFFICE");
+
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -54,14 +63,35 @@ public class AuthController {
             throw invalidCredentials(username);
         }
 
+        if (DEPT_ROLES.contains(user.getRole())) {
+            if (user.getDepartment() == null) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No department assigned to this account. Contact admin.");
+            }
+            String requestedDeptId = body.get("departmentId");
+            if (requestedDeptId != null && !requestedDeptId.isBlank()) {
+                try {
+                    long reqId = Long.parseLong(requestedDeptId);
+                    if (reqId != user.getDepartment().getId()) {
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid department for this account");
+                    }
+                } catch (NumberFormatException e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid departmentId format");
+                }
+            }
+        }
+
         clearFailures(username);
         String token = jwtService.generateToken(user.getUsername(), user.getRole());
 
-        return Map.of(
-                "message", "Login success",
-                "role", user.getRole(),
-                "token", token
-        );
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Login success");
+        response.put("role", user.getRole());
+        response.put("token", token);
+        if (user.getDepartment() != null) {
+            response.put("departmentId", String.valueOf(user.getDepartment().getId()));
+            response.put("departmentName", user.getDepartment().getDeptName());
+        }
+        return response;
     }
 
     private boolean matchesPassword(User user, String rawPassword) {

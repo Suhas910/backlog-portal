@@ -334,7 +334,7 @@ public class PdfService {
     private void addSubjectsTable(Document doc, PdfFont regular, PdfFont bold,
                                   Registration reg) {
 
-        float[] cols = { 5f, 6f, 12f, 37f, 9f, 17f, 14f };
+        float[] cols = { 5f, 6f, 12f, 37f, 9f, 31f };
 
         Table t = new Table(UnitValue.createPercentArray(cols))
                 .useAllAvailableWidth()
@@ -342,7 +342,7 @@ public class PdfService {
                 .setMarginBottom(4f);
 
         // title row
-        t.addCell(new Cell(1, 7)
+        t.addCell(new Cell(1, 6)
                 .add(new Paragraph("SUBJECTS REGISTERED FOR BACKLOG SUBJECT EXAMS")
                         .setFont(bold).setFontSize(FS_SECTION_HDR)
                         .setTextAlignment(TextAlignment.CENTER).setMargin(3f))
@@ -351,7 +351,7 @@ public class PdfService {
         // column headers
         for (String h : new String[]{
                 "Sl.\nNo.", "Sem.", "Course\nCode", "Course Title",
-                "Credits", "Final Grade\nAwarded", "Remarks"}) {
+                "Credits", "Remarks"}) {
             t.addCell(new Cell()
                     .add(new Paragraph(h)
                             .setFont(bold).setFontSize(FS_TABLE_HDR)
@@ -385,7 +385,6 @@ public class PdfService {
             t.addCell(dataCell(nvl(s.getCourseCode()), regular));
             t.addCell(dataCell(nvl(s.getSubjectName()), regular));
             t.addCell(dataCellCentre(creditsDisplay, regular));
-            t.addCell(dataCell("", regular)); // final grade
             t.addCell(dataCell("", regular)); // remarks
         }
 
@@ -399,8 +398,6 @@ public class PdfService {
                 .add(new Paragraph(totalCredits > 0 ? String.valueOf(totalCredits) : "")
                         .setFont(bold).setFontSize(FS_TABLE_DATA)
                         .setTextAlignment(TextAlignment.CENTER).setMargin(2f))
-                .setBorder(new SolidBorder(BLACK, 0.4f)));
-        t.addCell(new Cell().add(new Paragraph("").setMargin(2f))
                 .setBorder(new SolidBorder(BLACK, 0.4f)));
         t.addCell(new Cell().add(new Paragraph("").setMargin(2f))
                 .setBorder(new SolidBorder(BLACK, 0.4f)));

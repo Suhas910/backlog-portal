@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -14,18 +14,28 @@ import MagneticCta from "../components/ui/MagneticCta";
 import api from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
+const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
+
 function AdminLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(1);
   const [roleTitle, setRoleTitle] = useState("");
+  const [selectedRole, setSelectedRole] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [departments, setDepartments] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleRoleSelect = (title) => {
+  useEffect(() => {
+    api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
+  }, []);
+
+  const handleRoleSelect = (title, role) => {
     setRoleTitle(title);
+    setSelectedRole(role);
     setStep(2);
     setError("");
   };
@@ -35,21 +45,32 @@ function AdminLoginPage() {
       setError("Username and password are required.");
       return;
     }
+    if (DEPT_ROLES.has(selectedRole) && !departmentId) {
+      setError("Please select your department.");
+      return;
+    }
 
     setLoading(true);
     setError("");
 
     try {
-      const res = await api.post("/auth/login", {
-        username,
-        password,
-      });
+      const payload = { username, password };
+      if (DEPT_ROLES.has(selectedRole) && departmentId) {
+        payload.departmentId = departmentId;
+      }
+
+      const res = await api.post("/auth/login", payload);
 
       const validRoles = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
       if (validRoles.includes(res.data.role) && res.data.token) {
         sessionStorage.setItem("adminRole", res.data.role);
         sessionStorage.setItem("adminToken", res.data.token);
         sessionStorage.setItem("adminUsername", username);
+        if (res.data.departmentName) {
+          sessionStorage.setItem("adminDepartment", res.data.departmentName);
+        } else {
+          sessionStorage.removeItem("adminDepartment");
+        }
 
         const redirectUrl = searchParams.get("redirect");
         if (redirectUrl) {
@@ -102,7 +123,7 @@ function AdminLoginPage() {
         {step === 1 ? (
           <div className="flex flex-col gap-4">
             <button
-              onClick={() => handleRoleSelect("Principal / Registrar / COE")}
+              onClick={() => handleRoleSelect("Principal / Registrar / COE", "PRINCIPAL")}
               className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
@@ -119,7 +140,7 @@ function AdminLoginPage() {
             </button>
 
             <button
-              onClick={() => handleRoleSelect("Head of Department (HOD)")}
+              onClick={() => handleRoleSelect("Head of Department (HOD)", "HOD")}
               className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
@@ -136,7 +157,7 @@ function AdminLoginPage() {
             </button>
 
             <button
-              onClick={() => handleRoleSelect("Department Office")}
+              onClick={() => handleRoleSelect("Department Office", "DEPT_OFFICE")}
               className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
@@ -185,6 +206,31 @@ function AdminLoginPage() {
               data-cy="admin-password"
             />
 
+            {DEPT_ROLES.has(selectedRole) && (
+              <>
+                <label
+                  htmlFor="admin-department"
+                  className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+                >
+                  Department
+                </label>
+                <select
+                  id="admin-department"
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                  className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                  data-cy="admin-department"
+                >
+                  <option value="">Select department</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={String(d.id)}>
+                      {d.deptName}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+
             {error ? (
               <p
                 role="alert"
@@ -216,6 +262,8 @@ function AdminLoginPage() {
                 setStep(1);
                 setUsername("");
                 setPassword("");
+                setDepartmentId("");
+                setSelectedRole("");
                 setError("");
               }}
               className="mt-4 flex w-full items-center justify-center gap-2 text-sm font-medium text-[var(--text-main)] hover:text-[var(--color-primary)]"

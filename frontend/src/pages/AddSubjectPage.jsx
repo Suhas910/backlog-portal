@@ -10,6 +10,7 @@ import MobileActionBar from "../components/layout/MobileActionBar";
 function AddSubjectPage() {
   const navigate = useNavigate();
   const adminRole = sessionStorage.getItem("adminRole");
+  const adminDepartment = sessionStorage.getItem("adminDepartment") || "";
 
   const [formData, setFormData] = useState({
     subjectName: "",
@@ -19,6 +20,8 @@ function AddSubjectPage() {
     yearOfJoining: "",
     deptId: "",
   });
+  const [subjectType, setSubjectType] = useState("REGULAR");
+  const [eligibleDeptIds, setEligibleDeptIds] = useState([]);
 
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -26,14 +29,12 @@ function AddSubjectPage() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    // Redirect if not the correct role
-    if (adminRole !== "DEPT_OFFICE") {
+    if (adminRole !== "DEPT_OFFICE" && adminRole !== "ADMIN") {
       navigate("/admin");
     }
 
-    // Fetch departments for the dropdown
     api
-      .get("/admin/departments", { headers: getAdminHeaders() })
+      .get("/departments")
       .then((res) => {
         setDepartments(res.data);
       })
@@ -43,9 +44,24 @@ function AddSubjectPage() {
       });
   }, [adminRole, navigate]);
 
+  useEffect(() => {
+    if (adminRole === "DEPT_OFFICE" && adminDepartment && departments.length > 0) {
+      const myDept = departments.find((d) => d.deptName === adminDepartment);
+      if (myDept) {
+        setFormData((prev) => ({ ...prev, deptId: String(myDept.id) }));
+      }
+    }
+  }, [departments, adminRole, adminDepartment]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const toggleEligibleDept = (id) => {
+    setEligibleDeptIds((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id],
+    );
   };
 
   const handleSubmit = async (e) => {
@@ -53,12 +69,15 @@ function AddSubjectPage() {
     setError("");
     setSuccess("");
 
-    // Basic validation
     for (const key in formData) {
       if (formData[key] === "") {
         setError("All fields are required.");
         return;
       }
+    }
+    if (subjectType === "ELECTIVE" && eligibleDeptIds.length === 0) {
+      setError("Please select at least one eligible department for an elective subject.");
+      return;
     }
 
     setLoading(true);
@@ -70,6 +89,8 @@ function AddSubjectPage() {
         credits: parseInt(formData.credits, 10),
         yearOfJoining: parseInt(formData.yearOfJoining, 10),
         deptId: parseInt(formData.deptId, 10),
+        subjectType,
+        eligibleDeptIds: subjectType === "ELECTIVE" ? eligibleDeptIds : [],
       };
 
       await api.post("/admin/subjects", payload, {
@@ -79,13 +100,14 @@ function AddSubjectPage() {
       setSuccess(
         `Subject "${formData.subjectName}" has been added successfully!`,
       );
-      // Reset form, but keep semester, year, and department for faster entry of multiple subjects
       setFormData((prev) => ({
         ...prev,
         subjectName: "",
         courseCode: "",
         credits: "",
       }));
+      setSubjectType("REGULAR");
+      setEligibleDeptIds([]);
     } catch (apiError) {
       setError(
         apiError.response?.data?.message ||
@@ -249,7 +271,7 @@ function AddSubjectPage() {
                   value={formData.deptId}
                   onChange={handleChange}
                   className={inputClass}
-                  disabled={departments.length === 0}
+                  disabled={departments.length === 0 || adminRole === "DEPT_OFFICE"}
                 >
                   <option value="">Select Department</option>
                   {departments.map((dept) => (
@@ -258,8 +280,82 @@ function AddSubjectPage() {
                     </option>
                   ))}
                 </select>
+                {adminRole === "DEPT_OFFICE" && adminDepartment && (
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    Locked to your department: {adminDepartment}
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* Subject type */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Subject Type *
+              </span>
+              <div className="flex gap-3">
+                {["REGULAR", "ELECTIVE"].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      setSubjectType(type);
+                      setEligibleDeptIds([]);
+                    }}
+                    className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                      subjectType === type
+                        ? "border-[var(--color-primary)] bg-[rgba(145,25,28,0.08)] text-[var(--color-primary)]"
+                        : "border-[var(--stroke)] bg-[var(--surface-muted)] text-[var(--text-main)] hover:border-[var(--color-primary)]"
+                    }`}
+                  >
+                    {type.charAt(0) + type.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Eligible departments — only for ELECTIVE */}
+            {subjectType === "ELECTIVE" && (
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.08em]">
+                  Eligible Departments *
+                </span>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Select which departments' students can register for this elective. The offering department is not included automatically.
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {departments.map((dept) => {
+                    const checked = eligibleDeptIds.includes(dept.id);
+                    const isOfferingDept = String(dept.id) === String(formData.deptId);
+                    return (
+                      <label
+                        key={dept.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
+                          checked
+                            ? "border-[var(--color-primary)]/40 bg-[rgba(145,25,28,0.06)]"
+                            : "border-[var(--stroke)] bg-[var(--surface-muted)] hover:border-[var(--color-primary)]/40"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleEligibleDept(dept.id)}
+                          className="h-4 w-4 accent-[var(--color-primary)]"
+                        />
+                        <span className="text-sm text-[var(--text-main)]">
+                          {dept.deptName}
+                          {isOfferingDept && (
+                            <span className="ml-1.5 text-xs text-[var(--text-muted)]">
+                              (Offering dept)
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {error && (
               <p

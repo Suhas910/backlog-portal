@@ -24,8 +24,13 @@ function RegistrationPage() {
   const [regId, setRegId] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [departments, setDepartments] = useState([]);
   const [searchYear, setSearchYear] = useState("");
   const [searchSemester, setSearchSemester] = useState("");
+
+  useEffect(() => {
+    api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
+  }, []);
 
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -46,6 +51,7 @@ function RegistrationPage() {
         params: {
           year: searchYear,
           semester: searchSemester,
+          ...(formData.branch ? { branch: formData.branch } : {}),
         },
       })
       .then((res) => {
@@ -66,12 +72,13 @@ function RegistrationPage() {
     return () => {
       ignoreResponse = true;
     };
-  }, [searchYear, searchSemester, currentStep]);
+  }, [searchYear, searchSemester, currentStep, formData.branch]);
 
   const handleChange = (e) => {
     let value = e.target.value;
     if (e.target.name === "usn") value = value.toUpperCase();
     if (e.target.name === "email") value = value.toLowerCase();
+    if (e.target.name === "branch") setSelectedSubjects([]);
     setFormData((prev) => ({ ...prev, [e.target.name]: value }));
   };
 
@@ -312,17 +319,16 @@ function RegistrationPage() {
                     value={formData.branch}
                     onChange={handleChange}
                     data-cy="reg-branch"
+                    disabled={departments.length === 0}
                   >
-                    <option value="">Select your branch</option>
-                    <option value="CS">Computer Science Engineering (CS)</option>
-                    <option value="IS">Information Science Engineering (IS)</option>
-                    <option value="ECE">Electronics & Communication Engineering (ECE)</option>
-                    <option value="EEE">Electrical & Electronics Engineering (EEE)</option>
-                    <option value="ME">Mechanical Engineering (ME)</option>
-                    <option value="CV">Civil Engineering (CV)</option>
-                    <option value="CH">Chemical Engineering (CH)</option>
-                    <option value="BT">Biotechnology (BT)</option>
-                    <option value="AI">Artificial Intelligence & ML (AI)</option>
+                    <option value="">
+                      {departments.length === 0 ? "Loading branches..." : "Select your branch"}
+                    </option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.deptName}>
+                        {d.deptName}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

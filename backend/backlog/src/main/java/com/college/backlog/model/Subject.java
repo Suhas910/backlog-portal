@@ -1,6 +1,8 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "subjects")
@@ -26,6 +28,17 @@ public class Subject {
     @ManyToOne
     @JoinColumn(name = "dept_id")
     private Department department;
+
+    @Column(name = "subject_type")
+    private String subjectType = "REGULAR";
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "subject_eligible_departments",
+        joinColumns = @JoinColumn(name = "subject_id"),
+        inverseJoinColumns = @JoinColumn(name = "dept_id")
+    )
+    private List<Department> eligibleDepartments = new ArrayList<>();
 
     public Subject() {}
 
@@ -59,4 +72,10 @@ public class Subject {
 
     public Department getDepartment() { return department; }
     public void setDepartment(Department department) { this.department = department; }
+
+    public String getSubjectType() { return subjectType; }
+    public void setSubjectType(String subjectType) { this.subjectType = subjectType; }
+
+    public List<Department> getEligibleDepartments() { return eligibleDepartments; }
+    public void setEligibleDepartments(List<Department> eligibleDepartments) { this.eligibleDepartments = eligibleDepartments; }
 }

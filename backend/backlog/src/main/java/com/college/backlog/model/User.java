@@ -11,7 +11,11 @@ public class User {
 
     private String password;
 
-    private String role; // ADMIN
+    private String role;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "dept_id", nullable = true)
+    private Department department;
 
     public User() {}
 
@@ -29,4 +33,7 @@ public class User {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public Department getDepartment() { return department; }
+    public void setDepartment(Department department) { this.department = department; }
 }

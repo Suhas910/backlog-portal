@@ -20,6 +20,7 @@ import MobileActionBar from "../components/layout/MobileActionBar";
 
 function AdminPage() {
   const adminRole = sessionStorage.getItem("adminRole") || "";
+  const adminDepartment = sessionStorage.getItem("adminDepartment") || "";
   const navigate = useNavigate();
   const isAdmin = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(
     adminRole,
@@ -27,15 +28,18 @@ function AdminPage() {
   const adminToken = sessionStorage.getItem("adminToken");
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("ALL");
+  const [filter, setFilter] = useState(
+    ["HOD", "DEPT_OFFICE"].includes(adminRole) ? "SUBMITTED" : "ALL",
+  );
   const [verifyingRegId, setVerifyingRegId] = useState("");
   const [rejectingRegId, setRejectingRegId] = useState("");
   const [isExporting, setIsExporting] = useState(false);
 
-  // New filter states
+  // Filter states
   const [allSubjects, setAllSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [subjectFilter, setSubjectFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
@@ -47,6 +51,7 @@ function AdminPage() {
 
     setLoadingSubjects(true);
     const subjectParams = new URLSearchParams();
+    if (typeFilter) subjectParams.append("subjectType", typeFilter);
     if (searchFilter) subjectParams.append("searchQuery", searchFilter);
     if (startDateFilter) subjectParams.append("startDate", startDateFilter);
     if (endDateFilter) subjectParams.append("endDate", endDateFilter);
@@ -57,7 +62,6 @@ function AdminPage() {
       })
       .then((res) => {
         setAllSubjects(res.data);
-        // If the currently selected subject filter is no longer in the new list, reset it.
         if (
           subjectFilter &&
           !res.data.some((s) => String(s.id) === subjectFilter)
@@ -72,11 +76,12 @@ function AdminPage() {
       .finally(() => {
         setLoadingSubjects(false);
       });
-  }, [isAdmin, adminToken, searchFilter, startDateFilter, endDateFilter]);
+  }, [isAdmin, adminToken, typeFilter, searchFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (subjectFilter) params.append("subjectId", subjectFilter);
+    if (typeFilter) params.append("subjectType", typeFilter);
     if (searchFilter) params.append("searchQuery", searchFilter);
     if (startDateFilter) params.append("startDate", startDateFilter);
     if (endDateFilter) params.append("endDate", endDateFilter);
@@ -102,6 +107,7 @@ function AdminPage() {
     adminToken,
     navigate,
     subjectFilter,
+    typeFilter,
     searchFilter,
     startDateFilter,
     endDateFilter,
@@ -157,6 +163,7 @@ function AdminPage() {
     setIsExporting(true);
     const params = new URLSearchParams();
     if (subjectFilter) params.append("subjectId", subjectFilter);
+    if (typeFilter) params.append("subjectType", typeFilter);
     if (searchFilter) params.append("searchQuery", searchFilter);
     if (startDateFilter) params.append("startDate", startDateFilter);
     if (endDateFilter) params.append("endDate", endDateFilter);
@@ -239,12 +246,19 @@ function AdminPage() {
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-4 text-white shadow-soft sm:px-6">
           <div>
             <BrandIdentity compact />
-            <p className="mt-2 inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
-              Admin Control Panel
-            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <p className="inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
+                Admin Control Panel
+              </p>
+              {adminDepartment && (
+                <p className="inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
+                  {adminDepartment}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
-            {adminRole === "DEPT_OFFICE" && (
+            {(adminRole === "DEPT_OFFICE" || adminRole === "ADMIN") && (
               <Link
                 to="/admin/add-subject"
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
@@ -264,6 +278,7 @@ function AdminPage() {
                 sessionStorage.removeItem("adminRole");
                 sessionStorage.removeItem("adminToken");
                 sessionStorage.removeItem("adminUsername");
+                sessionStorage.removeItem("adminDepartment");
                 navigate("/admin/login");
               }}
               className="inline-flex items-center gap-1 rounded-full bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-white"
@@ -312,7 +327,30 @@ function AdminPage() {
           <h3 className="mb-3 text-lg font-semibold text-[var(--color-secondary)]">
             Filters
           </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {/* Subject Type Filter */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="type-filter"
+                className="text-xs font-semibold uppercase tracking-[0.08em]"
+              >
+                Subject Type
+              </label>
+              <select
+                id="type-filter"
+                value={typeFilter}
+                onChange={(e) => {
+                  setTypeFilter(e.target.value);
+                  setSubjectFilter("");
+                }}
+                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              >
+                <option value="">All Types</option>
+                <option value="REGULAR">Regular</option>
+                <option value="ELECTIVE">Elective</option>
+              </select>
+            </div>
+
             {/* Subject Filter */}
             <div className="flex flex-col gap-1.5">
               <label
@@ -324,7 +362,16 @@ function AdminPage() {
               <select
                 id="subject-filter"
                 value={subjectFilter}
-                onChange={(e) => setSubjectFilter(e.target.value)}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSubjectFilter(id);
+                  if (id) {
+                    const subject = allSubjects.find(
+                      (s) => String(s.id) === id,
+                    );
+                    if (subject) setTypeFilter(subject.subjectType);
+                  }
+                }}
                 className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                 disabled={loadingSubjects}
               >
@@ -488,7 +535,7 @@ function AdminPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {reg.status === "SUBMITTED" ? (
+                        {reg.status === "SUBMITTED" && adminRole !== "PRINCIPAL" ? (
                           <div className="flex gap-1.5">
                             <MagneticCta
                               onClick={() => handleVerify(reg.regId)}
@@ -522,9 +569,13 @@ function AdminPage() {
                           <span className="text-xs font-semibold text-[var(--color-primary)]">
                             Verified
                           </span>
-                        ) : (
+                        ) : reg.status === "REJECTED" ? (
                           <span className="text-xs font-semibold text-red-600">
                             Rejected
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-[var(--text-muted)]">
+                            Pending Verification
                           </span>
                         )}
                       </td>

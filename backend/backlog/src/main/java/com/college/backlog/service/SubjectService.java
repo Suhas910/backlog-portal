@@ -9,6 +9,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,10 +41,19 @@ public class SubjectService {
         Subject subject = new Subject(null, request.getSubjectName(), request.getCourseCode(),
                 request.getSemester(), request.getCredits(), request.getYearOfJoining(), department);
 
+        String type = (request.getSubjectType() != null && !request.getSubjectType().isBlank())
+                ? request.getSubjectType().toUpperCase() : "REGULAR";
+        subject.setSubjectType(type);
+
+        if ("ELECTIVE".equals(type) && request.getEligibleDeptIds() != null && !request.getEligibleDeptIds().isEmpty()) {
+            List<Department> eligibleDepts = departmentRepository.findAllById(request.getEligibleDeptIds());
+            subject.setEligibleDepartments(eligibleDepts);
+        }
+
         return subjectRepository.save(subject);
     }
 
-    public List<Subject> findDistinctSubjectsByRegistrationFilters(String searchQuery, LocalDate startDate, LocalDate endDate) {
+    public List<Subject> findDistinctSubjectsByRegistrationFilters(Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Subject> query = cb.createQuery(Subject.class);
         Root<Registration> registrationRoot = query.from(Registration.class);
@@ -52,6 +62,16 @@ public class SubjectService {
         query.select(subjectJoin).distinct(true);
 
         List<Predicate> predicates = new ArrayList<>();
+
+        if (departmentId != null) {
+            Predicate offeredBy = cb.equal(subjectJoin.join("department", JoinType.LEFT).get("id"), departmentId);
+            Predicate eligibleFor = cb.equal(subjectJoin.join("eligibleDepartments", JoinType.LEFT).get("id"), departmentId);
+            predicates.add(cb.or(offeredBy, eligibleFor));
+        }
+
+        if (subjectType != null && !subjectType.isBlank()) {
+            predicates.add(cb.equal(subjectJoin.get("subjectType"), subjectType.toUpperCase()));
+        }
 
         if (searchQuery != null && !searchQuery.isBlank()) {
             Join<Registration, Student> studentJoin = registrationRoot.join("student");

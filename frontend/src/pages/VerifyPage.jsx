@@ -12,6 +12,8 @@ function VerifyPage() {
   const { qrToken } = useParams();
   const navigate = useNavigate();
   const adminToken = sessionStorage.getItem("adminToken");
+  const adminRole = sessionStorage.getItem("adminRole");
+  const canAction = adminRole !== "PRINCIPAL";
   const [registration, setRegistration] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,8 +42,12 @@ function VerifyPage() {
         if (res.data.status === "VERIFIED") setVerified(true);
         if (res.data.status === "REJECTED") setRejected(true);
       })
-      .catch(() => {
-        setError("Invalid or expired QR code.");
+      .catch((err) => {
+        if (err.response?.status === 403) {
+          setError("Access denied: this registration does not belong to your department.");
+        } else {
+          setError("Invalid or expired QR code.");
+        }
         setLoading(false);
       });
   }, [qrToken]);
@@ -56,8 +62,12 @@ function VerifyPage() {
       );
       setVerified(true);
       setRegistration((prev) => ({ ...prev, status: "VERIFIED" }));
-    } catch {
-      setError("Verification failed. Please try again.");
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setError("Access denied: this registration does not belong to your department.");
+      } else {
+        setError("Verification failed. Please try again.");
+      }
     }
     setVerifying(false);
   };
@@ -72,8 +82,12 @@ function VerifyPage() {
       );
       setRejected(true);
       setRegistration((prev) => ({ ...prev, status: "REJECTED" }));
-    } catch {
-      setError("Rejection failed. Please try again.");
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setError("Access denied: this registration does not belong to your department.");
+      } else {
+        setError("Rejection failed. Please try again.");
+      }
     }
     setRejecting(false);
   };
@@ -230,7 +244,7 @@ function VerifyPage() {
           ))}
         </section>
 
-        {!verified && !rejected ? (
+        {!verified && !rejected && canAction ? (
           <section className="border-t border-[var(--stroke)] pt-6">
             <p className="mb-4 text-sm text-[var(--text-main)]">
               Physical form received and signatures verified? Mark as verified
