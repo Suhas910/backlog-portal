@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface RegistrationRepository extends JpaRepository<Registration, Long>, JpaSpecificationExecutor<Registration> {
     Optional<Registration> findByRegId(String regId);
     List<Registration> findAllByOrderByRegisteredAtDesc();
+    List<Registration> findByStudent_RollNo(String rollNo);
 }

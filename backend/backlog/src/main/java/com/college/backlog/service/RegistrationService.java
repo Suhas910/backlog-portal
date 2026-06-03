@@ -3,7 +3,9 @@ package com.college.backlog.service;
 import com.college.backlog.model.*;
 import com.college.backlog.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -24,21 +26,57 @@ public class RegistrationService {
                                   String phone, int yearOfJoining,
                                   int currentSemester, String branch, List<Long> subjectIds) {
 
-        // create or update student
-        Student student = studentRepository.findByRollNo(rollNo)
-            .orElse(new Student());
-        student.setRollNo(rollNo);
-        student.setName(name);
-        student.setEmail(email);
-        student.setPhone(phone);
-        student.setYearOfJoining(yearOfJoining);
-        student.setCurrentSemester(currentSemester);
-        student.setBranch(branch);
-        student.setPasswordHash("");
-        studentRepository.save(student);
-
-        // fetch selected subjects
+        // validate subjects before touching the DB
         List<Subject> subjects = subjectRepository.findAllById(subjectIds);
+
+        if (subjects.size() != subjectIds.size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "One or more selected subjects are invalid.");
+        }
+
+        for (Subject subject : subjects) {
+            if ("ELECTIVE".equals(subject.getSubjectType())) {
+                boolean eligible = subject.getEligibleDepartments().stream()
+                    .anyMatch(d -> d.getName().equalsIgnoreCase(branch));
+                if (!eligible) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Not eligible for elective: " + subject.getSubjectName());
+                }
+            } else {
+                if (subject.getDepartment() == null ||
+                    !subject.getDepartment().getName().equalsIgnoreCase(branch)) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Subject '" + subject.getSubjectName() + "' does not belong to branch: " + branch);
+                }
+            }
+        }
+
+        // create student record only on first registration — never overwrite existing details
+        Student student = studentRepository.findByRollNo(rollNo).orElse(null);
+        if (student == null) {
+            student = new Student();
+            student.setRollNo(rollNo);
+            student.setName(name);
+            student.setEmail(email);
+            student.setPhone(phone);
+            student.setYearOfJoining(yearOfJoining);
+            student.setCurrentSemester(currentSemester);
+            student.setBranch(branch);
+            student.setPasswordHash("");
+            studentRepository.save(student);
+        } else {
+            for (Registration existing : registrationRepository.findByStudent_RollNo(rollNo)) {
+                if ("REJECTED".equals(existing.getStatus())) continue;
+                if ("VERIFIED".equals(existing.getStatus())) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "You already have a verified registration.");
+                }
+                if ("SUBMITTED".equals(existing.getStatus())) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "You already have a pending registration.");
+                }
+            }
+        }
 
         // create registration
         Registration reg = new Registration();
