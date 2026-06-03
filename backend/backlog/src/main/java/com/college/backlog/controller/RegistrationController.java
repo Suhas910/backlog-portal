@@ -1,6 +1,5 @@
 package com.college.backlog.controller;
 
-import com.college.backlog.controller.dto.RegistrationDetailsResponse;
 import com.college.backlog.controller.dto.RegistrationRequest;
 import com.college.backlog.controller.dto.VerificationResponse;
 import com.college.backlog.exception.ResourceNotFoundException;
@@ -15,10 +14,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/register")
@@ -93,28 +90,4 @@ public class RegistrationController {
         );
     }
 
-    @GetMapping("/verify/{regId}")
-    public RegistrationDetailsResponse getRegistrationById(@PathVariable String regId, Authentication authentication) {
-        Registration reg = registrationRepository.findByRegId(regId)
-            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
-
-        checkDeptAccess(authentication, reg);
-
-        List<String> subjectNames = reg.getSubjects()
-            .stream()
-            .map(s -> s.getSubjectName())
-            .collect(Collectors.toList());
-
-        return new RegistrationDetailsResponse(
-            reg.getRegId(),
-            reg.getStudent().getName(),
-            reg.getStudent().getRollNo(),
-            reg.getStudent().getEmail(),
-            reg.getStudent().getCurrentSemester(),
-            reg.getStudent().getYearOfJoining(),
-            subjectNames,
-            reg.getStatus(),
-            reg.getRegisteredAt().toString()
-        );
-    }
 }
