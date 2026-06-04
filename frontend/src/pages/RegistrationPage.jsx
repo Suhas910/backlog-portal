@@ -90,12 +90,16 @@ function RegistrationPage() {
 
   const handleSubmit = async () => {
     if (currentStep === 1) {
-      if (!formData.usn || !formData.name || !formData.email || !formData.branch) {
+      if (!formData.usn || !formData.name || !formData.email || !formData.phone || !formData.branch) {
         setSubmitError("Please fill in all required fields.");
         return;
       }
       if (!formData.email.toLowerCase().endsWith("@msrit.edu")) {
         setSubmitError("Email must be a valid @msrit.edu address.");
+        return;
+      }
+      if (!/^[0-9]{10}$/.test(formData.phone)) {
+        setSubmitError("Phone number must be exactly 10 digits.");
         return;
       }
       setSubmitError("");
@@ -290,7 +294,7 @@ function RegistrationPage() {
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="phone" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
-                    Phone
+                    Phone *
                   </label>
                   <input
                     id="phone"

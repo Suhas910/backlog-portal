@@ -37,14 +37,14 @@ public class RegistrationService {
         for (Subject subject : subjects) {
             if ("ELECTIVE".equals(subject.getSubjectType())) {
                 boolean eligible = subject.getEligibleDepartments().stream()
-                    .anyMatch(d -> d.getName().equalsIgnoreCase(branch));
+                    .anyMatch(d -> d.getDeptName().equals(branch));
                 if (!eligible) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Not eligible for elective: " + subject.getSubjectName());
                 }
             } else {
                 if (subject.getDepartment() == null ||
-                    !subject.getDepartment().getName().equalsIgnoreCase(branch)) {
+                    !subject.getDepartment().getDeptName().equals(branch)) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Subject '" + subject.getSubjectName() + "' does not belong to branch: " + branch);
                 }
@@ -65,16 +65,28 @@ public class RegistrationService {
             student.setPasswordHash("");
             studentRepository.save(student);
         } else {
+            // block only while a submission is still pending; VERIFIED/REJECTED may re-submit
+            // (e.g. to add subjects they forgot)
+            boolean hasVerified = false;
             for (Registration existing : registrationRepository.findByStudent_RollNo(rollNo)) {
-                if ("REJECTED".equals(existing.getStatus())) continue;
-                if ("VERIFIED".equals(existing.getStatus())) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "You already have a verified registration.");
-                }
                 if ("SUBMITTED".equals(existing.getStatus())) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "You already have a pending registration.");
                 }
+                if ("VERIFIED".equals(existing.getStatus())) {
+                    hasVerified = true;
+                }
+            }
+            // refresh details only if never verified — verified details are locked to the
+            // physically-checked form, so they must not be overwritten by a later submission
+            if (!hasVerified) {
+                student.setName(name);
+                student.setEmail(email);
+                student.setPhone(phone);
+                student.setYearOfJoining(yearOfJoining);
+                student.setCurrentSemester(currentSemester);
+                student.setBranch(branch);
+                studentRepository.save(student);
             }
         }
 

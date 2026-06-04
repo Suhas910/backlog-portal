@@ -8,6 +8,7 @@ import com.college.backlog.model.User;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.RegistrationService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -51,7 +52,7 @@ public class RegistrationController {
     }
 
     @PostMapping
-    public Map<String, String> register(@RequestBody RegistrationRequest request) {
+    public Map<String, String> register(@Valid @RequestBody RegistrationRequest request) {
         Registration reg = registrationService.register(
             request.getRollNo(), request.getName(), request.getEmail(),
             request.getPhone(), request.getYearOfJoining(), request.getCurrentSemester(),
