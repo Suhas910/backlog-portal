@@ -3,6 +3,7 @@ package com.college.backlog.service;
 import com.college.backlog.model.*;
 import com.college.backlog.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,9 +23,20 @@ public class RegistrationService {
     @Autowired
     private SubjectRepository subjectRepository;
 
+    @Autowired
+    private ExamCycleRepository examCycleRepository;
+
+    @Autowired
+    private RegistrationEventRepository registrationEventRepository;
+
     public Registration register(String rollNo, String name, String email,
                                   String phone, int yearOfJoining,
                                   int currentSemester, String branch, List<Long> subjectIds) {
+
+        // an exam cycle must be open for registrations to be accepted
+        ExamCycle cycle = examCycleRepository.findByActiveTrue()
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                "Registrations are currently closed. No active exam cycle."));
 
         // validate subjects before touching the DB
         List<Subject> subjects = subjectRepository.findAllById(subjectIds);
@@ -51,53 +63,58 @@ public class RegistrationService {
             }
         }
 
-        // create student record only on first registration — never overwrite existing details
-        Student student = studentRepository.findByRollNo(rollNo).orElse(null);
-        if (student == null) {
-            student = new Student();
-            student.setRollNo(rollNo);
-            student.setName(name);
-            student.setEmail(email);
-            student.setPhone(phone);
-            student.setYearOfJoining(yearOfJoining);
-            student.setCurrentSemester(currentSemester);
-            student.setBranch(branch);
-            student.setPasswordHash("");
-            studentRepository.save(student);
-        } else {
-            // block only while a submission is still pending; VERIFIED/REJECTED may re-submit
-            // (e.g. to add subjects they forgot)
-            boolean hasVerified = false;
-            for (Registration existing : registrationRepository.findByStudent_RollNo(rollNo)) {
-                if ("SUBMITTED".equals(existing.getStatus())) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "You already have a pending registration.");
-                }
-                if ("VERIFIED".equals(existing.getStatus())) {
-                    hasVerified = true;
-                }
-            }
-            // refresh details only if never verified — verified details are locked to the
-            // physically-checked form, so they must not be overwritten by a later submission
-            if (!hasVerified) {
-                student.setName(name);
-                student.setEmail(email);
-                student.setPhone(phone);
-                student.setYearOfJoining(yearOfJoining);
-                student.setCurrentSemester(currentSemester);
-                student.setBranch(branch);
-                studentRepository.save(student);
+        // duplicate guard: only one pending submission per student per exam cycle.
+        // VERIFIED/REJECTED rows in the cycle may be followed by a new submission.
+        for (Registration existing : registrationRepository
+                .findByStudent_RollNoAndExamCycle_Id(rollNo, cycle.getId())) {
+            if ("SUBMITTED".equals(existing.getStatus())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "You already have a pending registration for this exam cycle.");
             }
         }
 
-        // create registration
+        // upsert the student's "latest known identity" — details are editable across cycles;
+        // historical fidelity is preserved by the per-registration snapshot below
+        Student student = studentRepository.findByRollNo(rollNo).orElse(new Student());
+        student.setRollNo(rollNo);
+        student.setName(name);
+        student.setEmail(email);
+        student.setPhone(phone);
+        student.setYearOfJoining(yearOfJoining);
+        student.setCurrentSemester(currentSemester);
+        student.setBranch(branch);
+        if (student.getPasswordHash() == null) {
+            student.setPasswordHash("");
+        }
+        studentRepository.save(student);
+
+        // create registration with an immutable snapshot of the submitted details
         Registration reg = new Registration();
         reg.setRegId(UUID.randomUUID().toString());
         reg.setStudent(student);
         reg.setSubjects(subjects);
         reg.setRegisteredAt(LocalDateTime.now());
         reg.setStatus("SUBMITTED");
+        reg.setExamCycle(cycle);
+        reg.setSnapName(name);
+        reg.setSnapEmail(email);
+        reg.setSnapPhone(phone);
+        reg.setSnapBranch(branch);
+        reg.setSnapSemester(currentSemester);
+        reg.setSnapYearOfJoining(yearOfJoining);
 
-        return registrationRepository.save(reg);
+        Registration saved;
+        try {
+            // saveAndFlush so the partial-unique-index race backstop fires here, not later
+            saved = registrationRepository.saveAndFlush(reg);
+        } catch (DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "You already have a pending registration for this exam cycle.");
+        }
+
+        registrationEventRepository.save(new RegistrationEvent(
+            saved.getRegId(), "SUBMITTED", rollNo, "STUDENT", null));
+
+        return saved;
     }
 }

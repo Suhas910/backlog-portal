@@ -5,6 +5,7 @@ import AdminPage from "./pages/AdminPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import { ThemeProvider } from "./context/ThemeContext";
 import AddSubjectPage from "./pages/AddSubjectPage";
+import ExamCyclePage from "./pages/ExamCyclePage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/add-subject" element={<AddSubjectPage />} />
+          <Route path="/admin/exam-cycles" element={<ExamCyclePage />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

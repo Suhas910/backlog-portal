@@ -3,13 +3,16 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   BadgeCheck,
+  CalendarRange,
   CircleDashed,
   Download,
+  History,
   LoaderCircle,
   LogOut,
   PlusCircle,
   Shield,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -43,6 +46,13 @@ function AdminPage() {
   const [searchFilter, setSearchFilter] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
+  const [examCycles, setExamCycles] = useState([]);
+  const [cycleFilter, setCycleFilter] = useState("");
+
+  // Audit history modal
+  const [historyRegId, setHistoryRegId] = useState("");
+  const [historyEvents, setHistoryEvents] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (!isAdmin || !adminToken) {
@@ -79,12 +89,24 @@ function AdminPage() {
   }, [isAdmin, adminToken, typeFilter, searchFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
+    if (!isAdmin || !adminToken) return;
+    api
+      .get("/admin/exam-cycles", { headers: getAdminHeaders() })
+      .then((res) => setExamCycles(res.data))
+      .catch((err) => {
+        console.error("Failed to fetch exam cycles", err);
+        setExamCycles([]);
+      });
+  }, [isAdmin, adminToken]);
+
+  useEffect(() => {
     const params = new URLSearchParams();
     if (subjectFilter) params.append("subjectId", subjectFilter);
     if (typeFilter) params.append("subjectType", typeFilter);
     if (searchFilter) params.append("searchQuery", searchFilter);
     if (startDateFilter) params.append("startDate", startDateFilter);
     if (endDateFilter) params.append("endDate", endDateFilter);
+    if (cycleFilter) params.append("examCycleId", cycleFilter);
 
     api
       .get(`/admin/registrations?${params.toString()}`, {
@@ -111,6 +133,7 @@ function AdminPage() {
     searchFilter,
     startDateFilter,
     endDateFilter,
+    cycleFilter,
   ]);
 
   const handleVerify = async (regId) => {
@@ -131,6 +154,7 @@ function AdminPage() {
       );
     } catch (err) {
       console.error(err);
+      alert(err.response?.data?.message || "Failed to verify. Please refresh and try again.");
     } finally {
       setVerifyingRegId("");
     }
@@ -154,8 +178,25 @@ function AdminPage() {
       );
     } catch (err) {
       console.error(err);
+      alert(err.response?.data?.message || "Failed to reject. Please refresh and try again.");
     } finally {
       setRejectingRegId("");
+    }
+  };
+
+  const openHistory = async (regId) => {
+    setHistoryRegId(regId);
+    setHistoryEvents([]);
+    setHistoryLoading(true);
+    try {
+      const res = await api.get(`/admin/registrations/${regId}/events`, {
+        headers: getAdminHeaders(),
+      });
+      setHistoryEvents(res.data);
+    } catch (err) {
+      console.error("Failed to load history", err);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -167,6 +208,7 @@ function AdminPage() {
     if (searchFilter) params.append("searchQuery", searchFilter);
     if (startDateFilter) params.append("startDate", startDateFilter);
     if (endDateFilter) params.append("endDate", endDateFilter);
+    if (cycleFilter) params.append("examCycleId", cycleFilter);
 
     api
       .get(`/admin/export-pdf?${params.toString()}`, {
@@ -258,6 +300,12 @@ function AdminPage() {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link
+              to="/admin/exam-cycles"
+              className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+            >
+              <CalendarRange size={14} /> Exam Cycles
+            </Link>
             {(adminRole === "DEPT_OFFICE" || adminRole === "ADMIN") && (
               <Link
                 to="/admin/add-subject"
@@ -327,7 +375,31 @@ function AdminPage() {
           <h3 className="mb-3 text-lg font-semibold text-[var(--color-secondary)]">
             Filters
           </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {/* Exam Cycle Filter */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="cycle-filter"
+                className="text-xs font-semibold uppercase tracking-[0.08em]"
+              >
+                Exam Cycle
+              </label>
+              <select
+                id="cycle-filter"
+                value={cycleFilter}
+                onChange={(e) => setCycleFilter(e.target.value)}
+                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              >
+                <option value="">All Cycles</option>
+                {examCycles.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.active ? " (active)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Subject Type Filter */}
             <div className="flex flex-col gap-1.5">
               <label
@@ -486,11 +558,13 @@ function AdminPage() {
                     <th className="px-4 py-3">USN</th>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Semester</th>
+                    <th className="px-4 py-3">Cycle</th>
                     <th className="px-4 py-3">Subjects</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Verified By</th>
                     <th className="px-4 py-3">Action</th>
+                    <th className="px-4 py-3">History</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -508,6 +582,15 @@ function AdminPage() {
                         {reg.studentName}
                       </td>
                       <td className="px-4 py-3">{reg.semester}</td>
+                      <td className="px-4 py-3">
+                        {reg.examCycle ? (
+                          <span className="text-xs text-[var(--text-main)]">
+                            {reg.examCycle}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[var(--text-muted)]">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">{reg.subjects.join(", ")}</td>
                       <td className="px-4 py-3">
                         <span
@@ -579,6 +662,15 @@ function AdminPage() {
                           </span>
                         )}
                       </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => openHistory(reg.regId)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-secondary)] transition-colors hover:bg-[var(--surface-muted)]"
+                        >
+                          <History size={14} /> View
+                        </button>
+                      </td>
                     </motion.tr>
                   ))}
                 </tbody>
@@ -587,6 +679,82 @@ function AdminPage() {
           )}
         </section>
       </div>
+
+      {historyRegId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setHistoryRegId("")}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+                <History size={18} /> Registration History
+              </h3>
+              <button
+                type="button"
+                onClick={() => setHistoryRegId("")}
+                className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-muted)]"
+                aria-label="Close history"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {historyLoading ? (
+              <p className="inline-flex items-center gap-2 text-sm text-[var(--text-main)]">
+                <LoaderCircle size={16} className="animate-spin" /> Loading history...
+              </p>
+            ) : historyEvents.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">
+                No history recorded for this registration.
+              </p>
+            ) : (
+              <ol className="space-y-3">
+                {historyEvents.map((ev, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-3 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3 py-2.5"
+                  >
+                    <span
+                      className={`mt-0.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                        ev.action === "VERIFIED"
+                          ? "bg-[rgba(145,25,28,0.1)] text-[var(--color-primary)]"
+                          : ev.action === "REJECTED"
+                            ? "bg-red-50 text-red-600"
+                            : "bg-[var(--surface-1)] text-[var(--color-secondary)]"
+                      }`}
+                    >
+                      {ev.action}
+                    </span>
+                    <div className="text-sm">
+                      <p className="text-[var(--text-main)]">
+                        {ev.actor || "unknown"}
+                        <span className="text-[var(--text-muted)]">
+                          {" "}
+                          ({ev.actorRole})
+                        </span>
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {ev.timestamp
+                          ? new Date(ev.timestamp).toLocaleString()
+                          : ""}
+                      </p>
+                      {ev.note && (
+                        <p className="mt-1 text-xs text-[var(--text-main)]">
+                          {ev.note}
+                        </p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </div>
+      )}
 
       <MobileActionBar />
     </div>

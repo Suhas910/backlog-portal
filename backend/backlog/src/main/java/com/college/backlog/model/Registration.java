@@ -38,6 +38,33 @@ public class Registration {
     @Column(name = "verified_by")
     private String verifiedBy;
 
+    @ManyToOne
+    @JoinColumn(name = "exam_cycle_id")
+    private ExamCycle examCycle;
+
+    @Version
+    private Long version;
+
+    // immutable snapshot of the student's details at submission time — keeps each
+    // registration's printed form faithful even after the Student record changes
+    @Column(name = "snap_name")
+    private String snapName;
+
+    @Column(name = "snap_email")
+    private String snapEmail;
+
+    @Column(name = "snap_phone")
+    private String snapPhone;
+
+    @Column(name = "snap_branch")
+    private String snapBranch;
+
+    @Column(name = "snap_semester")
+    private Integer snapSemester;
+
+    @Column(name = "snap_year_of_joining")
+    private Integer snapYearOfJoining;
+
     public Registration() {}
 
     public Registration(Long id, String regId, Student student, List<Subject> subjects, LocalDateTime registeredAt, String status) {
@@ -69,4 +96,28 @@ public class Registration {
 
     public String getVerifiedBy() { return verifiedBy; }
     public void setVerifiedBy(String verifiedBy) { this.verifiedBy = verifiedBy; }
+
+    public ExamCycle getExamCycle() { return examCycle; }
+    public void setExamCycle(ExamCycle examCycle) { this.examCycle = examCycle; }
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
+
+    public String getSnapName() { return snapName; }
+    public void setSnapName(String snapName) { this.snapName = snapName; }
+
+    public String getSnapEmail() { return snapEmail; }
+    public void setSnapEmail(String snapEmail) { this.snapEmail = snapEmail; }
+
+    public String getSnapPhone() { return snapPhone; }
+    public void setSnapPhone(String snapPhone) { this.snapPhone = snapPhone; }
+
+    public String getSnapBranch() { return snapBranch; }
+    public void setSnapBranch(String snapBranch) { this.snapBranch = snapBranch; }
+
+    public Integer getSnapSemester() { return snapSemester; }
+    public void setSnapSemester(Integer snapSemester) { this.snapSemester = snapSemester; }
+
+    public Integer getSnapYearOfJoining() { return snapYearOfJoining; }
+    public void setSnapYearOfJoining(Integer snapYearOfJoining) { this.snapYearOfJoining = snapYearOfJoining; }
 }

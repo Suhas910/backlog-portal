@@ -18,14 +18,16 @@ public class RegistrationSpecification implements Specification<Registration> {
     private final String searchQuery;
     private final LocalDate startDate;
     private final LocalDate endDate;
+    private final Long examCycleId;
 
-    public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate) {
+    public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate, Long examCycleId) {
         this.subjectId = subjectId;
         this.departmentId = departmentId;
         this.subjectType = subjectType;
         this.searchQuery = searchQuery;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.examCycleId = examCycleId;
     }
 
     @Override
@@ -59,6 +61,10 @@ public class RegistrationSpecification implements Specification<Registration> {
 
         if (startDate != null) { predicates.add(cb.greaterThanOrEqualTo(root.get("registeredAt"), startDate.atStartOfDay())); }
         if (endDate != null) { predicates.add(cb.lessThanOrEqualTo(root.get("registeredAt"), endDate.atTime(LocalTime.MAX))); }
+
+        if (examCycleId != null) {
+            predicates.add(cb.equal(root.join("examCycle", JoinType.LEFT).get("id"), examCycleId));
+        }
 
         return cb.and(predicates.toArray(new Predicate[0]));
     }

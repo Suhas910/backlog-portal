@@ -107,8 +107,8 @@ public class PdfService {
         for (Registration reg : registrations) {
             table.addCell(dataCellCentre(String.valueOf(i++), regular));
             table.addCell(dataCellCentre(safe(reg, r -> r.getStudent().getRollNo()), regular));
-            table.addCell(dataCell(safe(reg, r -> r.getStudent().getName()), regular));
-            table.addCell(dataCellCentre(safe(reg, r -> String.valueOf(r.getStudent().getCurrentSemester())), regular));
+            table.addCell(dataCell(safe(reg, r -> r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()), regular));
+            table.addCell(dataCellCentre(safe(reg, r -> String.valueOf(r.getSnapSemester() != null ? r.getSnapSemester() : r.getStudent().getCurrentSemester())), regular));
 
             String subjectsStr = reg.getSubjects() != null ? reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.joining(", ")) : "";
             table.addCell(dataCell(subjectsStr, regular));
@@ -265,9 +265,14 @@ public class PdfService {
     // =========================================================================
     private void addCurrentSemesterLabel(Document doc, PdfFont bold, PdfFont regular,
                                          Registration reg) {
-        String sem = (reg != null && reg.getStudent() != null)
-                ? String.valueOf(reg.getStudent().getCurrentSemester())
-                : "..............";
+        String sem;
+        if (reg != null && reg.getSnapSemester() != null) {
+            sem = String.valueOf(reg.getSnapSemester());
+        } else if (reg != null && reg.getStudent() != null) {
+            sem = String.valueOf(reg.getStudent().getCurrentSemester());
+        } else {
+            sem = "..............";
+        }
 
         Paragraph p = new Paragraph()
                 .setFontSize(FS_SECTION_HDR)
@@ -285,11 +290,11 @@ public class PdfService {
 
         String examMonthYear = (reg != null && reg.getRegisteredAt() != null)
                 ? reg.getRegisteredAt().format(DateTimeFormatter.ofPattern("MMMM yyyy")) : "";
-        String name   = safe(reg, r -> r.getStudent().getName().toUpperCase());
+        String name   = safe(reg, r -> (r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()).toUpperCase());
         String usn    = safe(reg, r -> r.getStudent().getRollNo());
-        String branch = safe(reg, r -> "B.E. / " + r.getStudent().getBranch());
-        String email  = safe(reg, r -> r.getStudent().getEmail());
-        String mobile = safe(reg, r -> r.getStudent().getPhone());
+        String branch = safe(reg, r -> "B.E. / " + (r.getSnapBranch() != null ? r.getSnapBranch() : r.getStudent().getBranch()));
+        String email  = safe(reg, r -> r.getSnapEmail() != null ? r.getSnapEmail() : r.getStudent().getEmail());
+        String mobile = safe(reg, r -> r.getSnapPhone() != null ? r.getSnapPhone() : r.getStudent().getPhone());
 
         String[][] fields = {
             { "Examination Month / Year",                  examMonthYear },

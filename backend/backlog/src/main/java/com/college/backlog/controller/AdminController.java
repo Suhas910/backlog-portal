@@ -2,11 +2,13 @@ package com.college.backlog.controller;
 
 import com.college.backlog.controller.dto.SubjectCreateRequest;
 import com.college.backlog.controller.dto.RegistrationSummaryResponse;
+import com.college.backlog.controller.dto.RegistrationEventResponse;
 import com.college.backlog.model.Department;
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.Subject;
 import com.college.backlog.model.User;
 import com.college.backlog.repository.DepartmentRepository;
+import com.college.backlog.repository.RegistrationEventRepository;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.SubjectRepository;
 import com.college.backlog.repository.UserRepository;
@@ -54,6 +56,9 @@ public class AdminController {
     @Autowired
     private PdfService pdfService;
 
+    @Autowired
+    private RegistrationEventRepository registrationEventRepository;
+
     private Long resolveCallerDeptId(Authentication auth) {
         if (auth == null) return null;
         User user = userRepository.findById(auth.getName()).orElse(null);
@@ -69,6 +74,7 @@ public class AdminController {
             @RequestParam Optional<String> searchQuery,
             @RequestParam Optional<LocalDate> startDate,
             @RequestParam Optional<LocalDate> endDate,
+            @RequestParam Optional<Long> examCycleId,
             Authentication authentication
     ) {
         Long callerDeptId = resolveCallerDeptId(authentication);
@@ -78,20 +84,35 @@ public class AdminController {
                 subjectType.orElse(null),
                 searchQuery.orElse(null),
                 startDate.orElse(null),
-                endDate.orElse(null));
+                endDate.orElse(null),
+                examCycleId.orElse(null));
 
         List<Registration> registrations = registrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
         return registrations.stream().map(reg -> new RegistrationSummaryResponse(
             reg.getRegId(),
             reg.getStudent().getRollNo(),
-            reg.getStudent().getName(),
-            reg.getStudent().getCurrentSemester(),
-            reg.getStudent().getYearOfJoining(),
+            reg.getSnapName() != null ? reg.getSnapName() : reg.getStudent().getName(),
+            reg.getSnapSemester() != null ? reg.getSnapSemester() : reg.getStudent().getCurrentSemester(),
+            reg.getSnapYearOfJoining() != null ? reg.getSnapYearOfJoining() : reg.getStudent().getYearOfJoining(),
             reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.toList()),
             reg.getStatus(),
             reg.getRegisteredAt().toString(),
-            reg.getVerifiedBy()
+            reg.getVerifiedBy(),
+            reg.getExamCycle() != null ? reg.getExamCycle().getName() : null
         )).collect(Collectors.toList());
+    }
+
+    @GetMapping("/registrations/{regId}/events")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    public List<RegistrationEventResponse> getRegistrationEvents(@PathVariable String regId) {
+        return registrationEventRepository.findByRegIdOrderByTimestampAsc(regId).stream()
+            .map(e -> new RegistrationEventResponse(
+                e.getAction(),
+                e.getActor(),
+                e.getActorRole(),
+                e.getTimestamp() != null ? e.getTimestamp().toString() : null,
+                e.getNote()))
+            .collect(Collectors.toList());
     }
 
     @PostMapping("/subjects")
@@ -139,6 +160,7 @@ public class AdminController {
             @RequestParam Optional<String> searchQuery,
             @RequestParam Optional<LocalDate> startDate,
             @RequestParam Optional<LocalDate> endDate,
+            @RequestParam Optional<Long> examCycleId,
             Authentication authentication
     ) throws Exception {
         Long callerDeptId = resolveCallerDeptId(authentication);
@@ -148,7 +170,8 @@ public class AdminController {
                 subjectType.orElse(null),
                 searchQuery.orElse(null),
                 startDate.orElse(null),
-                endDate.orElse(null));
+                endDate.orElse(null),
+                examCycleId.orElse(null));
 
         List<Registration> registrations = registrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
         byte[] pdfBytes = pdfService.generateRegistrationsSummaryPdf(registrations);
