@@ -42,6 +42,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/subjects").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pdf/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/departments").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/registration-status").permitAll()
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE")
                         .requestMatchers("/api/register/verify/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE")
                         .anyRequest().authenticated());

@@ -1,6 +1,9 @@
 # Claude local context
 CLAUDE.local.md
 
+# Claude tooling — local preview/dev server config, not for sharing
+.claude/launch.json
+
 # Backend
 backend/backlog/target/
 backend/backlog/.mvn/

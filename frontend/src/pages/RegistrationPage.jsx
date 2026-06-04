@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, CheckCircle2, Download, LoaderCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarX, CheckCircle2, Download, LoaderCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
@@ -27,9 +27,19 @@ function RegistrationPage() {
   const [departments, setDepartments] = useState([]);
   const [searchYear, setSearchYear] = useState("");
   const [searchSemester, setSearchSemester] = useState("");
+  // null = still checking; otherwise { open, cycleName?, examMonthYear? }
+  const [regStatus, setRegStatus] = useState(null);
 
   useEffect(() => {
     api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    api
+      .get("/registration-status")
+      .then((res) => setRegStatus(res.data))
+      // if the check fails, fall back to "open" so a flaky network never blocks a real student
+      .catch(() => setRegStatus({ open: true }));
   }, []);
 
   const availableYears = useMemo(() => {
@@ -141,6 +151,56 @@ function RegistrationPage() {
   const handleDownloadPdf = () => {
     window.open(`/api/pdf/${regId}`, "_blank");
   };
+
+  if (regStatus === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-1)] px-4 text-[var(--text-muted)]">
+        <p className="inline-flex items-center gap-2 text-sm">
+          <LoaderCircle size={18} className="animate-spin" /> Checking registration status...
+        </p>
+      </div>
+    );
+  }
+
+  if (regStatus.open === false) {
+    return (
+      <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto mb-6 w-full max-w-2xl">
+          <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
+            <BrandIdentity compact />
+            <Link
+              to="/"
+              aria-label="Back to home page"
+              className="inline-flex items-center rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              <ArrowLeft size={15} className="mr-1" /> Home
+            </Link>
+          </header>
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          role="alert"
+          className="mx-auto w-full max-w-2xl rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft sm:p-8"
+        >
+          <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--color-primary)]">
+            <CalendarX size={24} />
+          </span>
+          <h2 className="mb-3 text-3xl font-semibold text-[var(--color-primary)]">Registration Closed</h2>
+          <p className="mb-6 text-[var(--text-main)]">
+            Backlog registration is not open right now. There is no active exam cycle accepting
+            submissions. Please check back when your department announces the next registration window.
+          </p>
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--stroke)] bg-[var(--surface-1)] px-5 py-3 text-sm font-semibold text-[var(--color-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+          >
+            <ArrowLeft size={16} /> Back to Home
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
