@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   BadgeCheck,
+  Building2,
   CalendarRange,
   CircleDashed,
   Download,
@@ -312,6 +313,14 @@ function AdminPage() {
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >
                 <PlusCircle size={14} /> Add Subject
+              </Link>
+            )}
+            {(adminRole === "ADMIN" || adminRole === "PRINCIPAL") && (
+              <Link
+                to="/admin/departments"
+                className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+              >
+                <Building2 size={14} /> Departments
               </Link>
             )}
             <Link

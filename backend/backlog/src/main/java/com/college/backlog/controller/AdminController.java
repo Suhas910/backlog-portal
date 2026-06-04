@@ -1,8 +1,11 @@
 package com.college.backlog.controller;
 
+import com.college.backlog.controller.dto.DepartmentRequest;
 import com.college.backlog.controller.dto.SubjectCreateRequest;
 import com.college.backlog.controller.dto.RegistrationSummaryResponse;
 import com.college.backlog.controller.dto.RegistrationEventResponse;
+import com.college.backlog.exception.ResourceNotFoundException;
+import org.springframework.web.server.ResponseStatusException;
 import com.college.backlog.model.Department;
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.Subject;
@@ -123,9 +126,44 @@ public class AdminController {
     }
 
     @GetMapping("/departments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'DEPT_OFFICE')")
     public List<Department> getDepartments() {
-        return departmentRepository.findAll();
+        return departmentRepository.findAll(Sort.by("deptName"));
+    }
+
+    @PostMapping("/departments")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL')")
+    public Department addDepartment(@Valid @RequestBody DepartmentRequest request) {
+        String code = request.getCode().trim().toUpperCase();
+        if (departmentRepository.existsByCodeIgnoreCase(code)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "A department with code '" + code + "' already exists.");
+        }
+        Department dept = new Department();
+        dept.setDeptName(request.getDeptName().trim());
+        dept.setCode(code);
+        dept.setContactEmail(request.getContactEmail() != null ? request.getContactEmail().trim() : null);
+        return departmentRepository.save(dept);
+    }
+
+    @PutMapping("/departments/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL')")
+    public Department updateDepartment(@PathVariable Long id, @Valid @RequestBody DepartmentRequest request) {
+        Department dept = departmentRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + id));
+        String code = request.getCode().trim().toUpperCase();
+        // allow keeping the same code; only block if another department already owns it
+        departmentRepository.findByCodeIgnoreCase(code).ifPresent(other -> {
+            if (!other.getId().equals(id)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A department with code '" + code + "' already exists.");
+            }
+        });
+        dept.setDeptName(request.getDeptName().trim());
+        dept.setCode(code);
+        dept.setContactEmail(request.getContactEmail() != null ? request.getContactEmail().trim() : null);
+        return departmentRepository.save(dept);
     }
 
     @GetMapping("/all-subjects")

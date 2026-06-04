@@ -14,7 +14,6 @@ function RegistrationPage() {
     name: "",
     email: "",
     phone: "",
-    branch: "",
   });
   const [subjects, setSubjects] = useState([]);
   const [selectedSubjects, setSelectedSubjects] = useState([]);
@@ -47,6 +46,18 @@ function RegistrationPage() {
     return [currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1, currentYear];
   }, []);
 
+  // USN format: 1MS<2-digit year><2-letter branch code><3-digit serial>, e.g. 1MS22CS001
+  const USN_PATTERN = /^1MS\d{2}[A-Z]{2}\d{3}$/;
+  const usnValid = USN_PATTERN.test(formData.usn);
+
+  // Branch is derived from the USN's branch code, matched against department codes.
+  const derivedBranch = useMemo(() => {
+    if (!usnValid) return "";
+    const code = formData.usn.slice(5, 7).toUpperCase();
+    const dept = departments.find((d) => (d.code || "").toUpperCase() === code);
+    return dept ? dept.deptName : "";
+  }, [formData.usn, usnValid, departments]);
+
   useEffect(() => {
     if (!searchYear || !searchSemester || currentStep !== 2) {
       return;
@@ -61,7 +72,7 @@ function RegistrationPage() {
         params: {
           year: searchYear,
           semester: searchSemester,
-          ...(formData.branch ? { branch: formData.branch } : {}),
+          ...(derivedBranch ? { branch: derivedBranch } : {}),
         },
       })
       .then((res) => {
@@ -82,13 +93,16 @@ function RegistrationPage() {
     return () => {
       ignoreResponse = true;
     };
-  }, [searchYear, searchSemester, currentStep, formData.branch]);
+  }, [searchYear, searchSemester, currentStep, derivedBranch]);
 
   const handleChange = (e) => {
     let value = e.target.value;
-    if (e.target.name === "usn") value = value.toUpperCase();
+    if (e.target.name === "usn") {
+      value = value.toUpperCase();
+      // changing the USN can change the derived branch, so drop any picked subjects
+      setSelectedSubjects([]);
+    }
     if (e.target.name === "email") value = value.toLowerCase();
-    if (e.target.name === "branch") setSelectedSubjects([]);
     setFormData((prev) => ({ ...prev, [e.target.name]: value }));
   };
 
@@ -100,8 +114,16 @@ function RegistrationPage() {
 
   const handleSubmit = async () => {
     if (currentStep === 1) {
-      if (!formData.usn || !formData.name || !formData.email || !formData.phone || !formData.branch) {
+      if (!formData.usn || !formData.name || !formData.email || !formData.phone) {
         setSubmitError("Please fill in all required fields.");
+        return;
+      }
+      if (!usnValid) {
+        setSubmitError("USN must be in the format 1MS22CS001.");
+        return;
+      }
+      if (!derivedBranch) {
+        setSubmitError("We couldn't recognise the branch code in your USN. Please check it or contact the department office.");
         return;
       }
       if (!formData.email.toLowerCase().endsWith("@msrit.edu")) {
@@ -131,8 +153,7 @@ function RegistrationPage() {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
-        branch: formData.branch,
-        yearOfJoining: parseInt(searchYear || "0", 10),
+        // branch and year of joining are derived from the USN server-side
         currentSemester: parseInt(searchSemester || "0", 10),
         subjectIds: selectedSubjects.map((s) => s.id),
       });
@@ -312,12 +333,26 @@ function RegistrationPage() {
                     id="usn"
                     className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                     name="usn"
-                    placeholder="e.g. 1CS22CS001"
+                    placeholder="e.g. 1MS22CS001"
                     value={formData.usn}
                     onChange={handleChange}
-                    maxLength={16}
+                    maxLength={10}
                     data-cy="reg-usn"
                   />
+                  {formData.usn && !usnValid && (
+                    <p className="text-xs text-red-600">USN must be in the format 1MS22CS001.</p>
+                  )}
+                  {usnValid && (
+                    derivedBranch ? (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Branch: <span className="font-semibold text-[var(--text-main)]">{derivedBranch}</span>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-red-600">
+                        Branch code "{formData.usn.slice(5, 7)}" is not recognised. Contact the department office.
+                      </p>
+                    )
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-1.5">
@@ -373,27 +408,20 @@ function RegistrationPage() {
                 </div>
 
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
-                  <label htmlFor="branch" className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
-                    Branch *
+                  <label className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                    Branch
                   </label>
-                  <select
-                    id="branch"
-                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-                    name="branch"
-                    value={formData.branch}
-                    onChange={handleChange}
+                  <div
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3.5 py-2.5 text-sm text-[var(--text-main)]"
                     data-cy="reg-branch"
-                    disabled={departments.length === 0}
                   >
-                    <option value="">
-                      {departments.length === 0 ? "Loading branches..." : "Select your branch"}
-                    </option>
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.deptName}>
-                        {d.deptName}
-                      </option>
-                    ))}
-                  </select>
+                    {derivedBranch || (
+                      <span className="text-[var(--text-muted)]">Detected from your USN</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Your branch is determined automatically from your USN.
+                  </p>
                 </div>
               </div>
             </section>
@@ -435,6 +463,7 @@ function RegistrationPage() {
                     className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                     value={searchYear}
                     onChange={(e) => setSearchYear(e.target.value)}
+                    data-cy="reg-year"
                   >
                     <option value="">Select year</option>
                     {availableYears.map((year) => (
@@ -453,6 +482,7 @@ function RegistrationPage() {
                     className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                     value={searchSemester}
                     onChange={(e) => setSearchSemester(e.target.value)}
+                    data-cy="reg-semester"
                   >
                     <option value="">Select semester</option>
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (

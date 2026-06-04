@@ -61,8 +61,8 @@ public class RegistrationController {
     public Map<String, String> register(@Valid @RequestBody RegistrationRequest request) {
         Registration reg = registrationService.register(
             request.getRollNo(), request.getName(), request.getEmail(),
-            request.getPhone(), request.getYearOfJoining(), request.getCurrentSemester(),
-            request.getBranch(), request.getSubjectIds()
+            request.getPhone(), request.getCurrentSemester(),
+            request.getSubjectIds()
         );
 
         return Map.of(

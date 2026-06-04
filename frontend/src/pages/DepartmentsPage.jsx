@@ -1,0 +1,279 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, Building2, LoaderCircle, PlusCircle, Save } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import BrandIdentity from "../components/layout/BrandIdentity";
+import MagneticCta from "../components/ui/MagneticCta";
+import api, { getAdminHeaders } from "../lib/api";
+import MobileActionBar from "../components/layout/MobileActionBar";
+
+function DepartmentsPage() {
+  const navigate = useNavigate();
+  const adminRole = sessionStorage.getItem("adminRole");
+  const adminToken = sessionStorage.getItem("adminToken");
+  const isAdmin = adminRole === "ADMIN" || adminRole === "PRINCIPAL";
+
+  const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  // new department form
+  const [deptName, setDeptName] = useState("");
+  const [code, setCode] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  // inline code edits keyed by department id
+  const [codeEdits, setCodeEdits] = useState({});
+  const [savingId, setSavingId] = useState(null);
+
+  const inputClass =
+    "rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]";
+
+  const loadDepartments = () => {
+    setLoading(true);
+    api
+      .get("/admin/departments", { headers: getAdminHeaders() })
+      .then((res) => {
+        setDepartments(res.data);
+        setCodeEdits(
+          res.data.reduce((acc, d) => ({ ...acc, [d.id]: d.code || "" }), {}),
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to load departments", err);
+        setError("Could not load departments.");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    if (!isAdmin || !adminToken) {
+      navigate("/admin/login");
+      return;
+    }
+    loadDepartments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (!deptName.trim()) {
+      setError("Department name is required.");
+      return;
+    }
+    if (!/^[A-Za-z]{2}$/.test(code.trim())) {
+      setError("Department code must be exactly 2 letters.");
+      return;
+    }
+    setCreating(true);
+    try {
+      await api.post(
+        "/admin/departments",
+        {
+          deptName: deptName.trim(),
+          code: code.trim().toUpperCase(),
+          contactEmail: contactEmail.trim() || null,
+        },
+        { headers: getAdminHeaders() },
+      );
+      setSuccess(`Department "${deptName.trim()}" added.`);
+      setDeptName("");
+      setCode("");
+      setContactEmail("");
+      loadDepartments();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to add department.");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleSaveCode = async (dept) => {
+    const nextCode = (codeEdits[dept.id] || "").trim();
+    setError("");
+    setSuccess("");
+    if (!/^[A-Za-z]{2}$/.test(nextCode)) {
+      setError(`Code for ${dept.deptName} must be exactly 2 letters.`);
+      return;
+    }
+    setSavingId(dept.id);
+    try {
+      await api.put(
+        `/admin/departments/${dept.id}`,
+        {
+          deptName: dept.deptName,
+          code: nextCode.toUpperCase(),
+          contactEmail: dept.contactEmail || null,
+        },
+        { headers: getAdminHeaders() },
+      );
+      setSuccess(`Code for "${dept.deptName}" saved.`);
+      loadDepartments();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save code.");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  if (!isAdmin || !adminToken) return null;
+
+  return (
+    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-3xl pb-24 md:pb-0">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-4 text-white shadow-soft sm:px-6">
+          <div>
+            <BrandIdentity compact />
+            <p className="mt-2 inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
+              Manage Departments
+            </p>
+          </div>
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-1 rounded-full border border-white/35 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+          >
+            <ArrowLeft size={14} /> Dashboard
+          </Link>
+        </header>
+
+        {error && (
+          <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+            {error}
+          </p>
+        )}
+        {success && (
+          <p className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+            {success}
+          </p>
+        )}
+
+        <section className="mb-6 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft">
+          <h3 className="mb-1 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+            <PlusCircle size={18} /> New Department
+          </h3>
+          <p className="mb-4 text-xs text-[var(--text-muted)]">
+            The 2-letter code must match the branch segment of the USN (e.g. "CS" in 1MS22CS001).
+          </p>
+          <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="dept-name" className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Department Name *
+              </label>
+              <input
+                id="dept-name"
+                type="text"
+                value={deptName}
+                onChange={(e) => setDeptName(e.target.value)}
+                placeholder="e.g. Computer Science"
+                className={inputClass}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="dept-code" className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Code (2 letters) *
+              </label>
+              <input
+                id="dept-code"
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 2))}
+                placeholder="e.g. CS"
+                maxLength={2}
+                className={`${inputClass} uppercase`}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <label htmlFor="dept-email" className="text-xs font-semibold uppercase tracking-[0.08em]">
+                Contact Email
+              </label>
+              <input
+                id="dept-email"
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="e.g. cse@msrit.edu"
+                className={inputClass}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <MagneticCta type="submit" disabled={creating} className="gap-2 rounded-xl">
+                {creating ? <LoaderCircle size={16} className="animate-spin" /> : <PlusCircle size={16} />}
+                {creating ? "Adding..." : "Add Department"}
+              </MagneticCta>
+            </div>
+          </form>
+        </section>
+
+        <section className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft">
+          <h3 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+            <Building2 size={18} /> Departments
+          </h3>
+          {loading ? (
+            <p className="inline-flex items-center gap-2 text-sm">
+              <LoaderCircle size={16} className="animate-spin" /> Loading...
+            </p>
+          ) : departments.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">No departments yet. Add one above.</p>
+          ) : (
+            <ul className="space-y-3">
+              {departments.map((d) => (
+                <motion.li
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  key={d.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3"
+                >
+                  <div>
+                    <p className="font-semibold text-[var(--text-main)]">{d.deptName}</p>
+                    {d.contactEmail && (
+                      <p className="text-xs text-[var(--text-muted)]">{d.contactEmail}</p>
+                    )}
+                    {!d.code && (
+                      <p className="text-xs text-red-600">No code set — students of this branch cannot register.</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={codeEdits[d.id] ?? ""}
+                      onChange={(e) =>
+                        setCodeEdits((prev) => ({
+                          ...prev,
+                          [d.id]: e.target.value.toUpperCase().slice(0, 2),
+                        }))
+                      }
+                      placeholder="CS"
+                      maxLength={2}
+                      className={`w-16 text-center uppercase ${inputClass}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSaveCode(d)}
+                      disabled={savingId === d.id || (codeEdits[d.id] || "") === (d.code || "")}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-secondary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"
+                    >
+                      {savingId === d.id ? (
+                        <LoaderCircle size={14} className="animate-spin" />
+                      ) : (
+                        <Save size={14} />
+                      )}
+                      Save
+                    </button>
+                  </div>
+                </motion.li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <MobileActionBar />
+    </div>
+  );
+}
+
+export default DepartmentsPage;

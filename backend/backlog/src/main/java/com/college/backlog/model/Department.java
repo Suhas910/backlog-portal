@@ -13,6 +13,10 @@ public class Department {
     @Column(name = "dept_name")
     private String deptName;
 
+    // 2-letter branch code as it appears in the USN (e.g. "CS" in 1MS22CS001)
+    @Column(name = "dept_code", unique = true)
+    private String code;
+
     @Column(name = "contact_email")
     private String contactEmail;
 
@@ -29,6 +33,9 @@ public class Department {
 
     public String getDeptName() { return deptName; }
     public void setDeptName(String deptName) { this.deptName = deptName; }
+
+    public String getCode() { return code; }
+    public void setCode(String code) { this.code = code; }
 
     public String getContactEmail() { return contactEmail; }
     public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }

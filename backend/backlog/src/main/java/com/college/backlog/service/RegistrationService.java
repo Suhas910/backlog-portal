@@ -29,14 +29,29 @@ public class RegistrationService {
     @Autowired
     private RegistrationEventRepository registrationEventRepository;
 
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
     public Registration register(String rollNo, String name, String email,
-                                  String phone, int yearOfJoining,
-                                  int currentSemester, String branch, List<Long> subjectIds) {
+                                  String phone, int currentSemester, List<Long> subjectIds) {
 
         // an exam cycle must be open for registrations to be accepted
         ExamCycle cycle = examCycleRepository.findByActiveTrue()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                 "Registrations are currently closed. No active exam cycle."));
+
+        // year of joining and branch are encoded in the USN: 1MS<YY><BR><NNN>.
+        // The USN format is validated upstream, so the substrings are safe here.
+        if (rollNo == null || !rollNo.matches("^1MS\\d{2}[A-Za-z]{2}\\d{3}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "USN must be in the format 1MS22CS001.");
+        }
+        int yearOfJoining = 2000 + Integer.parseInt(rollNo.substring(3, 5));
+        String branchCode = rollNo.substring(5, 7).toUpperCase();
+        Department department = departmentRepository.findByCodeIgnoreCase(branchCode)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Unknown branch code '" + branchCode + "' in USN. Contact the department office."));
+        String branch = department.getDeptName();
 
         // validate subjects before touching the DB
         List<Subject> subjects = subjectRepository.findAllById(subjectIds);
