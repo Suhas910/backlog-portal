@@ -12,7 +12,7 @@ import {
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
-import api from "../lib/api";
+import api, { clearAdminSession } from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
@@ -87,8 +87,7 @@ function AdminLoginPage() {
           navigate("/admin");
         }
       } else {
-        sessionStorage.removeItem("adminRole");
-        sessionStorage.removeItem("adminToken");
+        clearAdminSession();
         setError("Unauthorized role.");
       }
     } catch (apiError) {

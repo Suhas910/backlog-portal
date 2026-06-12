@@ -101,10 +101,13 @@ function AddSubjectPage() {
         `Subject "${formData.subjectName}" has been added successfully!`,
       );
       setFormData((prev) => ({
-        ...prev,
         subjectName: "",
         courseCode: "",
+        semester: "",
         credits: "",
+        yearOfJoining: "",
+        // DEPT_OFFICE's department is pinned; everyone else re-picks it
+        deptId: adminRole === "DEPT_OFFICE" ? prev.deptId : "",
       }));
       setSubjectType("REGULAR");
       setEligibleDeptIds([]);

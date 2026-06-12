@@ -217,6 +217,12 @@ function AdminPage() {
         responseType: "blob", // Important parameter for file downloads
       })
       .then((res) => {
+        // A 200 that isn't a PDF (e.g. an HTML error page) must not be
+        // saved to disk as a .pdf
+        const contentType = res.headers["content-type"] || "";
+        if (!contentType.includes("application/pdf")) {
+          throw new Error(`Unexpected export content type: ${contentType}`);
+        }
         const url = window.URL.createObjectURL(
           new Blob([res.data], { type: "application/pdf" }),
         );
@@ -229,6 +235,7 @@ function AdminPage() {
         document.body.appendChild(link);
         link.click();
         link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
       })
       .catch((err) => {
         console.error("Failed to export PDF", err);
