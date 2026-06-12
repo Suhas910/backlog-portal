@@ -102,25 +102,11 @@ public class AuthController {
 
     private boolean matchesPassword(User user, String rawPassword) {
         String storedPassword = user.getPassword();
-
         if (storedPassword == null || storedPassword.isBlank()) {
             return false;
         }
-
-        if (isBcryptHash(storedPassword)) {
-            return passwordEncoder.matches(rawPassword, storedPassword);
-        }
-
-        boolean plainMatch = storedPassword.equals(rawPassword);
-        if (plainMatch) {
-            user.setPassword(passwordEncoder.encode(rawPassword));
-            userRepository.save(user);
-        }
-        return plainMatch;
-    }
-
-    private boolean isBcryptHash(String value) {
-        return value.startsWith("$2a$") || value.startsWith("$2b$") || value.startsWith("$2y$");
+        // bcrypt only — legacy plaintext rows are upgraded once at startup (DataSeeder)
+        return passwordEncoder.matches(rawPassword, storedPassword);
     }
 
     private ResponseStatusException invalidCredentials(String username) {

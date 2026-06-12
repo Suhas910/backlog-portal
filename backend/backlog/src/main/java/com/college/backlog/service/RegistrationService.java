@@ -32,8 +32,7 @@ public class RegistrationService {
     @Autowired
     private DepartmentRepository departmentRepository;
 
-    public Registration register(String rollNo, String name, String email,
-                                  String phone, int currentSemester, List<Long> subjectIds) {
+    public Registration register(String rollNo, int currentSemester, List<Long> subjectIds) {
 
         // an exam cycle must be open for registrations to be accepted
         ExamCycle cycle = examCycleRepository.findByActiveTrue()
@@ -46,6 +45,21 @@ public class RegistrationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "USN must be in the format 1MS22CS001.");
         }
+
+        // the owner is an authenticated student; identity (name/email/phone) comes
+        // from the account, never from the request — so a USN cannot be impersonated
+        // or have its record overwritten by the submission.
+        Student student = studentRepository.findByRollNo(rollNo)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                "Student account not found."));
+
+        // phone is set only from the dashboard; a missing phone blocks registration.
+        // Server-side guard — cannot be bypassed by a crafted request.
+        if (student.getPhone() == null || !student.getPhone().matches("^[0-9]{10}$")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Add your phone number in your profile before registering.");
+        }
+
         int yearOfJoining = 2000 + Integer.parseInt(rollNo.substring(3, 5));
         String branchCode = rollNo.substring(5, 7).toUpperCase();
         Department department = departmentRepository.findByCodeIgnoreCase(branchCode)
@@ -88,22 +102,11 @@ public class RegistrationService {
             }
         }
 
-        // upsert the student's "latest known identity" — details are editable across cycles;
-        // historical fidelity is preserved by the per-registration snapshot below
-        Student student = studentRepository.findByRollNo(rollNo).orElse(new Student());
-        student.setRollNo(rollNo);
-        student.setName(name);
-        student.setEmail(email);
-        student.setPhone(phone);
-        student.setYearOfJoining(yearOfJoining);
-        student.setCurrentSemester(currentSemester);
-        student.setBranch(branch);
-        if (student.getPasswordHash() == null) {
-            student.setPasswordHash("");
-        }
-        studentRepository.save(student);
+        // the student row is immutable identity (set at import; phone via dashboard).
+        // branch/year are derived from the USN at read time, and the per-registration
+        // semester lives in the snapshot below — so registration writes nothing to it.
 
-        // create registration with an immutable snapshot of the submitted details
+        // create registration with an immutable snapshot of the account details
         Registration reg = new Registration();
         reg.setRegId(UUID.randomUUID().toString());
         reg.setStudent(student);
@@ -111,9 +114,9 @@ public class RegistrationService {
         reg.setRegisteredAt(LocalDateTime.now());
         reg.setStatus("SUBMITTED");
         reg.setExamCycle(cycle);
-        reg.setSnapName(name);
-        reg.setSnapEmail(email);
-        reg.setSnapPhone(phone);
+        reg.setSnapName(student.getName());
+        reg.setSnapEmail(student.getEmail());
+        reg.setSnapPhone(student.getPhone());
         reg.setSnapBranch(branch);
         reg.setSnapSemester(currentSemester);
         reg.setSnapYearOfJoining(yearOfJoining);

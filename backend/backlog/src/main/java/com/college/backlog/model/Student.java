@@ -1,6 +1,7 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "students")
@@ -13,6 +14,11 @@ public class Student {
     private String name;
     private String email;
     private String phone;
+
+    // Used together with the USN as the student login credential.
+    // Populated out-of-band (admin/import); never returned by any endpoint.
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
 
     @Column(name = "year_of_joining")
     private int yearOfJoining;
@@ -49,6 +55,9 @@ public class Student {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    public LocalDate getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
 
     public int getYearOfJoining() { return yearOfJoining; }
     public void setYearOfJoining(int yearOfJoining) { this.yearOfJoining = yearOfJoining; }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, CalendarRange, CheckCircle2, LoaderCircle, PlusCircle } from "lucide-react";
+import { ArrowLeft, CalendarRange, CheckCircle2, CircleSlash, LoaderCircle, PlusCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
@@ -19,6 +19,7 @@ function ExamCyclePage() {
   const [examMonthYear, setExamMonthYear] = useState("");
   const [creating, setCreating] = useState(false);
   const [activatingId, setActivatingId] = useState(null);
+  const [endingId, setEndingId] = useState(null);
   const [error, setError] = useState("");
 
   const loadCycles = () => {
@@ -76,6 +77,19 @@ function ExamCyclePage() {
       setError(err.response?.data?.message || "Failed to activate exam cycle.");
     } finally {
       setActivatingId(null);
+    }
+  };
+
+  const handleEnd = async (id) => {
+    setEndingId(id);
+    setError("");
+    try {
+      await api.put(`/admin/exam-cycles/${id}/deactivate`, {}, { headers: getAdminHeaders() });
+      loadCycles();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to end exam cycle.");
+    } finally {
+      setEndingId(null);
     }
   };
 
@@ -180,13 +194,30 @@ function ExamCyclePage() {
                     )}
                   </div>
                   {c.active ? (
-                    <span className="text-xs font-semibold text-[var(--color-primary)]">Accepting registrations</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold text-[var(--color-primary)]">Accepting registrations</span>
+                      <button
+                        type="button"
+                        onClick={() => handleEnd(c.id)}
+                        disabled={endingId === c.id}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                        data-cy="cycle-end"
+                      >
+                        {endingId === c.id ? (
+                          <LoaderCircle size={14} className="animate-spin" />
+                        ) : (
+                          <CircleSlash size={14} />
+                        )}
+                        End cycle
+                      </button>
+                    </div>
                   ) : (
                     <button
                       type="button"
                       onClick={() => handleActivate(c.id)}
                       disabled={activatingId === c.id}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-secondary)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"
+                      data-cy="cycle-activate"
                     >
                       {activatingId === c.id ? (
                         <LoaderCircle size={14} className="animate-spin" />

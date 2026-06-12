@@ -1,6 +1,6 @@
 package com.college.backlog.controller;
 
-import com.college.backlog.controller.dto.RegistrationRequest;
+import com.college.backlog.controller.dto.StudentRegistrationRequest;
 import com.college.backlog.controller.dto.VerificationResponse;
 import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.Registration;
@@ -58,10 +58,13 @@ public class RegistrationController {
     }
 
     @PostMapping
-    public Map<String, String> register(@Valid @RequestBody RegistrationRequest request) {
+    @PreAuthorize("hasRole('STUDENT')")
+    public Map<String, String> register(@Valid @RequestBody StudentRegistrationRequest request,
+                                        Authentication authentication) {
+        // owner is taken from the authenticated token, never from the request body
         Registration reg = registrationService.register(
-            request.getRollNo(), request.getName(), request.getEmail(),
-            request.getPhone(), request.getCurrentSemester(),
+            authentication.getName(),
+            request.getCurrentSemester(),
             request.getSubjectIds()
         );
 

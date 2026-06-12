@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,18 +33,26 @@ public class ExamCycleController {
         return examCycleRepository.save(cycle);
     }
 
+    // Opens registrations for exactly this cycle: close whatever is open, then
+    // open the target — atomically, so there is never more than one active cycle.
     @PutMapping("/{id}/activate")
+    @Transactional
     public ExamCycle activate(@PathVariable Long id) {
         ExamCycle target = examCycleRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Exam cycle not found: " + id));
-
-        // exactly one active cycle at a time
-        List<ExamCycle> all = examCycleRepository.findAll();
-        for (ExamCycle c : all) {
-            c.setActive(c.getId().equals(id));
-        }
-        examCycleRepository.saveAll(all);
+        examCycleRepository.deactivateAll();
         target.setActive(true);
-        return target;
+        return examCycleRepository.save(target);
+    }
+
+    // Ends the cycle (closes registrations). With no active cycle, the portal
+    // reports registrations as closed.
+    @PutMapping("/{id}/deactivate")
+    @Transactional
+    public ExamCycle deactivate(@PathVariable Long id) {
+        ExamCycle target = examCycleRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Exam cycle not found: " + id));
+        target.setActive(false);
+        return examCycleRepository.save(target);
     }
 }

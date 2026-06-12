@@ -59,4 +59,32 @@ describe("Admin verification flow", () => {
     cy.wait("@verifyRegistration");
     cy.contains("Verified").should("exist");
   });
+
+  it("redirects unauthenticated visitors to the admin login", () => {
+    cy.visit("/admin");
+    cy.location("pathname").should("eq", "/admin/login");
+    cy.location("search").should("contain", "redirect");
+  });
+
+  it("logs in via the Administrator path", () => {
+    cy.intercept("POST", "/api/auth/login", {
+      statusCode: 200,
+      body: { message: "Login success", role: "ADMIN", token: "admin-jwt-token" },
+    }).as("adminLogin");
+    cy.intercept("GET", "/api/admin/registrations*", { statusCode: 200, body: [] }).as("getRegistrations");
+    cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+
+    cy.visit("/admin/login");
+    cy.contains("Administrator").click();
+
+    // ADMIN has no department step
+    cy.get('[data-cy="admin-department"]').should("not.exist");
+    cy.get('[data-cy="admin-username"]').type("admin");
+    cy.get('[data-cy="admin-password"]').type("password123");
+    cy.get('[data-cy="admin-login-submit"]').click();
+
+    cy.wait("@adminLogin");
+    cy.location("pathname").should("eq", "/admin");
+  });
 });

@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Briefcase,
   Building2,
+  ShieldCheck,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
@@ -122,6 +123,23 @@ function AdminLoginPage() {
 
         {step === 1 ? (
           <div className="flex flex-col gap-4">
+            <button
+              onClick={() => handleRoleSelect("Administrator", "ADMIN")}
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+                <ShieldCheck size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-secondary)]">
+                  Administrator
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                  Full system access
+                </p>
+              </div>
+            </button>
+
             <button
               onClick={() => handleRoleSelect("Principal / Registrar / COE", "PRINCIPAL")}
               className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"

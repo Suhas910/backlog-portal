@@ -3,11 +3,12 @@ package com.college.backlog.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.security.Key;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -20,10 +21,27 @@ public class JwtService {
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
 
+    private SecretKey signingKey;
+
+    // Fail fast at startup if the secret is missing or too weak for HS256 (which
+    // requires a 256-bit / 32-byte key), instead of failing lazily on the first
+    // token operation with an opaque WeakKeyException.
+    @PostConstruct
+    void init() {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException("app.jwt.secret is not configured.");
+        }
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                "app.jwt.secret must be at least 32 bytes (256 bits) for HS256. "
+                + "Generate a strong secret, e.g. `openssl rand -base64 48`.");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(keyBytes);
+    }
+
     private SecretKey getSigningKey() {
-        // Use a secure key generation for production environments
-        byte[] keyBytes = jwtSecret.getBytes();
-        return Keys.hmacShaKeyFor(keyBytes);
+        return signingKey;
     }
 
     public String generateToken(String username, String role) {

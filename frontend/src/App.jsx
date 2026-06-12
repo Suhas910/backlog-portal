@@ -7,6 +7,10 @@ import { ThemeProvider } from "./context/ThemeContext";
 import AddSubjectPage from "./pages/AddSubjectPage";
 import ExamCyclePage from "./pages/ExamCyclePage";
 import DepartmentsPage from "./pages/DepartmentsPage";
+import StudentLoginPage from "./pages/StudentLoginPage";
+import StudentDashboardPage from "./pages/StudentDashboardPage";
+import ProtectedStudentRoute from "./components/ProtectedStudentRoute";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
 function App() {
   return (
@@ -14,12 +18,56 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/register" element={<RegistrationPage />} />
+          <Route path="/student/login" element={<StudentLoginPage />} />
+          <Route
+            path="/student"
+            element={
+              <ProtectedStudentRoute>
+                <StudentDashboardPage />
+              </ProtectedStudentRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <ProtectedStudentRoute>
+                <RegistrationPage />
+              </ProtectedStudentRoute>
+            }
+          />
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/add-subject" element={<AddSubjectPage />} />
-          <Route path="/admin/exam-cycles" element={<ExamCyclePage />} />
-          <Route path="/admin/departments" element={<DepartmentsPage />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedAdminRoute>
+                <AdminPage />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/add-subject"
+            element={
+              <ProtectedAdminRoute>
+                <AddSubjectPage />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/exam-cycles"
+            element={
+              <ProtectedAdminRoute>
+                <ExamCyclePage />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/departments"
+            element={
+              <ProtectedAdminRoute>
+                <DepartmentsPage />
+              </ProtectedAdminRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
