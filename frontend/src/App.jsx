@@ -7,6 +7,8 @@ import { ThemeProvider } from "./context/ThemeContext";
 import AddSubjectPage from "./pages/AddSubjectPage";
 import ExamCyclePage from "./pages/ExamCyclePage";
 import DepartmentsPage from "./pages/DepartmentsPage";
+import ManageUsersPage from "./pages/ManageUsersPage";
+import ChangePasswordPage from "./pages/ChangePasswordPage";
 import StudentLoginPage from "./pages/StudentLoginPage";
 import StudentDashboardPage from "./pages/StudentDashboardPage";
 import ProtectedStudentRoute from "./components/ProtectedStudentRoute";
@@ -65,6 +67,22 @@ function App() {
             element={
               <ProtectedAdminRoute>
                 <DepartmentsPage />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedAdminRoute>
+                <ManageUsersPage />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/change-password"
+            element={
+              <ProtectedAdminRoute>
+                <ChangePasswordPage />
               </ProtectedAdminRoute>
             }
           />

@@ -61,6 +61,15 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || "";
+    // Server-side forced password change: the account is still authenticated but
+    // restricted until it sets a new password. Route to the change screen rather
+    // than logging out — clearing the session would strand them.
+    if (status === 403 && error.response?.data?.code === "PASSWORD_CHANGE_REQUIRED") {
+      if (!window.location.pathname.startsWith("/admin/change-password")) {
+        window.location.assign("/admin/change-password?forced=1");
+      }
+      return Promise.reject(error);
+    }
     if (status === 401 || status === 403) {
       if (isStudentScopedUrl(url)) {
         clearStudentSession();

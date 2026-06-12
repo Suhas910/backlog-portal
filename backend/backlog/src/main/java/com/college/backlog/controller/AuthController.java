@@ -1,5 +1,6 @@
 package com.college.backlog.controller;
 
+import com.college.backlog.controller.dto.ChangePasswordRequest;
 import com.college.backlog.model.Department;
 import com.college.backlog.model.LoginAttempt;
 import com.college.backlog.model.User;
@@ -8,8 +9,10 @@ import com.college.backlog.repository.LoginAttemptRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -93,11 +96,41 @@ public class AuthController {
         response.put("message", "Login success");
         response.put("role", user.getRole());
         response.put("token", token);
+        response.put("mustChangePassword", String.valueOf(user.isMustChangePassword()));
         if (user.getDepartment() != null) {
             response.put("departmentId", String.valueOf(user.getDepartment().getId()));
             response.put("departmentName", user.getDepartment().getDeptName());
         }
         return response;
+    }
+
+    /**
+     * Lets any authenticated admin-type user set a new password for their own
+     * account. Powers both the forced first-login change (mustChangePassword)
+     * and voluntary self-service changes. Requires the current password.
+     */
+    @PostMapping("/change-password")
+    public Map<String, String> changePassword(@Valid @RequestBody ChangePasswordRequest req, Authentication auth) {
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        User user = userRepository.findById(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
+
+        if (!matchesPassword(user, req.getCurrentPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Current password is incorrect");
+        }
+        if (passwordEncoder.matches(req.getNewPassword(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password must be different from the current one");
+        }
+
+        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        user.setMustChangePassword(false);
+        userRepository.save(user);
+
+        Map<String, String> resp = new HashMap<>();
+        resp.put("message", "Password changed");
+        return resp;
     }
 
     private boolean matchesPassword(User user, String rawPassword) {

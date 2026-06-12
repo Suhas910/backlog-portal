@@ -50,13 +50,29 @@ public class DataSeeder implements CommandLineRunner {
             user.setUsername(username);
             user.setPassword(passwordEncoder.encode(password));
             user.setRole(role);
+            // Force the weak default password to be replaced on first login.
+            user.setMustChangePassword(true);
             userRepository.save(user);
-        } else if (user.getPassword() == null || user.getPassword().isBlank()) {
+            return;
+        }
+
+        boolean dirty = false;
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
             // account row exists but has no usable password — set the default
             user.setPassword(passwordEncoder.encode(password));
+            user.setMustChangePassword(true);
             if (user.getRole() == null || user.getRole().isBlank()) {
                 user.setRole(role);
             }
+            dirty = true;
+        } else if (passwordEncoder.matches(password, user.getPassword()) && !user.isMustChangePassword()) {
+            // Existing account still sitting on the seeded default password — arm the
+            // forced change. Idempotent: once rotated, the password no longer matches
+            // the default, so this never re-triggers.
+            user.setMustChangePassword(true);
+            dirty = true;
+        }
+        if (dirty) {
             userRepository.save(user);
         }
     }

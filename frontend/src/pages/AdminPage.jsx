@@ -323,6 +323,14 @@ function AdminPage() {
                 <Building2 size={14} /> Departments
               </Link>
             )}
+            {["ADMIN", "PRINCIPAL", "HOD"].includes(adminRole) && (
+              <Link
+                to="/admin/users"
+                className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+              >
+                <Users size={14} /> Manage Users
+              </Link>
+            )}
             <Link
               to="/"
               className="inline-flex items-center gap-1 rounded-full border border-white/35 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
