@@ -6,10 +6,21 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Locale;
 
 /**
- * IP-based brute-force throttling backed by the {@code login_attempts} table.
- * Shared by admin and student login flows.
+ * Brute-force throttling backed by the {@code login_throttle} table, shared by
+ * the admin and student login flows.
+ *
+ * Counters are keyed by {@code scope:username:ip} so that:
+ *  - admin and student failures never cross-count (distinct scope),
+ *  - failures against different accounts never cross-count (distinct username),
+ *  - a single attacker IP can only lock out the (account, that-IP) pair, not the
+ *    victim's own IP (distinct ip).
+ *
+ * The client IP is taken from {@link HttpServletRequest#getRemoteAddr()} only.
+ * There is no reverse proxy in front of the app, so {@code X-Forwarded-For} is
+ * untrusted (client-spoofable) and deliberately ignored.
  */
 @Service
 public class LoginThrottleService {
@@ -23,8 +34,9 @@ public class LoginThrottleService {
         this.loginAttemptRepository = loginAttemptRepository;
     }
 
-    public boolean isLocked(String ip) {
-        LoginAttempt attempt = loginAttemptRepository.findById(ip).orElse(null);
+    public boolean isLocked(String scope, String username, HttpServletRequest request) {
+        String key = throttleKey(scope, username, request);
+        LoginAttempt attempt = loginAttemptRepository.findById(key).orElse(null);
         if (attempt == null || attempt.getLockedUntil() == null) {
             return false;
         }
@@ -35,9 +47,10 @@ public class LoginThrottleService {
         return true;
     }
 
-    public void registerFailure(String ip) {
-        LoginAttempt attempt = loginAttemptRepository.findById(ip)
-                .orElse(new LoginAttempt(ip));
+    public void registerFailure(String scope, String username, HttpServletRequest request) {
+        String key = throttleKey(scope, username, request);
+        LoginAttempt attempt = loginAttemptRepository.findById(key)
+                .orElse(new LoginAttempt(key));
         attempt.setAttempts(attempt.getAttempts() + 1);
         if (attempt.getAttempts() >= MAX_FAILED_ATTEMPTS) {
             attempt.setLockedUntil(Instant.now().plusSeconds(LOCK_DURATION_SECONDS));
@@ -46,16 +59,17 @@ public class LoginThrottleService {
         loginAttemptRepository.save(attempt);
     }
 
-    public void clearFailures(String ip) {
-        loginAttemptRepository.deleteById(ip);
+    public void clearFailures(String scope, String username, HttpServletRequest request) {
+        loginAttemptRepository.deleteById(throttleKey(scope, username, request));
     }
 
-    public String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            // X-Forwarded-For may be a comma-separated list; the first entry is the original client
-            return forwarded.split(",")[0].trim();
-        }
+    private String throttleKey(String scope, String username, HttpServletRequest request) {
+        String normalizedUser = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
+        return scope + ":" + normalizedUser + ":" + resolveClientIp(request);
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        // getRemoteAddr() only — no reverse proxy, so X-Forwarded-For is untrusted.
         return request.getRemoteAddr();
     }
 }

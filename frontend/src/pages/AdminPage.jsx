@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -38,6 +38,7 @@ function AdminPage() {
   );
   const [verifyingRegId, setVerifyingRegId] = useState("");
   const [rejectingRegId, setRejectingRegId] = useState("");
+  const [rowErrors, setRowErrors] = useState({});
   const [isExporting, setIsExporting] = useState(false);
 
   // Filter states
@@ -101,7 +102,7 @@ function AdminPage() {
       });
   }, [isAdmin, adminToken]);
 
-  useEffect(() => {
+  const fetchRegistrations = useCallback(() => {
     const params = new URLSearchParams();
     if (subjectFilter) params.append("subjectId", subjectFilter);
     if (typeFilter) params.append("subjectType", typeFilter);
@@ -110,7 +111,7 @@ function AdminPage() {
     if (endDateFilter) params.append("endDate", endDateFilter);
     if (cycleFilter) params.append("examCycleId", cycleFilter);
 
-    api
+    return api
       .get(`/admin/registrations?${params.toString()}`, {
         headers: getAdminHeaders(),
       })
@@ -127,8 +128,6 @@ function AdminPage() {
         }
       });
   }, [
-    isAdmin,
-    adminToken,
     navigate,
     subjectFilter,
     typeFilter,
@@ -138,7 +137,37 @@ function AdminPage() {
     cycleFilter,
   ]);
 
+  useEffect(() => {
+    fetchRegistrations();
+  }, [isAdmin, adminToken, fetchRegistrations]);
+
+  const clearRowError = (regId) =>
+    setRowErrors((prev) => {
+      if (!prev[regId]) return prev;
+      const next = { ...prev };
+      delete next[regId];
+      return next;
+    });
+
+  // Verify/reject failures land here. The row is only mutated on success, so
+  // there is nothing to roll back; instead we surface an inline per-row error.
+  // When the server says the row's state moved underneath us (404 gone, 409/410
+  // conflict — e.g. another admin already actioned it or the cycle closed), we
+  // refetch so the table reflects the true server state rather than a stale row.
+  const handleActionError = async (regId, err, fallback) => {
+    console.error(err);
+    const status = err.response?.status;
+    setRowErrors((prev) => ({
+      ...prev,
+      [regId]: err.response?.data?.message || fallback,
+    }));
+    if (status === 404 || status === 409 || status === 410) {
+      await fetchRegistrations();
+    }
+  };
+
   const handleVerify = async (regId) => {
+    clearRowError(regId);
     setVerifyingRegId(regId);
     try {
       await api.put(
@@ -155,14 +184,14 @@ function AdminPage() {
         ),
       );
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to verify. Please refresh and try again.");
+      await handleActionError(regId, err, "Failed to verify. Please refresh and try again.");
     } finally {
       setVerifyingRegId("");
     }
   };
 
   const handleReject = async (regId) => {
+    clearRowError(regId);
     setRejectingRegId(regId);
     try {
       await api.put(
@@ -179,8 +208,7 @@ function AdminPage() {
         ),
       );
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to reject. Please refresh and try again.");
+      await handleActionError(regId, err, "Failed to reject. Please refresh and try again.");
     } finally {
       setRejectingRegId("");
     }
@@ -652,34 +680,45 @@ function AdminPage() {
                       </td>
                       <td className="px-4 py-3">
                         {reg.status === "SUBMITTED" && adminRole !== "PRINCIPAL" ? (
-                          <div className="flex gap-1.5">
-                            <MagneticCta
-                              onClick={() => handleVerify(reg.regId)}
-                              className="rounded-lg px-3 py-1.5 text-xs"
-                              disabled={verifyingRegId === reg.regId || rejectingRegId === reg.regId}
-                              data-cy="admin-verify"
-                            >
-                              {verifyingRegId === reg.regId ? (
-                                <LoaderCircle size={14} className="animate-spin" />
-                              ) : (
-                                <BadgeCheck size={14} />
-                              )}
-                              Verify
-                            </MagneticCta>
-                            <button
-                              type="button"
-                              onClick={() => handleReject(reg.regId)}
-                              disabled={rejectingRegId === reg.regId || verifyingRegId === reg.regId}
-                              data-cy="admin-reject"
-                              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
-                            >
-                              {rejectingRegId === reg.regId ? (
-                                <LoaderCircle size={14} className="animate-spin" />
-                              ) : (
-                                <XCircle size={14} />
-                              )}
-                              Reject
-                            </button>
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex gap-1.5">
+                              <MagneticCta
+                                onClick={() => handleVerify(reg.regId)}
+                                className="rounded-lg px-3 py-1.5 text-xs"
+                                disabled={verifyingRegId === reg.regId || rejectingRegId === reg.regId}
+                                data-cy="admin-verify"
+                              >
+                                {verifyingRegId === reg.regId ? (
+                                  <LoaderCircle size={14} className="animate-spin" />
+                                ) : (
+                                  <BadgeCheck size={14} />
+                                )}
+                                Verify
+                              </MagneticCta>
+                              <button
+                                type="button"
+                                onClick={() => handleReject(reg.regId)}
+                                disabled={rejectingRegId === reg.regId || verifyingRegId === reg.regId}
+                                data-cy="admin-reject"
+                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                              >
+                                {rejectingRegId === reg.regId ? (
+                                  <LoaderCircle size={14} className="animate-spin" />
+                                ) : (
+                                  <XCircle size={14} />
+                                )}
+                                Reject
+                              </button>
+                            </div>
+                            {rowErrors[reg.regId] && (
+                              <p
+                                className="text-xs font-medium text-red-600"
+                                role="alert"
+                                data-cy="admin-action-error"
+                              >
+                                {rowErrors[reg.regId]}
+                              </p>
+                            )}
                           </div>
                         ) : reg.status === "VERIFIED" ? (
                           <span className="text-xs font-semibold text-[var(--color-primary)]">

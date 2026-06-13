@@ -2,12 +2,11 @@ package com.college.backlog.controller;
 
 import com.college.backlog.controller.dto.ChangePasswordRequest;
 import com.college.backlog.model.Department;
-import com.college.backlog.model.LoginAttempt;
 import com.college.backlog.model.User;
 import com.college.backlog.repository.DepartmentRepository;
-import com.college.backlog.repository.LoginAttemptRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.JwtService;
+import com.college.backlog.security.LoginThrottleService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -26,8 +24,7 @@ import java.util.Set;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final int MAX_FAILED_ATTEMPTS = 5;
-    private static final long LOCK_DURATION_SECONDS = 900;
+    private static final String SCOPE = "ADMIN";
 
     private static final Set<String> DEPT_ROLES = Set.of("HOD", "DEPT_OFFICE");
 
@@ -35,7 +32,7 @@ public class AuthController {
     private UserRepository userRepository;
 
     @Autowired
-    private LoginAttemptRepository loginAttemptRepository;
+    private LoginThrottleService throttle;
 
     @Autowired
     private DepartmentRepository departmentRepository;
@@ -51,24 +48,23 @@ public class AuthController {
 
         String username = body.getOrDefault("username", "").trim();
         String password = body.getOrDefault("password", "");
-        String clientIp = resolveClientIp(request);
 
         if (username.isEmpty() || password.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username and password are required");
         }
 
-        if (isLocked(clientIp)) {
+        if (throttle.isLocked(SCOPE, username, request)) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many failed login attempts");
         }
 
         User user = userRepository.findById(username).orElse(null);
         if (user == null) {
-            registerFailure(clientIp);
+            throttle.registerFailure(SCOPE, username, request);
             throw invalidCredentials(username);
         }
 
         if (!matchesPassword(user, password)) {
-            registerFailure(clientIp);
+            throttle.registerFailure(SCOPE, username, request);
             throw invalidCredentials(username);
         }
 
@@ -89,7 +85,7 @@ public class AuthController {
             }
         }
 
-        clearFailures(clientIp);
+        throttle.clearFailures(SCOPE, username, request);
         String token = jwtService.generateToken(user.getUsername(), user.getRole());
 
         Map<String, String> response = new HashMap<>();
@@ -144,41 +140,5 @@ public class AuthController {
 
     private ResponseStatusException invalidCredentials(String username) {
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
-    }
-
-    private boolean isLocked(String ip) {
-        LoginAttempt attempt = loginAttemptRepository.findById(ip).orElse(null);
-        if (attempt == null || attempt.getLockedUntil() == null) {
-            return false;
-        }
-        if (Instant.now().isAfter(attempt.getLockedUntil())) {
-            loginAttemptRepository.delete(attempt);
-            return false;
-        }
-        return true;
-    }
-
-    private void registerFailure(String ip) {
-        LoginAttempt attempt = loginAttemptRepository.findById(ip)
-                .orElse(new LoginAttempt(ip));
-        attempt.setAttempts(attempt.getAttempts() + 1);
-        if (attempt.getAttempts() >= MAX_FAILED_ATTEMPTS) {
-            attempt.setLockedUntil(Instant.now().plusSeconds(LOCK_DURATION_SECONDS));
-            attempt.setAttempts(0);
-        }
-        loginAttemptRepository.save(attempt);
-    }
-
-    private void clearFailures(String ip) {
-        loginAttemptRepository.deleteById(ip);
-    }
-
-    private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            // X-Forwarded-For may be a comma-separated list; the first entry is the original client
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 }

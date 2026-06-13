@@ -19,6 +19,8 @@ import java.util.Map;
 @RequestMapping("/api/student/auth")
 public class StudentAuthController {
 
+    private static final String SCOPE = "STUDENT";
+
     @Autowired
     private StudentRepository studentRepository;
 
@@ -33,13 +35,12 @@ public class StudentAuthController {
 
         String rollNo = body.getOrDefault("rollNo", "").trim();
         String dob = body.getOrDefault("dateOfBirth", "").trim();
-        String clientIp = throttle.resolveClientIp(request);
 
         if (rollNo.isEmpty() || dob.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "USN and date of birth are required");
         }
 
-        if (throttle.isLocked(clientIp)) {
+        if (throttle.isLocked(SCOPE, rollNo, request)) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many failed login attempts");
         }
 
@@ -47,7 +48,7 @@ public class StudentAuthController {
         try {
             dateOfBirth = LocalDate.parse(dob); // expects ISO yyyy-MM-dd
         } catch (DateTimeParseException e) {
-            throttle.registerFailure(clientIp);
+            throttle.registerFailure(SCOPE, rollNo, request);
             throw invalidCredentials();
         }
 
@@ -55,11 +56,11 @@ public class StudentAuthController {
         if (student == null
                 || student.getDateOfBirth() == null
                 || !student.getDateOfBirth().equals(dateOfBirth)) {
-            throttle.registerFailure(clientIp);
+            throttle.registerFailure(SCOPE, rollNo, request);
             throw invalidCredentials();
         }
 
-        throttle.clearFailures(clientIp);
+        throttle.clearFailures(SCOPE, rollNo, request);
         String token = jwtService.generateToken(student.getRollNo(), "STUDENT");
 
         Map<String, String> response = new HashMap<>();

@@ -4,10 +4,15 @@ spring.datasource.password=${DB_PASSWORD:YOUR_PASSWORD_HERE}
 spring.datasource.hikari.maximum-pool-size=${DB_POOL_MAX_SIZE:5}
 spring.datasource.hikari.minimum-idle=${DB_POOL_MIN_IDLE:1}
 
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
+# Boot behavior — dev-friendly defaults; override via env in production.
+#   JPA_DDL_AUTO=validate  -> verify schema only, never auto-migrate (add Neon columns manually first)
+#   JPA_SHOW_SQL=true      -> log every SQL statement (debugging only; off by default)
+#   SQL_INIT_MODE=never    -> skip schema.sql/data.sql demo seeding
+spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:update}
+spring.jpa.show-sql=${JPA_SHOW_SQL:false}
+spring.jpa.properties.hibernate.format_sql=${JPA_FORMAT_SQL:false}
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.sql.init.mode=${SQL_INIT_MODE:always}
 
 app.cors.allowed-origin=${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173}
 app.jwt.secret=${JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_BASE64_SECRET}
