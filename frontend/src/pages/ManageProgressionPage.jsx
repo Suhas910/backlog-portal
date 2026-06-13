@@ -255,31 +255,6 @@ function ManageProgressionPage() {
     }
   };
 
-  const Card = ({ icon, title, children }) => (
-    <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-      <h2 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
-        {icon} {title}
-      </h2>
-      {children}
-    </section>
-  );
-
-  const DeptSelect = ({ value, onChange }) => (
-    <select
-      className={inputClass}
-      value={deptLocked ? pinnedDeptId : value}
-      onChange={(e) => onChange(e.target.value)}
-      disabled={deptLocked}
-    >
-      <option value="">All departments</option>
-      {departments.map((d) => (
-        <option key={d.id} value={d.id}>
-          {d.deptName}
-        </option>
-      ))}
-    </select>
-  );
-
   return (
     <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-4xl pb-24 md:pb-8">
@@ -310,7 +285,13 @@ function ManageProgressionPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-[0.08em]">Department</label>
-                <DeptSelect value={pDeptId} onChange={setPDeptId} />
+                <DeptSelect
+                  deptLocked={deptLocked}
+                  pinnedDeptId={pinnedDeptId}
+                  departments={departments}
+                  value={pDeptId}
+                  onChange={setPDeptId}
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-[0.08em]">
@@ -326,7 +307,7 @@ function ManageProgressionPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-[0.08em]">Promote to semester</label>
-                <select className={inputClass} value={pTargetSem} onChange={(e) => setPTargetSem(e.target.value)}>
+                <select className={inputClass} value={pTargetSem} onChange={(e) => setPTargetSem(e.target.value)} data-cy="prog-promote-sem">
                   <option value="">Select semester</option>
                   {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
                     <option key={s} value={s}>
@@ -343,6 +324,7 @@ function ManageProgressionPage() {
                   placeholder="e.g. 2025 (= AY 2025–26)"
                   value={pAcademicYear}
                   onChange={(e) => setPAcademicYear(e.target.value)}
+                  data-cy="prog-promote-ay"
                 />
               </div>
               <div className="flex flex-col gap-1.5 sm:col-span-2">
@@ -357,17 +339,18 @@ function ManageProgressionPage() {
                 />
               </div>
             </div>
-            {pError && <p className="mt-3 text-sm text-red-600">{pError}</p>}
+            {pError && <p className="mt-3 text-sm text-red-600" role="alert" data-cy="prog-promote-error">{pError}</p>}
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={() => runPromote(true)}
                 disabled={pBusy}
+                data-cy="prog-promote-preview"
                 className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
               >
                 {pBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Preview
               </button>
-              <MagneticCta type="button" onClick={() => runPromote(false)} disabled={pBusy} className="gap-2 rounded-xl">
+              <MagneticCta type="button" onClick={() => runPromote(false)} disabled={pBusy} className="gap-2 rounded-xl" data-cy="prog-promote-apply">
                 <Users size={15} /> Apply promotion
               </MagneticCta>
             </div>
@@ -385,6 +368,7 @@ function ManageProgressionPage() {
               placeholder={"1MS24CS191,1,2024\n1MS24CS191,2,2024"}
               value={csv}
               onChange={(e) => setCsv(e.target.value)}
+              data-cy="prog-import-csv"
             />
             {iError && <p className="mt-3 text-sm text-red-600">{iError}</p>}
             <div className="mt-4 flex flex-wrap gap-3">
@@ -392,6 +376,7 @@ function ManageProgressionPage() {
                 type="button"
                 onClick={() => runImport(true)}
                 disabled={iBusy}
+                data-cy="prog-import-preview"
                 className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
               >
                 {iBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Preview
@@ -412,7 +397,13 @@ function ManageProgressionPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-[0.08em]">Department</label>
-                <DeptSelect value={bDeptId} onChange={setBDeptId} />
+                <DeptSelect
+                  deptLocked={deptLocked}
+                  pinnedDeptId={pinnedDeptId}
+                  departments={departments}
+                  value={bDeptId}
+                  onChange={setBDeptId}
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-semibold uppercase tracking-[0.08em]">
@@ -452,11 +443,13 @@ function ManageProgressionPage() {
                 placeholder="USN e.g. 1MS24CS191"
                 value={lookupRoll}
                 onChange={(e) => setLookupRoll(e.target.value)}
+                data-cy="prog-lookup-input"
               />
               <button
                 type="button"
                 onClick={loadStudent}
                 disabled={sBusy}
+                data-cy="prog-lookup-load"
                 className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
               >
                 {sBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Load
@@ -537,6 +530,38 @@ function ManageProgressionPage() {
   );
 }
 
+// Defined at module scope (not inside ManageProgressionPage) so their identity is
+// stable across renders — an inline definition makes every keystroke remount the
+// card subtree and steal focus from the inputs inside it.
+function Card({ icon, title, children }) {
+  return (
+    <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
+      <h2 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+        {icon} {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function DeptSelect({ deptLocked, pinnedDeptId, departments, value, onChange }) {
+  return (
+    <select
+      className={inputClass}
+      value={deptLocked ? pinnedDeptId : value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={deptLocked}
+    >
+      <option value="">All departments</option>
+      {departments.map((d) => (
+        <option key={d.id} value={d.id}>
+          {d.deptName}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function TermRow({ term, onSave, busy }) {
   const [year, setYear] = useState(String(term.academicYear));
   return (
@@ -548,6 +573,7 @@ function TermRow({ term, onSave, busy }) {
           type="number"
           value={year}
           onChange={(e) => setYear(e.target.value)}
+          data-cy={`prog-term-year-${term.semester}`}
         />
       </td>
       <td className="px-3 py-2">
@@ -555,6 +581,7 @@ function TermRow({ term, onSave, busy }) {
           type="button"
           onClick={() => onSave(term.semester, year)}
           disabled={busy || year === String(term.academicYear)}
+          data-cy={`prog-term-save-${term.semester}`}
           className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-50"
         >
           Save

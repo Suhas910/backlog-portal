@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -46,6 +46,10 @@ function AdminPage() {
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [subjectFilter, setSubjectFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  // searchInput is the raw text box value (updates per keystroke); searchFilter
+  // is the debounced value the fetches actually key off, so typing fires one
+  // request pair after the user pauses rather than one per keystroke.
+  const [searchInput, setSearchInput] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
@@ -57,11 +61,26 @@ function AdminPage() {
   const [historyEvents, setHistoryEvents] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Monotonic counter shared by every registrations fetch (filter effect AND the
+  // imperative post-action resync). Each call captures the next value and only
+  // applies its response if still the latest — so out-of-order completions from
+  // rapid filter changes are dropped instead of clobbering the table.
+  const registrationsReqRef = useRef(0);
+
+  // Debounce the free-text search: push searchInput into searchFilter (the value
+  // the effects depend on) only after the user pauses typing.
+  useEffect(() => {
+    const t = setTimeout(() => setSearchFilter(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
   useEffect(() => {
     if (!isAdmin || !adminToken) {
       return;
     }
 
+    // ignore guards against a stale response landing after a newer filter change
+    let ignore = false;
     setLoadingSubjects(true);
     const subjectParams = new URLSearchParams();
     if (typeFilter) subjectParams.append("subjectType", typeFilter);
@@ -74,6 +93,7 @@ function AdminPage() {
         headers: getAdminHeaders(),
       })
       .then((res) => {
+        if (ignore) return;
         setAllSubjects(res.data);
         if (
           subjectFilter &&
@@ -83,26 +103,40 @@ function AdminPage() {
         }
       })
       .catch((err) => {
+        if (ignore) return;
         console.error("Failed to fetch subjects list for filter", err);
         setAllSubjects([]);
       })
       .finally(() => {
-        setLoadingSubjects(false);
+        if (!ignore) setLoadingSubjects(false);
       });
+
+    return () => {
+      ignore = true;
+    };
   }, [isAdmin, adminToken, typeFilter, searchFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     if (!isAdmin || !adminToken) return;
+    let ignore = false;
     api
       .get("/admin/exam-cycles", { headers: getAdminHeaders() })
-      .then((res) => setExamCycles(res.data))
+      .then((res) => {
+        if (!ignore) setExamCycles(res.data);
+      })
       .catch((err) => {
+        if (ignore) return;
         console.error("Failed to fetch exam cycles", err);
         setExamCycles([]);
       });
+    return () => {
+      ignore = true;
+    };
   }, [isAdmin, adminToken]);
 
   const fetchRegistrations = useCallback(() => {
+    // tag this request; only the latest one is allowed to apply its result
+    const seq = ++registrationsReqRef.current;
     const params = new URLSearchParams();
     if (subjectFilter) params.append("subjectId", subjectFilter);
     if (typeFilter) params.append("subjectType", typeFilter);
@@ -116,11 +150,14 @@ function AdminPage() {
         headers: getAdminHeaders(),
       })
       .then((res) => {
+        if (seq !== registrationsReqRef.current) return; // superseded
         setRegistrations(res.data);
         setLoading(false);
       })
       .catch((error) => {
         console.error("Failed to fetch dashboard data:", error);
+        // An auth failure invalidates the session regardless of ordering, so the
+        // redirect is not gated on seq; only the success state-write is.
         if (error.response?.status === 401 || error.response?.status === 403) {
           sessionStorage.removeItem("adminRole");
           sessionStorage.removeItem("adminToken");
@@ -531,8 +568,8 @@ function AdminPage() {
                 id="search-filter"
                 type="text"
                 placeholder="Enter USN or name..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
               />
             </div>

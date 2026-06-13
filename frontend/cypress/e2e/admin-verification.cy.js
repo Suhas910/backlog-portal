@@ -60,6 +60,58 @@ describe("Admin verification flow", () => {
     cy.contains("Verified").should("exist");
   });
 
+  it("logs in as admin and rejects a pending registration", () => {
+    cy.intercept("POST", "/api/auth/login", {
+      statusCode: 200,
+      body: { message: "Login success", role: "ADMIN", token: "admin-jwt-token" },
+    }).as("adminLogin");
+
+    cy.intercept("GET", "/api/admin/registrations*", {
+      statusCode: 200,
+      body: [
+        {
+          regId: "REG-2026-1001",
+          rollNo: "1MS22CS001",
+          studentName: "Student One",
+          semester: 4,
+          subjects: ["Data Structures"],
+          status: "SUBMITTED",
+          registeredAt: "2026-04-20T10:20:00",
+        },
+      ],
+    }).as("getRegistrations");
+    cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+
+    cy.intercept("PUT", "/api/register/verify/REG-2026-1001", {
+      statusCode: 200,
+      body: {
+        regId: "REG-2026-1001",
+        studentName: "Student One",
+        rollNo: "1MS22CS001",
+        status: "REJECTED",
+      },
+    }).as("rejectRegistration");
+
+    cy.visit("/admin/login");
+    cy.contains("Administrator").click();
+    cy.get('[data-cy="admin-username"]').type("admin");
+    cy.get('[data-cy="admin-password"]').type("password123");
+    cy.get('[data-cy="admin-login-submit"]').click();
+    cy.wait("@adminLogin");
+    cy.wait("@getRegistrations");
+
+    cy.get('[data-cy="admin-reject"]').first().click();
+
+    // the PUT carries action REJECTED and the row flips to Rejected (action
+    // buttons replaced by the rejected state label)
+    cy.wait("@rejectRegistration")
+      .its("request.body")
+      .should("deep.equal", { action: "REJECTED" });
+    cy.contains("td", "Rejected").should("exist");
+    cy.get('[data-cy="admin-reject"]').should("not.exist");
+  });
+
   it("shows an inline per-row error when verify fails (no rollback needed)", () => {
     cy.intercept("POST", "/api/auth/login", {
       statusCode: 200,
