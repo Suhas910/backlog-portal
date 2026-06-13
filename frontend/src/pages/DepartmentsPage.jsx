@@ -108,13 +108,26 @@ function DepartmentsPage() {
           deptName: dept.deptName,
           code: nextCode.toUpperCase(),
           contactEmail: dept.contactEmail || null,
+          // version the row was loaded at — lets the server reject a stale
+          // overwrite if another admin saved this department in the meantime
+          version: dept.version,
         },
         { headers: getAdminHeaders() },
       );
       setSuccess(`Code for "${dept.deptName}" saved.`);
       loadDepartments();
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save code.");
+      // 409 = someone edited this department underneath us. Resync the list so
+      // the admin sees the current value (and version) before retrying.
+      if (err.response?.status === 409) {
+        setError(
+          err.response?.data?.message ||
+            "This department was changed by someone else. The list has been refreshed.",
+        );
+        loadDepartments();
+      } else {
+        setError(err.response?.data?.message || "Failed to save code.");
+      }
     } finally {
       setSavingId(null);
     }
@@ -141,7 +154,11 @@ function DepartmentsPage() {
         </header>
 
         {error && (
-          <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+          <p
+            data-cy="dept-error"
+            role="alert"
+            className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600"
+          >
             {error}
           </p>
         )}
@@ -239,6 +256,7 @@ function DepartmentsPage() {
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
+                      data-cy={`dept-code-input-${d.id}`}
                       value={codeEdits[d.id] ?? ""}
                       onChange={(e) =>
                         setCodeEdits((prev) => ({
@@ -252,6 +270,7 @@ function DepartmentsPage() {
                     />
                     <button
                       type="button"
+                      data-cy={`dept-save-${d.id}`}
                       onClick={() => handleSaveCode(d)}
                       disabled={savingId === d.id || (codeEdits[d.id] || "") === (d.code || "")}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-secondary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"

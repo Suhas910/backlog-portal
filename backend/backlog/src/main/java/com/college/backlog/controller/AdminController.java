@@ -20,6 +20,7 @@ import com.college.backlog.service.RegistrationSpecification;
 import com.college.backlog.service.PdfService;
 import com.college.backlog.service.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
@@ -153,6 +154,14 @@ public class AdminController {
     public Department updateDepartment(@PathVariable Long id, @Valid @RequestBody DepartmentRequest request) {
         Department dept = departmentRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + id));
+        // Conflict detection: the @Version lock only guards a race within this
+        // request — it can't catch a stale-page overwrite, because we just loaded
+        // the *current* row. So compare the version the client last saw against the
+        // current one and reject if another admin has saved in between.
+        if (request.getVersion() != null && !request.getVersion().equals(dept.getVersion())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This department was changed by someone else. Reload and try again.");
+        }
         String code = request.getCode().trim().toUpperCase();
         // allow keeping the same code; only block if another department already owns it
         departmentRepository.findByCodeIgnoreCase(code).ifPresent(other -> {
@@ -164,7 +173,16 @@ public class AdminController {
         dept.setDeptName(request.getDeptName().trim());
         dept.setCode(code);
         dept.setContactEmail(request.getContactEmail() != null ? request.getContactEmail().trim() : null);
-        return departmentRepository.save(dept);
+        try {
+            // saveAndFlush so a genuine concurrent write surfaces here as an
+            // optimistic-lock failure (the @Version backstop for the narrow window
+            // between the check above and the flush), not later. Rethrown as 409 —
+            // otherwise the generic handler would map it to a 500.
+            return departmentRepository.saveAndFlush(dept);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This department was just changed by someone else. Reload and try again.");
+        }
     }
 
     @GetMapping("/all-subjects")

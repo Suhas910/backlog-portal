@@ -1,6 +1,7 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 
 @Entity
 @Table(name = "departments")
@@ -19,6 +20,14 @@ public class Department {
 
     @Column(name = "contact_email")
     private String contactEmail;
+
+    // Optimistic-lock version for concurrent-edit conflict detection on the
+    // manage-departments page. @ColumnDefault("0") makes ddl-auto=update emit the
+    // column with `default 0`, so the ADD COLUMN backfills existing department
+    // rows (Postgres backfills on ADD COLUMN ... DEFAULT) — no manual Neon DDL.
+    @Version
+    @ColumnDefault("0")
+    private Long version;
 
     public Department() {}
 
@@ -39,4 +48,7 @@ public class Department {
 
     public String getContactEmail() { return contactEmail; }
     public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
 }

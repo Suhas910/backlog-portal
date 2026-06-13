@@ -17,6 +17,10 @@ public class DepartmentRequest {
     @Email(message = "Contact email must be a valid address")
     private String contactEmail;
 
+    // Optimistic-lock version the client last saw; sent on update so the server
+    // can reject a stale overwrite (409). Null on create — ignored there.
+    private Long version;
+
     public DepartmentRequest() {}
 
     public String getDeptName() { return deptName; }
@@ -27,4 +31,7 @@ public class DepartmentRequest {
 
     public String getContactEmail() { return contactEmail; }
     public void setContactEmail(String contactEmail) { this.contactEmail = contactEmail; }
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
 }
