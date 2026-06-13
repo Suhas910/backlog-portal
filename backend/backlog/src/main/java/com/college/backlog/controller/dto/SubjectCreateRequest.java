@@ -19,8 +19,8 @@ public class SubjectCreateRequest {
     @Min(value = 0, message = "Credits cannot be negative")
     private int credits;
 
-    @NotNull(message = "Curriculum year must be provided")
-    private int yearOfJoining;
+    @NotNull(message = "Academic year offered must be provided")
+    private int academicYearOffered;
 
     @NotNull(message = "Department ID must be provided")
     private Long deptId;
@@ -42,8 +42,8 @@ public class SubjectCreateRequest {
     public int getCredits() { return credits; }
     public void setCredits(int credits) { this.credits = credits; }
 
-    public int getYearOfJoining() { return yearOfJoining; }
-    public void setYearOfJoining(int yearOfJoining) { this.yearOfJoining = yearOfJoining; }
+    public int getAcademicYearOffered() { return academicYearOffered; }
+    public void setAcademicYearOffered(int academicYearOffered) { this.academicYearOffered = academicYearOffered; }
 
     public Long getDeptId() { return deptId; }
     public void setDeptId(Long deptId) { this.deptId = deptId; }

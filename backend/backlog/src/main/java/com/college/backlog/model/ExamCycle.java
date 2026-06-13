@@ -12,6 +12,9 @@ public class ExamCycle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // name UNIQUE and the single-active-cycle rule are enforced at the DB level
+    // (db/migrations/2026-06-13-add-db-constraints.sql); the partial unique index
+    // for single-active can't be expressed in JPA.
     @Column(nullable = false)
     private String name;
 

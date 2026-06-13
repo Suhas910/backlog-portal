@@ -39,10 +39,7 @@ public class SubjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + request.getDeptId()));
 
         Subject subject = new Subject(null, request.getSubjectName(), request.getCourseCode(),
-                request.getSemester(), request.getCredits(), request.getYearOfJoining(), department);
-        // keep the new year-binding column in sync while year_of_joining is retired
-        // (Phase 5). Until the AddSubject UI is relabelled, this mirrors the same value.
-        subject.setAcademicYearOffered(request.getYearOfJoining());
+                request.getSemester(), request.getCredits(), request.getAcademicYearOffered(), department);
 
         String type = (request.getSubjectType() != null && !request.getSubjectType().isBlank())
                 ? request.getSubjectType().toUpperCase() : "REGULAR";

@@ -16,6 +16,9 @@ public class Subject {
     @Column(name = "subject_name")
     private String subjectName;
 
+    // Composite UNIQUE(course_code, academic_year_offered) enforced at the DB
+    // level (db/migrations/2026-06-13-add-db-constraints.sql) — a course recurs
+    // across academic years, so course_code alone is intentionally NOT unique.
     @Column(name = "course_code")
     private String courseCode;
 
@@ -23,15 +26,10 @@ public class Subject {
 
     private int credits;
 
-    // Curriculum scheme year — legacy meaning. Being superseded by
-    // academicYearOffered (Phase 0); retained until Phase 5 cleanup.
-    @Column(name = "year_of_joining")
-    private int yearOfJoining;
-
     // Academic year this offering was taught (e.g. 2023 = AY 2023-24). The
-    // authoritative key for backlog year-binding. @ColumnDefault keeps the
-    // NOT NULL column addable to the existing table; rows are then backfilled
-    // from yearOfJoining at startup. See docs/adr/backlog-progression.md.
+    // authoritative key for backlog year-binding; supersedes the retired
+    // year_of_joining column. @ColumnDefault("0") was needed to add this NOT
+    // NULL column to the populated table. See docs/adr/backlog-progression.md.
     @Column(name = "academic_year_offered")
     @ColumnDefault("0")
     private int academicYearOffered;
@@ -53,13 +51,13 @@ public class Subject {
 
     public Subject() {}
 
-    public Subject(Long id, String subjectName, String courseCode, int semester, int credits, int yearOfJoining, Department department) {
+    public Subject(Long id, String subjectName, String courseCode, int semester, int credits, int academicYearOffered, Department department) {
         this.id = id;
         this.subjectName = subjectName;
         this.courseCode = courseCode;
         this.semester = semester;
         this.credits = credits;
-        this.yearOfJoining = yearOfJoining;
+        this.academicYearOffered = academicYearOffered;
         this.department = department;
     }
 
@@ -77,9 +75,6 @@ public class Subject {
 
     public int getCredits() { return credits; }
     public void setCredits(int credits) { this.credits = credits; }
-
-    public int getYearOfJoining() { return yearOfJoining; }
-    public void setYearOfJoining(int yearOfJoining) { this.yearOfJoining = yearOfJoining; }
 
     public int getAcademicYearOffered() { return academicYearOffered; }
     public void setAcademicYearOffered(int academicYearOffered) { this.academicYearOffered = academicYearOffered; }

@@ -38,6 +38,8 @@ public class Registration {
     @Column(name = "verified_by")
     private String verifiedBy;
 
+    // NOT NULL is enforced at the DB level (db/migrations/2026-06-13-add-db-constraints.sql),
+    // not here — adding nullable=false would make ddl-auto=update auto-ALTER on boot.
     @ManyToOne
     @JoinColumn(name = "exam_cycle_id")
     private ExamCycle examCycle;

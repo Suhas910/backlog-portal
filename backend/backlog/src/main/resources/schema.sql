@@ -9,6 +9,6 @@ CREATE TABLE IF NOT EXISTS subjects (
     id BIGSERIAL PRIMARY KEY,
     subject_name VARCHAR(255) NOT NULL,
     semester INTEGER NOT NULL,
-    year_of_joining INTEGER NOT NULL,
+    academic_year_offered INTEGER NOT NULL,
     dept_id BIGINT REFERENCES departments(id)
 );

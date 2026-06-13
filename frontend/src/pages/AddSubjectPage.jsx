@@ -17,7 +17,7 @@ function AddSubjectPage() {
     courseCode: "",
     semester: "",
     credits: "",
-    yearOfJoining: "",
+    academicYearOffered: "",
     deptId: "",
   });
   const [subjectType, setSubjectType] = useState("REGULAR");
@@ -87,7 +87,7 @@ function AddSubjectPage() {
         ...formData,
         semester: parseInt(formData.semester, 10),
         credits: parseInt(formData.credits, 10),
-        yearOfJoining: parseInt(formData.yearOfJoining, 10),
+        academicYearOffered: parseInt(formData.academicYearOffered, 10),
         deptId: parseInt(formData.deptId, 10),
         subjectType,
         eligibleDeptIds: subjectType === "ELECTIVE" ? eligibleDeptIds : [],
@@ -105,7 +105,7 @@ function AddSubjectPage() {
         courseCode: "",
         semester: "",
         credits: "",
-        yearOfJoining: "",
+        academicYearOffered: "",
         // DEPT_OFFICE's department is pinned; everyone else re-picks it
         deptId: adminRole === "DEPT_OFFICE" ? prev.deptId : "",
       }));
@@ -241,15 +241,15 @@ function AddSubjectPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label
-                  htmlFor="yearOfJoining"
+                  htmlFor="academicYearOffered"
                   className="text-xs font-semibold uppercase tracking-[0.08em]"
                 >
-                  Curriculum Year *
+                  Academic Year Offered *
                 </label>
                 <select
-                  id="yearOfJoining"
-                  name="yearOfJoining"
-                  value={formData.yearOfJoining}
+                  id="academicYearOffered"
+                  name="academicYearOffered"
+                  value={formData.academicYearOffered}
                   onChange={handleChange}
                   className={inputClass}
                 >

@@ -15,6 +15,9 @@ public class RegistrationEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // FK to registrations.reg_id is enforced at the DB level
+    // (db/migrations/2026-06-13-add-db-constraints.sql); kept as a plain String
+    // here to preserve the append-only audit design.
     @Column(name = "reg_id")
     private String regId;
 
