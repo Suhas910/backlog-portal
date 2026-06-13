@@ -28,12 +28,9 @@ public class Student {
 
     private String branch;
 
-    @Column(name = "password_hash")
-    private String passwordHash;
-
     public Student() {}
 
-    public Student(String rollNo, String name, String email, String phone, int yearOfJoining, int currentSemester, String branch, String passwordHash) {
+    public Student(String rollNo, String name, String email, String phone, int yearOfJoining, int currentSemester, String branch) {
         this.rollNo = rollNo;
         this.name = name;
         this.email = email;
@@ -41,7 +38,6 @@ public class Student {
         this.yearOfJoining = yearOfJoining;
         this.currentSemester = currentSemester;
         this.branch = branch;
-        this.passwordHash = passwordHash;
     }
 
     public String getRollNo() { return rollNo; }
@@ -68,6 +64,4 @@ public class Student {
     public String getBranch() { return branch; }
     public void setBranch(String branch) { this.branch = branch; }
 
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 }
