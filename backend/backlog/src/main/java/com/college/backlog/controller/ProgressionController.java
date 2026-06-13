@@ -5,6 +5,7 @@ import com.college.backlog.model.Department;
 import com.college.backlog.model.Student;
 import com.college.backlog.model.StudentSemesterTerm;
 import com.college.backlog.model.User;
+import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.StudentRepository;
 import com.college.backlog.repository.StudentSemesterTermRepository;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
 public class ProgressionController {
 
-    private static final Set<String> DEPT_ROLES = Set.of("HOD", "DEPT_OFFICE");
+    private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
     @Autowired private ProgressionService progressionService;
     @Autowired private StudentRepository studentRepository;

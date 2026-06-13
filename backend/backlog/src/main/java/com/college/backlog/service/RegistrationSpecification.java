@@ -3,6 +3,7 @@ package com.college.backlog.service;
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.Student;
 import com.college.backlog.model.Subject;
+import com.college.backlog.model.SubjectType;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDate;
@@ -47,8 +48,9 @@ public class RegistrationSpecification implements Specification<Registration> {
                         subjectJoin.join("eligibleDepartments", JoinType.LEFT).get("id"), departmentId);
                 predicates.add(cb.or(offeredBy, eligibleFor));
             }
-            if (subjectType != null && !subjectType.isBlank()) {
-                predicates.add(cb.equal(subjectJoin.get("subjectType"), subjectType.toUpperCase()));
+            SubjectType subjectTypeFilter = SubjectType.fromNullable(subjectType);
+            if (subjectTypeFilter != null) {
+                predicates.add(cb.equal(subjectJoin.get("subjectType"), subjectTypeFilter));
             }
         }
 

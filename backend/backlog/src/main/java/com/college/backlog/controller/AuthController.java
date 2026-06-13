@@ -3,6 +3,7 @@ package com.college.backlog.controller;
 import com.college.backlog.controller.dto.ChangePasswordRequest;
 import com.college.backlog.model.Department;
 import com.college.backlog.model.User;
+import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.JwtService;
@@ -26,7 +27,7 @@ public class AuthController {
 
     private static final String SCOPE = "ADMIN";
 
-    private static final Set<String> DEPT_ROLES = Set.of("HOD", "DEPT_OFFICE");
+    private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
     @Autowired
     private UserRepository userRepository;
@@ -86,11 +87,11 @@ public class AuthController {
         }
 
         throttle.clearFailures(SCOPE, username, request);
-        String token = jwtService.generateToken(user.getUsername(), user.getRole());
+        String token = jwtService.generateToken(user.getUsername(), user.getRole().name());
 
         Map<String, String> response = new HashMap<>();
         response.put("message", "Login success");
-        response.put("role", user.getRole());
+        response.put("role", user.getRole().name());
         response.put("token", token);
         response.put("mustChangePassword", String.valueOf(user.isMustChangePassword()));
         if (user.getDepartment() != null) {

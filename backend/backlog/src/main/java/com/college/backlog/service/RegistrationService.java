@@ -112,7 +112,7 @@ public class RegistrationService {
                     "Subject '" + subject.getSubjectName() + "' is not from your semester "
                         + subject.getSemester() + " offering (" + term.getAcademicYear() + ").");
             }
-            if ("ELECTIVE".equals(subject.getSubjectType())) {
+            if (subject.getSubjectType() == SubjectType.ELECTIVE) {
                 boolean eligible = subject.getEligibleDepartments().stream()
                     .anyMatch(d -> d.getDeptName().equals(branch));
                 if (!eligible) {
@@ -132,7 +132,7 @@ public class RegistrationService {
         // VERIFIED/REJECTED rows in the cycle may be followed by a new submission.
         for (Registration existing : registrationRepository
                 .findByStudent_RollNoAndExamCycle_Id(rollNo, cycle.getId())) {
-            if ("SUBMITTED".equals(existing.getStatus())) {
+            if (existing.getStatus() == RegistrationStatus.SUBMITTED) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "You already have a pending registration for this exam cycle.");
             }
@@ -148,7 +148,7 @@ public class RegistrationService {
         reg.setStudent(student);
         reg.setSubjects(subjects);
         reg.setRegisteredAt(LocalDateTime.now());
-        reg.setStatus("SUBMITTED");
+        reg.setStatus(RegistrationStatus.SUBMITTED);
         reg.setExamCycle(cycle);
         reg.setSnapName(student.getName());
         reg.setSnapEmail(student.getEmail());
@@ -174,7 +174,7 @@ public class RegistrationService {
         }
 
         registrationEventRepository.save(new RegistrationEvent(
-            saved.getRegId(), "SUBMITTED", rollNo, "STUDENT", null));
+            saved.getRegId(), EventAction.SUBMITTED, rollNo, ActorRole.STUDENT, null));
 
         return saved;
     }

@@ -1,6 +1,7 @@
 package com.college.backlog.config;
 
 import com.college.backlog.model.User;
+import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,17 +34,17 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) throws Exception {
         // Default accounts: created if missing, and repaired if the row exists
         // without a usable password (e.g. inserted by hand without one).
-        seedUser("principal", principalPassword, "PRINCIPAL");
-        seedUser("hod", hodPassword, "HOD");
-        seedUser("office", officePassword, "DEPT_OFFICE");
-        seedUser("admin", adminPassword, "ADMIN");
+        seedUser("principal", principalPassword, UserRole.PRINCIPAL);
+        seedUser("hod", hodPassword, UserRole.HOD);
+        seedUser("office", officePassword, UserRole.DEPT_OFFICE);
+        seedUser("admin", adminPassword, UserRole.ADMIN);
 
         // One-time safety net: bcrypt any legacy plaintext password so login can
         // rely on bcrypt only (the plaintext fallback has been removed).
         migratePlaintextPasswords();
     }
 
-    private void seedUser(String username, String password, String role) {
+    private void seedUser(String username, String password, UserRole role) {
         User user = userRepository.findById(username).orElse(null);
         if (user == null) {
             user = new User();
@@ -61,7 +62,7 @@ public class DataSeeder implements CommandLineRunner {
             // account row exists but has no usable password — set the default
             user.setPassword(passwordEncoder.encode(password));
             user.setMustChangePassword(true);
-            if (user.getRole() == null || user.getRole().isBlank()) {
+            if (user.getRole() == null) {
                 user.setRole(role);
             }
             dirty = true;

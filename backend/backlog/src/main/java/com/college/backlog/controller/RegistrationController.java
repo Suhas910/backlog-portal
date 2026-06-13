@@ -3,9 +3,13 @@ package com.college.backlog.controller;
 import com.college.backlog.controller.dto.StudentRegistrationRequest;
 import com.college.backlog.controller.dto.VerificationResponse;
 import com.college.backlog.exception.ResourceNotFoundException;
+import com.college.backlog.model.ActorRole;
+import com.college.backlog.model.EventAction;
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.RegistrationEvent;
+import com.college.backlog.model.RegistrationStatus;
 import com.college.backlog.model.User;
+import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.RegistrationEventRepository;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.UserRepository;
@@ -25,7 +29,7 @@ import java.util.Set;
 @RequestMapping("/api/register")
 public class RegistrationController {
 
-    private static final Set<String> DEPT_ROLES = Set.of("HOD", "DEPT_OFFICE");
+    private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
     @Autowired
     private RegistrationService registrationService;
@@ -70,7 +74,7 @@ public class RegistrationController {
 
         return Map.of(
             "regId", reg.getRegId(),
-            "status", reg.getStatus()
+            "status", reg.getStatus().name()
         );
     }
 
@@ -86,12 +90,13 @@ public class RegistrationController {
         checkDeptAccess(authentication, reg);
 
         // state machine: only a pending registration can be actioned
-        if (!"SUBMITTED".equals(reg.getStatus())) {
+        if (reg.getStatus() != RegistrationStatus.SUBMITTED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "This registration has already been actioned.");
         }
 
-        String action = (body != null && "REJECTED".equals(body.get("action"))) ? "REJECTED" : "VERIFIED";
+        RegistrationStatus action = (body != null && "REJECTED".equals(body.get("action")))
+            ? RegistrationStatus.REJECTED : RegistrationStatus.VERIFIED;
         reg.setStatus(action);
 
         String actor = authentication != null ? authentication.getName() : null;
@@ -107,17 +112,19 @@ public class RegistrationController {
                 "This registration was just actioned by someone else.");
         }
 
-        String actorRole = (actor != null)
-            ? userRepository.findById(actor).map(User::getRole).orElse("ADMIN")
-            : "ADMIN";
+        // UserRole is a subset of ActorRole by name, so the mapping is always valid.
+        ActorRole actorRole = (actor != null)
+            ? userRepository.findById(actor)
+                .map(u -> ActorRole.valueOf(u.getRole().name())).orElse(ActorRole.ADMIN)
+            : ActorRole.ADMIN;
         registrationEventRepository.save(new RegistrationEvent(
-            reg.getRegId(), action, actor, actorRole, null));
+            reg.getRegId(), EventAction.valueOf(action.name()), actor, actorRole, null));
 
         return new VerificationResponse(
             reg.getRegId(),
             reg.getStudent().getName(),
             reg.getStudent().getRollNo(),
-            reg.getStatus()
+            reg.getStatus().name()
         );
     }
 

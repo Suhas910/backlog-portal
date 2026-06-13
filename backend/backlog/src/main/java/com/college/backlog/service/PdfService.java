@@ -112,7 +112,7 @@ public class PdfService {
 
             String subjectsStr = reg.getSubjects() != null ? reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.joining(", ")) : "";
             table.addCell(dataCell(subjectsStr, regular));
-            table.addCell(dataCellCentre(safe(reg, Registration::getStatus), regular));
+            table.addCell(dataCellCentre(safe(reg, r -> r.getStatus() != null ? r.getStatus().name() : null), regular));
             
             String dateStr = reg.getRegisteredAt() != null ? reg.getRegisteredAt().format(dtf) : "";
             table.addCell(dataCellCentre(dateStr, regular));

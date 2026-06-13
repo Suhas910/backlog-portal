@@ -10,6 +10,7 @@ import com.college.backlog.model.Registration;
 import com.college.backlog.model.Student;
 import com.college.backlog.model.StudentSemesterTerm;
 import com.college.backlog.model.Subject;
+import com.college.backlog.model.SubjectType;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.StudentRepository;
@@ -109,7 +110,7 @@ public class StudentController {
         if (branch == null) {
             return false;
         }
-        if ("ELECTIVE".equals(subject.getSubjectType())) {
+        if (subject.getSubjectType() == SubjectType.ELECTIVE) {
             return subject.getEligibleDepartments().stream()
                 .anyMatch(d -> branch.equals(d.getDeptName()));
         }
@@ -157,7 +158,7 @@ public class StudentController {
                 reg.getSnapSemester() != null ? reg.getSnapSemester() : reg.getStudent().getCurrentSemester(),
                 reg.getSnapYearOfJoining() != null ? reg.getSnapYearOfJoining() : reg.getStudent().getYearOfJoining(),
                 reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.toList()),
-                reg.getStatus(),
+                reg.getStatus().name(),
                 reg.getRegisteredAt().toString(),
                 reg.getVerifiedBy(),
                 reg.getExamCycle() != null ? reg.getExamCycle().getName() : null))

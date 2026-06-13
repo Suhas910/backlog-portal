@@ -21,12 +21,16 @@ public class RegistrationEvent {
     @Column(name = "reg_id")
     private String regId;
 
-    private String action;       // SUBMITTED | VERIFIED | REJECTED
+    // action / actorRole are stored as enum names (varchar); DB CHECK constraints
+    // guard the values — see db/migrations/2026-06-13-add-enum-check-constraints.sql.
+    @Enumerated(EnumType.STRING)
+    private EventAction action;
 
     private String actor;        // student rollNo, or admin username
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "actor_role")
-    private String actorRole;    // STUDENT | ADMIN | PRINCIPAL | HOD | DEPT_OFFICE
+    private ActorRole actorRole;
 
     private Instant timestamp;
 
@@ -35,7 +39,7 @@ public class RegistrationEvent {
 
     public RegistrationEvent() {}
 
-    public RegistrationEvent(String regId, String action, String actor, String actorRole, String note) {
+    public RegistrationEvent(String regId, EventAction action, String actor, ActorRole actorRole, String note) {
         this.regId = regId;
         this.action = action;
         this.actor = actor;
@@ -50,14 +54,14 @@ public class RegistrationEvent {
     public String getRegId() { return regId; }
     public void setRegId(String regId) { this.regId = regId; }
 
-    public String getAction() { return action; }
-    public void setAction(String action) { this.action = action; }
+    public EventAction getAction() { return action; }
+    public void setAction(EventAction action) { this.action = action; }
 
     public String getActor() { return actor; }
     public void setActor(String actor) { this.actor = actor; }
 
-    public String getActorRole() { return actorRole; }
-    public void setActorRole(String actorRole) { this.actorRole = actorRole; }
+    public ActorRole getActorRole() { return actorRole; }
+    public void setActorRole(ActorRole actorRole) { this.actorRole = actorRole; }
 
     public Instant getTimestamp() { return timestamp; }
     public void setTimestamp(Instant timestamp) { this.timestamp = timestamp; }

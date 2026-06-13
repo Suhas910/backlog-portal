@@ -41,11 +41,16 @@ public class SubjectService {
         Subject subject = new Subject(null, request.getSubjectName(), request.getCourseCode(),
                 request.getSemester(), request.getCredits(), request.getAcademicYearOffered(), department);
 
-        String type = (request.getSubjectType() != null && !request.getSubjectType().isBlank())
-                ? request.getSubjectType().toUpperCase() : "REGULAR";
+        // Unknown/blank types fall back to REGULAR — the create form only ever
+        // sends REGULAR or ELECTIVE, and the DB CHECK constraint would reject
+        // anything else anyway.
+        SubjectType type = SubjectType.fromNullable(request.getSubjectType());
+        if (type == null) {
+            type = SubjectType.REGULAR;
+        }
         subject.setSubjectType(type);
 
-        if ("ELECTIVE".equals(type) && request.getEligibleDeptIds() != null && !request.getEligibleDeptIds().isEmpty()) {
+        if (type == SubjectType.ELECTIVE && request.getEligibleDeptIds() != null && !request.getEligibleDeptIds().isEmpty()) {
             List<Department> eligibleDepts = departmentRepository.findAllById(request.getEligibleDeptIds());
             subject.setEligibleDepartments(eligibleDepts);
         }
@@ -69,8 +74,9 @@ public class SubjectService {
             predicates.add(cb.or(offeredBy, eligibleFor));
         }
 
-        if (subjectType != null && !subjectType.isBlank()) {
-            predicates.add(cb.equal(subjectJoin.get("subjectType"), subjectType.toUpperCase()));
+        SubjectType subjectTypeFilter = SubjectType.fromNullable(subjectType);
+        if (subjectTypeFilter != null) {
+            predicates.add(cb.equal(subjectJoin.get("subjectType"), subjectTypeFilter));
         }
 
         if (searchQuery != null && !searchQuery.isBlank()) {

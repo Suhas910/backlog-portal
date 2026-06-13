@@ -33,7 +33,10 @@ public class Registration {
     @Column(name = "registered_at")
     private LocalDateTime registeredAt;
 
-    private String status;
+    // Stored as the enum name (varchar). A DB CHECK constraint guards the values
+    // at the database level — see db/migrations/2026-06-13-add-enum-check-constraints.sql.
+    @Enumerated(EnumType.STRING)
+    private RegistrationStatus status;
 
     @Column(name = "verified_by")
     private String verifiedBy;
@@ -75,7 +78,7 @@ public class Registration {
 
     public Registration() {}
 
-    public Registration(Long id, String regId, Student student, List<Subject> subjects, LocalDateTime registeredAt, String status) {
+    public Registration(Long id, String regId, Student student, List<Subject> subjects, LocalDateTime registeredAt, RegistrationStatus status) {
         this.id = id;
         this.regId = regId;
         this.student = student;
@@ -99,8 +102,8 @@ public class Registration {
     public LocalDateTime getRegisteredAt() { return registeredAt; }
     public void setRegisteredAt(LocalDateTime registeredAt) { this.registeredAt = registeredAt; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public RegistrationStatus getStatus() { return status; }
+    public void setStatus(RegistrationStatus status) { this.status = status; }
 
     public String getVerifiedBy() { return verifiedBy; }
     public void setVerifiedBy(String verifiedBy) { this.verifiedBy = verifiedBy; }

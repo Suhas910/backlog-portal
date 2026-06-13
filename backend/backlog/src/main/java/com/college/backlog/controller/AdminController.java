@@ -10,6 +10,7 @@ import com.college.backlog.model.Department;
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.Subject;
 import com.college.backlog.model.User;
+import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.RegistrationEventRepository;
 import com.college.backlog.repository.RegistrationRepository;
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin")
 public class AdminController {
 
-    private static final java.util.Set<String> DEPT_ROLES = java.util.Set.of("HOD", "DEPT_OFFICE");
+    private static final java.util.Set<UserRole> DEPT_ROLES = java.util.Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
     @Autowired
     private RegistrationRepository registrationRepository;
@@ -98,7 +99,7 @@ public class AdminController {
             reg.getSnapSemester() != null ? reg.getSnapSemester() : reg.getStudent().getCurrentSemester(),
             reg.getSnapYearOfJoining() != null ? reg.getSnapYearOfJoining() : reg.getStudent().getYearOfJoining(),
             reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.toList()),
-            reg.getStatus(),
+            reg.getStatus().name(),
             reg.getRegisteredAt().toString(),
             reg.getVerifiedBy(),
             reg.getExamCycle() != null ? reg.getExamCycle().getName() : null
@@ -110,9 +111,9 @@ public class AdminController {
     public List<RegistrationEventResponse> getRegistrationEvents(@PathVariable String regId) {
         return registrationEventRepository.findByRegIdOrderByTimestampAsc(regId).stream()
             .map(e -> new RegistrationEventResponse(
-                e.getAction(),
+                e.getAction() != null ? e.getAction().name() : null,
                 e.getActor(),
-                e.getActorRole(),
+                e.getActorRole() != null ? e.getActorRole().name() : null,
                 e.getTimestamp() != null ? e.getTimestamp().toString() : null,
                 e.getNote()))
             .collect(Collectors.toList());

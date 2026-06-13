@@ -16,7 +16,7 @@ public class UserResponse {
     public static UserResponse from(User user) {
         UserResponse r = new UserResponse();
         r.username = user.getUsername();
-        r.role = user.getRole();
+        r.role = user.getRole() != null ? user.getRole().name() : null;
         r.mustChangePassword = user.isMustChangePassword();
         if (user.getDepartment() != null) {
             r.departmentId = user.getDepartment().getId();

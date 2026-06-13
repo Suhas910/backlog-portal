@@ -38,8 +38,11 @@ public class Subject {
     @JoinColumn(name = "dept_id")
     private Department department;
 
+    // Stored as the enum name (varchar). A DB CHECK constraint guards the values
+    // at the database level — see db/migrations/2026-06-13-add-enum-check-constraints.sql.
+    @Enumerated(EnumType.STRING)
     @Column(name = "subject_type")
-    private String subjectType = "REGULAR";
+    private SubjectType subjectType = SubjectType.REGULAR;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -82,8 +85,8 @@ public class Subject {
     public Department getDepartment() { return department; }
     public void setDepartment(Department department) { this.department = department; }
 
-    public String getSubjectType() { return subjectType; }
-    public void setSubjectType(String subjectType) { this.subjectType = subjectType; }
+    public SubjectType getSubjectType() { return subjectType; }
+    public void setSubjectType(SubjectType subjectType) { this.subjectType = subjectType; }
 
     public List<Department> getEligibleDepartments() { return eligibleDepartments; }
     public void setEligibleDepartments(List<Department> eligibleDepartments) { this.eligibleDepartments = eligibleDepartments; }

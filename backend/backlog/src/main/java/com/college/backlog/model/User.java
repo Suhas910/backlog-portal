@@ -12,7 +12,11 @@ public class User {
 
     private String password;
 
-    private String role;
+    // Stored as the enum name (varchar) and used verbatim as the Spring Security
+    // authority / JWT role claim. A DB CHECK constraint guards the values at the
+    // database level — see db/migrations/2026-06-13-add-enum-check-constraints.sql.
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
 
     // When true, the user is forced to set a new password on their next login.
     // Set on account creation, on admin password reset, and on the seeded default
@@ -29,7 +33,7 @@ public class User {
 
     public User() {}
 
-    public User(String username, String password, String role) {
+    public User(String username, String password, UserRole role) {
         this.username = username;
         this.password = password;
         this.role = role;
@@ -41,8 +45,8 @@ public class User {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
 
     public boolean isMustChangePassword() { return mustChangePassword; }
     public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }

@@ -4,6 +4,7 @@ import com.college.backlog.controller.dto.CreateUserRequest;
 import com.college.backlog.controller.dto.UserResponse;
 import com.college.backlog.model.Department;
 import com.college.backlog.model.User;
+import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.TempPasswordGenerator;
@@ -40,8 +41,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin/users")
 public class UserManagementController {
 
-    private static final Set<String> ALL_ROLES = Set.of("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE");
-    private static final Set<String> DEPT_ROLES = Set.of("HOD", "DEPT_OFFICE");
+    private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
     @Autowired
     private UserRepository userRepository;
@@ -70,9 +70,9 @@ public class UserManagementController {
         User actor = requireActor(auth);
 
         String username = req.getUsername().trim();
-        String role = req.getRole() == null ? "" : req.getRole().trim().toUpperCase();
+        UserRole role = UserRole.fromNullable(req.getRole());
 
-        if (!ALL_ROLES.contains(role)) {
+        if (role == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role");
         }
         if (!canManageRole(actor, role)) {
@@ -90,7 +90,7 @@ public class UserManagementController {
             department = departmentRepository.findById(req.getDepartmentId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown department"));
             // HOD may only create accounts within their own department.
-            if ("HOD".equals(actor.getRole()) && !sameDept(actor, department.getId())) {
+            if (actor.getRole() == UserRole.HOD && !sameDept(actor, department.getId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only manage users in your own department");
             }
         }
@@ -135,7 +135,7 @@ public class UserManagementController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot delete your own account");
         }
         // Never allow the system to be left with no administrator.
-        if ("ADMIN".equals(target.getRole()) && userRepository.countByRole("ADMIN") <= 1) {
+        if (target.getRole() == UserRole.ADMIN && userRepository.countByRole(UserRole.ADMIN) <= 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete the last administrator account");
         }
 
@@ -171,21 +171,24 @@ public class UserManagementController {
             return false;
         }
         // HOD is additionally constrained to their own department.
-        if ("HOD".equals(actor.getRole())) {
+        if (actor.getRole() == UserRole.HOD) {
             Long deptId = target.getDepartment() == null ? null : target.getDepartment().getId();
             return deptId != null && sameDept(actor, deptId);
         }
         return true;
     }
 
-    private boolean canManageRole(User actor, String targetRole) {
+    private boolean canManageRole(User actor, UserRole targetRole) {
+        if (actor.getRole() == null) {
+            return false;
+        }
         switch (actor.getRole()) {
-            case "ADMIN":
-                return ALL_ROLES.contains(targetRole);
-            case "PRINCIPAL":
+            case ADMIN:
+                return true; // ADMIN may manage any role
+            case PRINCIPAL:
                 return DEPT_ROLES.contains(targetRole);
-            case "HOD":
-                return "DEPT_OFFICE".equals(targetRole);
+            case HOD:
+                return targetRole == UserRole.DEPT_OFFICE;
             default:
                 return false;
         }
@@ -198,7 +201,7 @@ public class UserManagementController {
     private Map<String, String> tempPasswordResponse(User user, String tempPassword) {
         Map<String, String> resp = new HashMap<>();
         resp.put("username", user.getUsername());
-        resp.put("role", user.getRole());
+        resp.put("role", user.getRole() != null ? user.getRole().name() : null);
         resp.put("tempPassword", tempPassword);
         if (user.getDepartment() != null) {
             resp.put("departmentName", user.getDepartment().getDeptName());
