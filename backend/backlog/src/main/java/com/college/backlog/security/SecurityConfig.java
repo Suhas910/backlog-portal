@@ -43,7 +43,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/student/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/subjects").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/departments").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/registration-status").permitAll()
                         .requestMatchers("/api/register/verify/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE")

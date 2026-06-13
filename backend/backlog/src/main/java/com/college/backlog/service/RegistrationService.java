@@ -32,6 +32,12 @@ public class RegistrationService {
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private EligibilityService eligibilityService;
+
+    @Autowired
+    private StudentSemesterTermRepository studentSemesterTermRepository;
+
     public Registration register(String rollNo, int currentSemester, List<Long> subjectIds) {
 
         // an exam cycle must be open for registrations to be accepted
@@ -67,6 +73,15 @@ public class RegistrationService {
                 "Unknown branch code '" + branchCode + "' in USN. Contact the department office."));
         String branch = department.getDeptName();
 
+        // semester-eligibility window is derived from the authoritative, admin-maintained
+        // current semester on the student record — never from the client request.
+        java.util.Set<Integer> eligibleSemesters =
+            eligibilityService.eligibleSemesters(student.getCurrentSemester());
+        if (eligibleSemesters.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Your current semester is not set up for registration. Contact the department office.");
+        }
+
         // validate subjects before touching the DB
         List<Subject> subjects = subjectRepository.findAllById(subjectIds);
 
@@ -76,6 +91,27 @@ public class RegistrationService {
         }
 
         for (Subject subject : subjects) {
+            // backlog window: a subject's semester must be one the student may still
+            // register for, given their current semester (mirrors the UI constraint)
+            if (!eligibleSemesters.contains(subject.getSemester())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Subject '" + subject.getSubjectName() + "' is for semester "
+                        + subject.getSemester() + ", which you are not eligible to register for.");
+            }
+            // year-binding: the subject must be the offering from the academic year the
+            // student actually studied that semester. Fail closed if there is no
+            // progression record — mirrors the read path so a crafted/stale request
+            // cannot register a subject from a different year's offering.
+            StudentSemesterTerm term = studentSemesterTermRepository
+                .findByRollNoAndSemester(rollNo, subject.getSemester())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+                    "We don't have a record of the academic year you studied semester "
+                        + subject.getSemester() + ". Please contact the department office."));
+            if (subject.getAcademicYearOffered() != term.getAcademicYear()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Subject '" + subject.getSubjectName() + "' is not from your semester "
+                        + subject.getSemester() + " offering (" + term.getAcademicYear() + ").");
+            }
             if ("ELECTIVE".equals(subject.getSubjectType())) {
                 boolean eligible = subject.getEligibleDepartments().stream()
                     .anyMatch(d -> d.getDeptName().equals(branch));
@@ -120,6 +156,13 @@ public class RegistrationService {
         reg.setSnapBranch(branch);
         reg.setSnapSemester(currentSemester);
         reg.setSnapYearOfJoining(yearOfJoining);
+        // capture the academic-year offering when unambiguous (single-semester
+        // submission); null if the selection spans multiple years
+        java.util.Set<Integer> distinctAcademicYears = subjects.stream()
+            .map(Subject::getAcademicYearOffered)
+            .collect(java.util.stream.Collectors.toSet());
+        reg.setSnapAcademicYear(distinctAcademicYears.size() == 1
+            ? distinctAcademicYears.iterator().next() : null);
 
         Registration saved;
         try {

@@ -65,6 +65,12 @@ public class Registration {
     @Column(name = "snap_year_of_joining")
     private Integer snapYearOfJoining;
 
+    // Academic-year offering this registration was made against, captured at
+    // submission. Set only when all selected subjects share one academic year
+    // (the usual single-semester case); null if the submission spans years.
+    @Column(name = "snap_academic_year")
+    private Integer snapAcademicYear;
+
     public Registration() {}
 
     public Registration(Long id, String regId, Student student, List<Subject> subjects, LocalDateTime registeredAt, String status) {
@@ -120,4 +126,7 @@ public class Registration {
 
     public Integer getSnapYearOfJoining() { return snapYearOfJoining; }
     public void setSnapYearOfJoining(Integer snapYearOfJoining) { this.snapYearOfJoining = snapYearOfJoining; }
+
+    public Integer getSnapAcademicYear() { return snapAcademicYear; }
+    public void setSnapAcademicYear(Integer snapAcademicYear) { this.snapAcademicYear = snapAcademicYear; }
 }

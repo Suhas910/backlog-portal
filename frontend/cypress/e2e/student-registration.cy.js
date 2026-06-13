@@ -8,6 +8,8 @@ describe("Student registration flow", () => {
     branch: "Computer Science",
     phone: "9876543210",
     currentSemester: 4,
+    // server-derived backlog window for a sem-4 student
+    eligibleSemesters: [1, 2, 3, 4],
   };
 
   function stubAuthedSession({ phone = profile.phone } = {}) {
@@ -46,12 +48,18 @@ describe("Student registration flow", () => {
   it("logs in, registers, and shows submission success", () => {
     stubAuthedSession();
 
-    cy.intercept("GET", "/api/subjects*", {
+    // the academic year is resolved server-side from the student's progression;
+    // the client sends only the semester and receives { semester, academicYear, subjects }
+    cy.intercept("GET", "/api/student/subjects*", {
       statusCode: 200,
-      body: [
-        { id: 101, subjectName: "Data Structures", department: { deptName: "Computer Science" } },
-        { id: 102, subjectName: "Operating Systems", department: { deptName: "Computer Science" } },
-      ],
+      body: {
+        semester: 4,
+        academicYear: 2024,
+        subjects: [
+          { id: 101, subjectName: "Data Structures", academicYearOffered: 2024, department: { deptName: "Computer Science" } },
+          { id: 102, subjectName: "Operating Systems", academicYearOffered: 2024, department: { deptName: "Computer Science" } },
+        ],
+      },
     }).as("getSubjects");
 
     cy.intercept("POST", "/api/register", {
@@ -75,10 +83,12 @@ describe("Student registration flow", () => {
     cy.contains("Registering as").should("be.visible");
     cy.contains(profile.rollNo).should("be.visible");
 
-    // pick curriculum year/semester, which loads subjects
-    cy.get('[data-cy="reg-year"]').select("2024");
+    // pick a semester (no year input — it is resolved from the record)
     cy.get('[data-cy="reg-semester"]').select("4");
     cy.wait("@getSubjects");
+
+    // the resolved academic year is shown read-only
+    cy.contains(/2024\D+2025/).should("be.visible");
 
     cy.contains("label", "Data Structures").click();
     cy.get('[data-cy="reg-submit"]').click();
@@ -93,6 +103,39 @@ describe("Student registration flow", () => {
 
     cy.contains("Registration Submitted").should("be.visible");
     cy.contains("REG-2026-1001").should("be.visible");
+  });
+
+  it("offers only the eligible semesters in the dropdown", () => {
+    stubAuthedSession();
+    login();
+    cy.get('[data-cy="register-cta"]').click();
+    cy.location("pathname").should("eq", "/register");
+
+    // a sem-4 student may register sems 1-4 only — never 5-8
+    cy.get('[data-cy="reg-semester"] option').then(($opts) => {
+      const labels = [...$opts].map((o) => o.textContent.trim());
+      expect(labels).to.include("Semester 4");
+      expect(labels).to.not.include("Semester 5");
+      expect(labels).to.not.include("Semester 8");
+    });
+  });
+
+  it("shows a clear message when no academic-year record exists (fail closed)", () => {
+    stubAuthedSession();
+    cy.intercept("GET", "/api/student/subjects*", {
+      statusCode: 409,
+      body: {
+        message:
+          "We don't have a record of the academic year you studied semester 3. Please contact the department office.",
+      },
+    }).as("getSubjectsFailClosed");
+
+    login();
+    cy.get('[data-cy="register-cta"]').click();
+    cy.get('[data-cy="reg-semester"]').select("3");
+    cy.wait("@getSubjectsFailClosed");
+
+    cy.contains("Please contact the department office.").should("be.visible");
   });
 
   it("blocks registration until a phone number is set", () => {

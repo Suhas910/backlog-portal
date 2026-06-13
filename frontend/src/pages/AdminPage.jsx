@@ -7,6 +7,7 @@ import {
   CalendarRange,
   CircleDashed,
   Download,
+  GraduationCap,
   History,
   LoaderCircle,
   LogOut,
@@ -336,6 +337,14 @@ function AdminPage() {
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >
                 <Users size={14} /> Manage Users
+              </Link>
+            )}
+            {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole) && (
+              <Link
+                to="/admin/progression"
+                className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+              >
+                <GraduationCap size={14} /> Progression
               </Link>
             )}
             <Link

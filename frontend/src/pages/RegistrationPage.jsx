@@ -27,8 +27,9 @@ function RegistrationPage() {
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [searchYear, setSearchYear] = useState("");
   const [searchSemester, setSearchSemester] = useState("");
+  // academic year the chosen semester resolved to (server-derived); shown read-only
+  const [resolvedAcademicYear, setResolvedAcademicYear] = useState(null);
   // null = still checking; otherwise { open, cycleName?, examMonthYear? }
   const [regStatus, setRegStatus] = useState(null);
 
@@ -55,15 +56,19 @@ function RegistrationPage() {
       .catch(() => setRegStatus({ open: false }));
   }, []);
 
-  const availableYears = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return [currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1, currentYear];
-  }, []);
+  // backlog semesters the student may register for, from their authoritative
+  // current semester (server-derived).
+  const eligibleSemesters = useMemo(() => {
+    const fromProfile = profile?.eligibleSemesters;
+    return Array.isArray(fromProfile) ? fromProfile : [];
+  }, [profile]);
 
-  const derivedBranch = profile?.branch || "";
-
+  // Subjects are resolved by the server from the student's progression — the
+  // academic year is no longer a client choice. We send only the semester.
   useEffect(() => {
-    if (!searchYear || !searchSemester) {
+    if (!searchSemester) {
+      setSubjects([]);
+      setResolvedAcademicYear(null);
       return;
     }
 
@@ -72,21 +77,23 @@ function RegistrationPage() {
     setSubjectsError("");
 
     api
-      .get("/subjects", {
-        params: {
-          year: searchYear,
-          semester: searchSemester,
-          ...(derivedBranch ? { branch: derivedBranch } : {}),
-        },
+      .get("/student/subjects", {
+        headers: getStudentHeaders(),
+        params: { semester: searchSemester },
       })
       .then((res) => {
         if (ignoreResponse) return;
-        setSubjects(Array.isArray(res.data) ? res.data : []);
+        setSubjects(Array.isArray(res.data?.subjects) ? res.data.subjects : []);
+        setResolvedAcademicYear(res.data?.academicYear ?? null);
       })
       .catch((err) => {
         if (ignoreResponse) return;
         setSubjects([]);
-        setSubjectsError("Unable to load subjects. Please try again.");
+        setResolvedAcademicYear(null);
+        // surface the server's explanation (e.g. missing progression record)
+        setSubjectsError(
+          err.response?.data?.message || "Unable to load subjects. Please try again.",
+        );
         console.error("Failed to fetch subjects", err);
       })
       .finally(() => {
@@ -97,7 +104,7 @@ function RegistrationPage() {
     return () => {
       ignoreResponse = true;
     };
-  }, [searchYear, searchSemester, derivedBranch]);
+  }, [searchSemester]);
 
   const handleSubjectToggle = (subject) => {
     setSelectedSubjects((prev) =>
@@ -298,28 +305,6 @@ function RegistrationPage() {
             <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label
-                  htmlFor="searchYear"
-                  className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
-                >
-                  Curriculum Year Offering
-                </label>
-                <select
-                  id="searchYear"
-                  className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-                  value={searchYear}
-                  onChange={(e) => setSearchYear(e.target.value)}
-                  data-cy="reg-year"
-                >
-                  <option value="">Select year</option>
-                  {availableYears.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label
                   htmlFor="searchSemester"
                   className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
                 >
@@ -327,18 +312,37 @@ function RegistrationPage() {
                 </label>
                 <select
                   id="searchSemester"
-                  className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                  className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                   value={searchSemester}
                   onChange={(e) => setSearchSemester(e.target.value)}
                   data-cy="reg-semester"
+                  disabled={eligibleSemesters.length === 0}
                 >
                   <option value="">Select semester</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                  {eligibleSemesters.map((sem) => (
                     <option key={sem} value={sem}>
                       Semester {sem}
                     </option>
                   ))}
                 </select>
+                {eligibleSemesters.length === 0 ? (
+                  <p className="mt-1 text-xs text-red-600">
+                    Your current semester isn't set up yet. Please contact the department office.
+                  </p>
+                ) : null}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                  Academic Year
+                </span>
+                <div className="flex h-[42px] items-center rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3.5 text-sm text-[var(--text-main)]">
+                  {resolvedAcademicYear
+                    ? `${resolvedAcademicYear}–${resolvedAcademicYear + 1}`
+                    : "Set automatically from your record"}
+                </div>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Resolved from the year you studied this semester.
+                </p>
               </div>
             </div>
 
@@ -352,9 +356,9 @@ function RegistrationPage() {
               </p>
             ) : subjects.length === 0 ? (
               <p className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
-                {searchYear && searchSemester
-                  ? "No subjects found for the selected year and semester."
-                  : "Select a year and semester to find subjects."}
+                {searchSemester
+                  ? "No subjects found for the selected semester."
+                  : "Select a semester to find subjects."}
               </p>
             ) : (
               <div className="grid grid-cols-1 gap-2">

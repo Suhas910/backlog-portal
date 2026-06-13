@@ -1,6 +1,7 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,8 +23,18 @@ public class Subject {
 
     private int credits;
 
+    // Curriculum scheme year — legacy meaning. Being superseded by
+    // academicYearOffered (Phase 0); retained until Phase 5 cleanup.
     @Column(name = "year_of_joining")
     private int yearOfJoining;
+
+    // Academic year this offering was taught (e.g. 2023 = AY 2023-24). The
+    // authoritative key for backlog year-binding. @ColumnDefault keeps the
+    // NOT NULL column addable to the existing table; rows are then backfilled
+    // from yearOfJoining at startup. See docs/adr/backlog-progression.md.
+    @Column(name = "academic_year_offered")
+    @ColumnDefault("0")
+    private int academicYearOffered;
 
     @ManyToOne
     @JoinColumn(name = "dept_id")
@@ -69,6 +80,9 @@ public class Subject {
 
     public int getYearOfJoining() { return yearOfJoining; }
     public void setYearOfJoining(int yearOfJoining) { this.yearOfJoining = yearOfJoining; }
+
+    public int getAcademicYearOffered() { return academicYearOffered; }
+    public void setAcademicYearOffered(int academicYearOffered) { this.academicYearOffered = academicYearOffered; }
 
     public Department getDepartment() { return department; }
     public void setDepartment(Department department) { this.department = department; }

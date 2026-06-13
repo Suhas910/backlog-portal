@@ -40,6 +40,9 @@ public class SubjectService {
 
         Subject subject = new Subject(null, request.getSubjectName(), request.getCourseCode(),
                 request.getSemester(), request.getCredits(), request.getYearOfJoining(), department);
+        // keep the new year-binding column in sync while year_of_joining is retired
+        // (Phase 5). Until the AddSubject UI is relabelled, this mirrors the same value.
+        subject.setAcademicYearOffered(request.getYearOfJoining());
 
         String type = (request.getSubjectType() != null && !request.getSubjectType().isBlank())
                 ? request.getSubjectType().toUpperCase() : "REGULAR";
