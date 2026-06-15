@@ -65,6 +65,71 @@ This project is built with a modern, robust, and scalable technology stack.
 | **Database** | PostgreSQL / MySQL (or any JPA-compatible relational database)       |
 | **Testing**  | Cypress (for End-to-End tests)                                       |
 
+## Local Development Setup
+
+### Backend (Spring Boot)
+
+The backend targets **Java 17** (see `pom.xml`). Maven itself is provided via the Maven Wrapper, so you do **not** need a system-wide Maven install — just a JDK 17 and `./mvnw`.
+
+**macOS (Apple Silicon / Intel)** — pin JDK 17 to this folder without disturbing any newer JDK you use globally:
+
+```bash
+# 1. Install JDK 17 and direnv (once)
+brew install --cask temurin@17
+brew install direnv
+
+# 2. Hook direnv into your shell (zsh), then reload
+echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+source ~/.zshrc
+
+# 3. Allow this project's .envrc (once per clone)
+cd backend/backlog
+direnv allow
+```
+
+The committed `.envrc` sets `JAVA_HOME` to JDK 17 automatically whenever you enter `backend/backlog/`, and reverts when you leave — so a different global JDK is fine. Verify with:
+
+```bash
+./mvnw -version   # should report "Java version: 17.x"
+```
+
+> Not on macOS / don't want direnv? Just ensure a JDK 17 is active (`java -version` shows 17) before running `./mvnw` — direnv is only a convenience for per-folder switching.
+
+**Configure before the first run.** Two config files are gitignored, so a fresh clone must create them from the provided templates:
+
+```bash
+cd backend/backlog
+
+# 1. App config (DB connection, etc.)
+cp src/main/resources/application.properties.example src/main/resources/application.properties
+
+# 2. Secrets / environment (DB credentials, JWT secret, admin seed passwords)
+cp .env.example .env
+```
+
+Then edit `.env` and set at minimum:
+
+- `DB_URL`, `DB_USER`, `DB_PASSWORD` — pointing at your own PostgreSQL database (the example uses a Neon cloud DB). The schema and starter data are seeded automatically on first boot via `schema.sql` / `data.sql`.
+- `JWT_SECRET` — a long random base64 string.
+- At least one `ADMIN_PASSWORD_*` — so an admin account is created on first boot (there are no default passwords). Seeded accounts are forced to change their password on first login.
+
+**Run the backend:**
+
+```bash
+cd backend/backlog
+./mvnw spring-boot:run    # Windows: mvnw.cmd spring-boot:run
+```
+
+The backend starts on `http://localhost:8080`.
+
+### Frontend (React + Vite)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
 ---
 
 This project serves as a practical demonstration of how modern software engineering can be applied to solve real-world administrative challenges within an educational institution.
