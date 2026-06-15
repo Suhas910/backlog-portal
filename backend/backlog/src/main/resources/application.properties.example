@@ -1,5 +1,10 @@
-spring.datasource.url=${DB_URL:jdbc:postgresql://ep-old-darkness-a116xq97-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channelBinding=require&currentSchema=public}
-spring.datasource.username=${DB_USER:neondb_owner}
+# Copy this file to application.properties (which is gitignored). All secrets/config
+# come from the .env file (loaded via the spring.config.import line below); the
+# defaults here are safe fallbacks only.
+spring.config.import=optional:file:.env[.properties]
+
+spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/database_name}
+spring.datasource.username=${DB_USER:postgres}
 spring.datasource.password=${DB_PASSWORD:YOUR_PASSWORD_HERE}
 spring.datasource.hikari.maximum-pool-size=${DB_POOL_MAX_SIZE:5}
 spring.datasource.hikari.minimum-idle=${DB_POOL_MIN_IDLE:1}
@@ -7,14 +12,14 @@ spring.datasource.hikari.minimum-idle=${DB_POOL_MIN_IDLE:1}
 # Boot behavior — dev-friendly defaults; override via env in production.
 #   JPA_DDL_AUTO=validate  -> verify schema only, never auto-migrate (add Neon columns manually first)
 #   JPA_SHOW_SQL=true      -> log every SQL statement (debugging only; off by default)
-#   SQL_INIT_MODE=never    -> skip schema.sql/data.sql demo seeding
+#   SQL_INIT_MODE=never    -> skip schema.sql/data.sql demo seeding (set this against an already-seeded DB)
 spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:update}
 spring.jpa.show-sql=${JPA_SHOW_SQL:false}
 spring.jpa.properties.hibernate.format_sql=${JPA_FORMAT_SQL:false}
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 spring.sql.init.mode=${SQL_INIT_MODE:always}
 
-app.cors.allowed-origin=${APP_CORS_ALLOWED_ORIGIN:http://localhost:5173}
+app.cors.allowed-origins=${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
 app.jwt.secret=${JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_BASE64_SECRET}
 app.jwt.expiration-ms=${JWT_EXPIRATION_MS:3600000}
 
@@ -28,4 +33,3 @@ admin.password.admin=${ADMIN_PASSWORD_ADMIN:}
 spring.application.name=backlog
 server.port=8080
 server.error.include-message=never
-
