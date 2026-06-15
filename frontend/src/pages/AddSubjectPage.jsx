@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
+import { formatAcademicYear } from "../lib/academicYear";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 function AddSubjectPage() {
@@ -253,10 +254,10 @@ function AddSubjectPage() {
                   onChange={handleChange}
                   className={inputClass}
                 >
-                  <option value="">Select Year</option>
+                  <option value="">Select Academic Year</option>
                   {availableYears.map((year) => (
                     <option key={year} value={year}>
-                      {year}
+                      {formatAcademicYear(year)}
                     </option>
                   ))}
                 </select>

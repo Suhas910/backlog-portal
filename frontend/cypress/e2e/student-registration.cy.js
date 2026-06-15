@@ -87,8 +87,8 @@ describe("Student registration flow", () => {
     cy.get('[data-cy="reg-semester"]').select("4");
     cy.wait("@getSubjects");
 
-    // the resolved academic year is shown read-only
-    cy.contains(/2024\D+2025/).should("be.visible");
+    // the resolved academic year is shown read-only, in span format
+    cy.contains("2024-25").should("be.visible");
 
     cy.contains("label", "Data Structures").click();
     cy.get('[data-cy="reg-submit"]').click();

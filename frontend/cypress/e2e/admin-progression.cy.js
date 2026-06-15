@@ -37,7 +37,8 @@ describe("Manage Progression page", () => {
     visitAs("ADMIN");
 
     cy.get('[data-cy="prog-promote-sem"]').select("5");
-    cy.get('[data-cy="prog-promote-ay"]').type("2025");
+    // entered in span format; the client parses it back to the start-year int
+    cy.get('[data-cy="prog-promote-ay"]').type("2025-26");
     cy.get('[data-cy="prog-promote-preview"]').click();
 
     cy.wait("@promote")
@@ -88,7 +89,7 @@ describe("Manage Progression page", () => {
     visitAs("ADMIN");
 
     cy.get('[data-cy="prog-import-csv"]').type(
-      "1MS24CS191,1,2024\n1MS24CS191,2,2024",
+      "1MS24CS191,1,2024-25\n1MS24CS191,2,2024-25",
     );
     cy.get('[data-cy="prog-import-preview"]').click();
 
@@ -137,17 +138,18 @@ describe("Manage Progression page", () => {
     cy.wait("@lookup");
 
     cy.contains("Progression Pat").should("be.visible");
-    cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2023");
+    // years are shown in span format; the stored start-year int 2023 -> "2023-24"
+    cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2023-24");
 
-    // change the year and save -> PUT carries the new academic year
-    cy.get('[data-cy="prog-term-year-1"]').clear().type("2024");
+    // change the year and save -> PUT carries the parsed start-year int
+    cy.get('[data-cy="prog-term-year-1"]').clear().type("2024-25");
     cy.get('[data-cy="prog-term-save-1"]').click();
 
     cy.wait("@override")
       .its("request.body")
       .should("deep.equal", { academicYear: 2024 });
 
-    cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2024");
+    cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2024-25");
   });
 
   it("pins the department for a dept-scoped role (HOD)", () => {

@@ -12,6 +12,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentHeaders } from "../lib/api";
+import { formatAcademicYear } from "../lib/academicYear";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 function RegistrationPage() {
@@ -261,6 +262,10 @@ function RegistrationPage() {
               <LockedField label="USN" value={profile.rollNo} />
               <LockedField label="Email" value={profile.email} />
               <LockedField label="Branch" value={profile.branch} />
+              <LockedField
+                label="Current Semester"
+                value={profile.currentSemester ? `Semester ${profile.currentSemester}` : ""}
+              />
               <LockedField label="Phone" value={profile.phone} />
             </div>
             {profileError ? (
@@ -337,7 +342,7 @@ function RegistrationPage() {
                 </span>
                 <div className="flex h-[42px] items-center rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3.5 text-sm text-[var(--text-main)]">
                   {resolvedAcademicYear
-                    ? `${resolvedAcademicYear}–${resolvedAcademicYear + 1}`
+                    ? formatAcademicYear(resolvedAcademicYear)
                     : "Set automatically from your record"}
                 </div>
                 <p className="text-xs text-[var(--text-muted)]">

@@ -1,11 +1,13 @@
 # ADR: Backlog progression & academic-year subject binding
 
-Status: Implemented (Phases 0–4 + tests/docs) — 2026-06-13
+Status: Implemented (Phases 0–5 + tests/docs) — 2026-06-13
 Branch: `rejectStatus` (uncommitted)
 
-Deferred: retiring `subjects.year_of_joining` and issue #7 (AddSubjectPage relabel + range) —
-bundled together; the retirement needs a manual Neon `DROP COLUMN` and is coupled to the
-AddSubjectPage field. Tracked as a separate task.
+Resolved (2026-06-16): `subjects.year_of_joining` retired (entity field removed; physical
+`DROP COLUMN` applied on Neon) and issue #7 closed — `AddSubjectPage` relabeled to "Academic
+Year Offered" with a corrected year range. Follow-up: `subjects.academic_year_offered` is now
+enforced NOT NULL via db/migrations/2026-06-16-subjects-academic-year-not-null.sql (manual,
+matching the schema to the entity's primitive-int mapping).
 
 ## Context
 
@@ -92,6 +94,17 @@ Fail-closed: if an eligible semester has no progression row, the student gets a 
   + fix year-range (known issue #7); unit/integration/Cypress tests (closes part of #17).
 
 Dependency chain: Phase 0 → (1 ∥ 2-foundations) → 2 → 3 → 4 → 5. Phase 1 is shippable today.
+
+## Academic-year representation
+
+Stored canonically as a single **start-year `int`** (2025 = AY 2025-26) in every column
+(`student_semester_terms.academic_year`, `subjects.academic_year_offered`,
+`exam_cycles.academic_year`, `registrations.snap_academic_year`) and over the API — the
+`-26` is always `start+1`, so it is pure presentation. The int stays the source of truth for
+all comparisons, the year-binding equality check, and the `(course_code, academic_year_offered)`
+unique key. Human-facing `YYYY-YY` formatting/parsing lives only in the frontend
+(`frontend/src/lib/academicYear.js`), applied at the display + input edges (RegistrationPage,
+AddSubjectPage, ManageProgressionPage). Inputs stay parse-tolerant of a bare `2025` too.
 
 ## Cross-cutting
 

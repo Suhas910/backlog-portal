@@ -13,6 +13,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
+import { formatAcademicYear, parseAcademicYear } from "../lib/academicYear";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
@@ -137,11 +138,16 @@ function ManageProgressionPage() {
         setPError("Academic year is required to apply.");
         return;
       }
+      const academicYear = pAcademicYear ? parseAcademicYear(pAcademicYear) : 0;
+      if (pAcademicYear && Number.isNaN(academicYear)) {
+        setPError("Enter the academic year as a range or start year, e.g. 2025-26.");
+        return;
+      }
       setPBusy(true);
       try {
         const payload = {
           targetSemester: Number(pTargetSem),
-          academicYear: pAcademicYear ? Number(pAcademicYear) : 0,
+          academicYear,
           dryRun,
           excludeRollNos: parseExclude(pExclude),
         };
@@ -170,10 +176,10 @@ function ManageProgressionPage() {
         .filter((line) => line && !/^usn|^rollno/i.test(line))
         .map((line) => {
           const [rollNo, semester, academicYear] = line.split(",").map((c) => c.trim());
-          return { rollNo, semester: Number(semester), academicYear: Number(academicYear) };
+          return { rollNo, semester: Number(semester), academicYear: parseAcademicYear(academicYear) };
         });
       if (rows.length === 0) {
-        setIError("Paste at least one row: USN,semester,academicYear");
+        setIError("Paste at least one row: USN,semester,academicYear (e.g. 1MS24CS191,1,2024-25)");
         return;
       }
       setIBusy(true);
@@ -237,12 +243,17 @@ function ManageProgressionPage() {
       setSError("Enter an academic year.");
       return;
     }
+    const parsed = parseAcademicYear(academicYear);
+    if (Number.isNaN(parsed)) {
+      setSError("Enter the academic year as a range or start year, e.g. 2024-25.");
+      return;
+    }
     setSBusy(true);
     setSError("");
     try {
       const res = await api.put(
         `/admin/progression/${student.rollNo}/semester/${semester}`,
-        { academicYear: Number(academicYear) },
+        { academicYear: parsed },
         { headers: getAdminHeaders() },
       );
       setStudent(res.data);
@@ -320,8 +331,8 @@ function ManageProgressionPage() {
                 <label className="text-xs font-semibold uppercase tracking-[0.08em]">Academic year</label>
                 <input
                   className={inputClass}
-                  type="number"
-                  placeholder="e.g. 2025 (= AY 2025–26)"
+                  type="text"
+                  placeholder="e.g. 2025-26"
                   value={pAcademicYear}
                   onChange={(e) => setPAcademicYear(e.target.value)}
                   data-cy="prog-promote-ay"
@@ -360,12 +371,13 @@ function ManageProgressionPage() {
           {/* CSV import */}
           <Card icon={<UploadCloud size={18} />} title="Import progression (CSV)">
             <p className="mb-2 text-xs text-[var(--text-muted)]">
-              One row per line: <code>USN,semester,academicYear</code>. Existing rows are kept
+              One row per line: <code>USN,semester,academicYear</code> (academic year as
+              <code> 2024-25</code> or just <code>2024</code>). Existing rows are kept
               (write-once) — use the correction tool below to change one.
             </p>
             <textarea
               className={`${inputClass} min-h-32 font-mono`}
-              placeholder={"1MS24CS191,1,2024\n1MS24CS191,2,2024"}
+              placeholder={"1MS24CS191,1,2024-25\n1MS24CS191,2,2024-25"}
               value={csv}
               onChange={(e) => setCsv(e.target.value)}
               data-cy="prog-import-csv"
@@ -504,8 +516,8 @@ function ManageProgressionPage() {
                     <label className="text-xs font-semibold uppercase tracking-[0.08em]">Academic year</label>
                     <input
                       className={`${inputClass} w-40`}
-                      type="number"
-                      placeholder="e.g. 2024"
+                      type="text"
+                      placeholder="e.g. 2024-25"
                       value={editYear}
                       onChange={(e) => setEditYear(e.target.value)}
                     />
@@ -563,14 +575,14 @@ function DeptSelect({ deptLocked, pinnedDeptId, departments, value, onChange }) 
 }
 
 function TermRow({ term, onSave, busy }) {
-  const [year, setYear] = useState(String(term.academicYear));
+  const [year, setYear] = useState(formatAcademicYear(term.academicYear));
   return (
     <tr className="border-t border-[var(--stroke)]">
       <td className="px-3 py-2">Semester {term.semester}</td>
       <td className="px-3 py-2">
         <input
           className={`${inputClass} w-32`}
-          type="number"
+          type="text"
           value={year}
           onChange={(e) => setYear(e.target.value)}
           data-cy={`prog-term-year-${term.semester}`}
@@ -580,7 +592,7 @@ function TermRow({ term, onSave, busy }) {
         <button
           type="button"
           onClick={() => onSave(term.semester, year)}
-          disabled={busy || year === String(term.academicYear)}
+          disabled={busy || year === formatAcademicYear(term.academicYear)}
           data-cy={`prog-term-save-${term.semester}`}
           className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-50"
         >

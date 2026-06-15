@@ -27,9 +27,12 @@ public class Subject {
     private int credits;
 
     // Academic year this offering was taught (e.g. 2023 = AY 2023-24). The
-    // authoritative key for backlog year-binding; supersedes the retired
-    // year_of_joining column. @ColumnDefault("0") was needed to add this NOT
-    // NULL column to the populated table. See docs/adr/backlog-progression.md.
+    // authoritative key for backlog year-binding. @ColumnDefault("0") was needed
+    // to add this column to the already-populated table without a default-value
+    // violation. NOT NULL is enforced at the DB level (see
+    // db/migrations/2026-06-16-subjects-academic-year-not-null.sql), not via
+    // nullable=false here — that would make ddl-auto=update auto-ALTER on boot.
+    // See docs/adr/backlog-progression.md.
     @Column(name = "academic_year_offered")
     @ColumnDefault("0")
     private int academicYearOffered;
