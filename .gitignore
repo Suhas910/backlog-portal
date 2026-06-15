@@ -6,7 +6,8 @@ CLAUDE.local.md
 
 # Backend
 backend/backlog/target/
-backend/backlog/.mvn/
+# Ignore only the downloaded wrapper binary, not the shareable wrapper config
+backend/backlog/.mvn/wrapper/maven-wrapper.jar
 backend/backlog/*.class
 
 # Frontend
