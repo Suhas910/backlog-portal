@@ -53,11 +53,14 @@ describe("Admin dashboard — role & department scoped access", () => {
     cy.contains("td", "Pending Pam").should("exist");
     cy.contains("td", "Verified Vic").should("not.exist");
 
-    // HOD can manage users and progression, but not departments / add-subject
+    // HOD can manage users, progression, and curriculum (add + clone subjects for
+    // their own department), but not departments
     cy.contains("a", "Manage Users").should("exist");
     cy.contains("a", "Progression").should("exist");
+    cy.contains("a", "Add Subject").should("exist");
+    cy.contains("a", "Clone Subjects").should("exist");
+    cy.contains("a", "Manage Subjects").should("exist");
     cy.contains("a", "Departments").should("not.exist");
-    cy.contains("a", "Add Subject").should("not.exist");
   });
 
   it("PRINCIPAL: is read-only — a pending row exposes no verify/reject controls", () => {

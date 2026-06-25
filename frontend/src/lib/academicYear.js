@@ -23,3 +23,27 @@ export function parseAcademicYear(value) {
   const match = String(value).trim().match(/^(\d{4})/);
   return match ? Number(match[1]) : NaN;
 }
+
+// The first two digits of a course code are, by institutional convention, the
+// start year of the academic year it is offered in (22CSL44 -> AY 2022-23). The
+// year is authoritative and stamps this locked prefix; only the suffix is edited.
+// These helpers compose/split a code around that rule (the server enforces it too,
+// via CourseCodes.java). See docs/adr/backlog-progression.md.
+
+// Two-digit prefix for an academic-year start: 2022 -> "22". "" for invalid input.
+export function academicYearPrefix(year) {
+  const y = Number(year);
+  if (!Number.isInteger(y) || y <= 0) return "";
+  return String(((y % 100) + 100) % 100).padStart(2, "0");
+}
+
+// The editable part of a course code — everything after the two-digit year prefix.
+// "22CSL44" -> "CSL44"; a code with no numeric prefix is returned as-is.
+export function courseCodeSuffix(code) {
+  return /^\d{2}/.test(code || "") ? String(code).slice(2) : code || "";
+}
+
+// Compose a full course code from an academic year + the editable suffix.
+export function buildCourseCode(year, suffix) {
+  return academicYearPrefix(year) + (suffix || "");
+}

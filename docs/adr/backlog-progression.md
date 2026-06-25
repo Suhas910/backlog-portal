@@ -106,6 +106,49 @@ unique key. Human-facing `YYYY-YY` formatting/parsing lives only in the frontend
 (`frontend/src/lib/academicYear.js`), applied at the display + input edges (RegistrationPage,
 AddSubjectPage, ManageProgressionPage). Inputs stay parse-tolerant of a bare `2025` too.
 
+Course-code prefix (ENFORCED — Phase 1, 2026-06-16): the first two digits of a course code are the
+academic-year start (`22CSL44` → 2022 → AY 2022-23), a hard institutional invariant. The year is
+authoritative and stamps a **locked** two-digit prefix; the admin edits only the suffix
+(`CourseCodeField` + the `academicYear.js` `buildCourseCode`/`courseCodeSuffix` helpers). The rule
+lives once in `CourseCodes.java` (`prefixForYear`/`bumpPrefix`/`matchesYear`), shared by create,
+clone, and (Phase 2) edit; `SubjectService.createSubject` validates `prefix == academicYearOffered`
+and rejects mismatches as the server backstop. So prefix=year holds by construction *and* is
+server-checked — this **superseded the earlier soft-warn** (the `academicYearFromCourseCode`
+auto-fill helper was removed). Deliberately enforced at the **app layer, not a DB CHECK**: it's a
+naming *convention* (more exception-prone than the structural uniqueness/FK rules that do live in
+the DB), and app-layer enforcement stays cheaply relaxable if a genuine exception ever appears. The
+year remains the canonical int the binding logic reads.
+
+## Subject cloning (year rollover)
+
+Setting up a new year's offerings is a clone, not a re-entry: `SubjectCloneController`
+(`/api/admin/subjects/clone/preview` + `/apply`) + `SubjectCloneService` copy a department's
+subjects from a source year into a target year, **bumping the course-code prefix and
+`academicYearOffered`** to the target (the prefix=year invariant makes the bump mechanical).
+Two phases: *preview* generates an editable draft (per-row `WOULD_CREATE` / `WOULD_SKIP`);
+*apply* commits the admin-approved rows with **skip-existing** (the
+`UNIQUE(course_code, academic_year_offered)` index is the backstop), so it's idempotent /
+re-runnable. Each create runs in its own transaction so one bad row can't poison the batch.
+Offerings are intentionally **independent flat rows** — no canonical-subject/offering split,
+because name/code/credits all drift year to year (see the data-model discussion); the clone is
+a starting template you edit, not a relational link.
+
+Scope: **DEPT_OFFICE + HOD → own department; ADMIN + PRINCIPAL → any** (server-enforced via
+`resolveDept`, mirroring `ProgressionController`). This expanded subject-creation rights: HOD and
+PRINCIPAL now also get the single-subject `AddSubject` flow, and `AdminController.addSubject` now
+enforces dept scope server-side (previously only pinned in the UI). The UI is the dept-scoped
+`CloneSubjectsPage` (`/admin/clone-subjects`): department + source/target year (span format) +
+semester selector (all default, odd/even/none shortcuts) → editable preview grid → apply.
+
+Maintenance — `SubjectController` (`GET/PUT/DELETE /api/admin/subjects`) + `ManageSubjectsPage`
+(`/admin/manage-subjects`): list/filter the catalog (dept/year/semester) and **edit** or **delete**.
+Edit changes name/credits/semester/type/eligibility and the course-code **suffix** (prefix locked
+to the year via `CourseCodeField`); **`academic_year_offered` is denied** (it's the binding key) and
+the dept can't be reassigned. **Delete is blocked (409) when any registration references the
+subject** (`RegistrationRepository.existsBySubjects_Id`) — registrations are immutable history, so a
+referenced subject is never deletable; discontinuation is handled by simply not cloning it forward.
+Same dept-scoping. No soft-delete/archive flag (deliberately — "don't clone next year" covers it).
+
 ## Cross-cutting
 
 - Auth scope mirrors user-management: ADMIN/PRINCIPAL broad, HOD/DEPT_OFFICE own-dept.

@@ -5,7 +5,8 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
-import { formatAcademicYear } from "../lib/academicYear";
+import { formatAcademicYear, buildCourseCode, courseCodeSuffix } from "../lib/academicYear";
+import CourseCodeField from "../components/ui/CourseCodeField";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 function AddSubjectPage() {
@@ -30,7 +31,7 @@ function AddSubjectPage() {
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
-    if (adminRole !== "DEPT_OFFICE" && adminRole !== "ADMIN") {
+    if (!["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole)) {
       navigate("/admin");
     }
 
@@ -46,7 +47,7 @@ function AddSubjectPage() {
   }, [adminRole, navigate]);
 
   useEffect(() => {
-    if (adminRole === "DEPT_OFFICE" && adminDepartment && departments.length > 0) {
+    if (["DEPT_OFFICE", "HOD"].includes(adminRole) && adminDepartment && departments.length > 0) {
       const myDept = departments.find((d) => d.deptName === adminDepartment);
       if (myDept) {
         setFormData((prev) => ({ ...prev, deptId: String(myDept.id) }));
@@ -57,6 +58,17 @@ function AddSubjectPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // The academic year is authoritative: it stamps the locked two-digit prefix of
+  // the course code. Changing the year re-prefixes the code, preserving the suffix.
+  const handleYearChange = (e) => {
+    const year = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      academicYearOffered: year,
+      courseCode: buildCourseCode(year, courseCodeSuffix(prev.courseCode)),
+    }));
   };
 
   const toggleEligibleDept = (id) => {
@@ -75,6 +87,11 @@ function AddSubjectPage() {
         setError("All fields are required.");
         return;
       }
+    }
+    // a year stamps only the prefix; the admin must still enter the code suffix
+    if (!courseCodeSuffix(formData.courseCode)) {
+      setError("Enter the course code.");
+      return;
     }
     if (subjectType === "ELECTIVE" && eligibleDeptIds.length === 0) {
       setError("Please select at least one eligible department for an elective subject.");
@@ -122,10 +139,20 @@ function AddSubjectPage() {
     }
   };
 
-  const availableYears = Array.from(
+  const selectedYear = formData.academicYearOffered
+    ? Number(formData.academicYearOffered)
+    : NaN;
+  // Recent years for the dropdown, plus the selected one if it falls outside the window.
+  const baseYears = Array.from(
     { length: 6 },
     (_, i) => new Date().getFullYear() - i + 1,
   );
+  const availableYears = Array.from(
+    new Set([
+      ...baseYears,
+      ...(Number.isInteger(selectedYear) ? [selectedYear] : []),
+    ]),
+  ).sort((a, b) => b - a);
   const inputClass =
     "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]";
 
@@ -170,6 +197,28 @@ function AddSubjectPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label
+                  htmlFor="academicYearOffered"
+                  className="text-xs font-semibold uppercase tracking-[0.08em]"
+                >
+                  Academic Year Offered *
+                </label>
+                <select
+                  id="academicYearOffered"
+                  name="academicYearOffered"
+                  value={formData.academicYearOffered}
+                  onChange={handleYearChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Academic Year</option>
+                  {availableYears.map((year) => (
+                    <option key={year} value={year}>
+                      {formatAcademicYear(year)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label
                   htmlFor="subjectName"
                   className="text-xs font-semibold uppercase tracking-[0.08em]"
                 >
@@ -191,14 +240,19 @@ function AddSubjectPage() {
                 >
                   Course Code *
                 </label>
-                <input
+                <CourseCodeField
                   id="courseCode"
-                  name="courseCode"
+                  year={formData.academicYearOffered}
                   value={formData.courseCode}
-                  onChange={handleChange}
-                  className={inputClass}
-                  placeholder="e.g., 22CS51"
+                  onChange={(code) =>
+                    setFormData((prev) => ({ ...prev, courseCode: code }))
+                  }
+                  inputClassName={inputClass}
+                  dataCy="course-code-suffix"
                 />
+                <p className="text-xs text-[var(--text-muted)]">
+                  The first two digits are set from the academic year.
+                </p>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label
@@ -242,28 +296,6 @@ function AddSubjectPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <label
-                  htmlFor="academicYearOffered"
-                  className="text-xs font-semibold uppercase tracking-[0.08em]"
-                >
-                  Academic Year Offered *
-                </label>
-                <select
-                  id="academicYearOffered"
-                  name="academicYearOffered"
-                  value={formData.academicYearOffered}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-                  <option value="">Select Academic Year</option>
-                  {availableYears.map((year) => (
-                    <option key={year} value={year}>
-                      {formatAcademicYear(year)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label
                   htmlFor="deptId"
                   className="text-xs font-semibold uppercase tracking-[0.08em]"
                 >
@@ -275,7 +307,7 @@ function AddSubjectPage() {
                   value={formData.deptId}
                   onChange={handleChange}
                   className={inputClass}
-                  disabled={departments.length === 0 || adminRole === "DEPT_OFFICE"}
+                  disabled={departments.length === 0 || ["DEPT_OFFICE", "HOD"].includes(adminRole)}
                 >
                   <option value="">Select Department</option>
                   {departments.map((dept) => (
@@ -284,7 +316,7 @@ function AddSubjectPage() {
                     </option>
                   ))}
                 </select>
-                {adminRole === "DEPT_OFFICE" && adminDepartment && (
+                {["DEPT_OFFICE", "HOD"].includes(adminRole) && adminDepartment && (
                   <p className="mt-1 text-xs text-[var(--text-muted)]">
                     Locked to your department: {adminDepartment}
                   </p>

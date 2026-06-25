@@ -21,6 +21,10 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
 
     List<Registration> findByStudent_RollNoAndExamCycle_Id(String rollNo, Long examCycleId);
 
+    // Delete guard: is any registration referencing this subject? Blocks deletion
+    // of a subject that students have already registered for.
+    boolean existsBySubjects_Id(Long subjectId);
+
     // Fetch-joins the relations the list/PDF mappers touch per row; without
     // this, student/subjects/examCycle each fire a separate query per result
     @Override

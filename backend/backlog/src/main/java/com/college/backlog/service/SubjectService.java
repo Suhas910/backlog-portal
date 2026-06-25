@@ -3,7 +3,9 @@ package com.college.backlog.service;
 import com.college.backlog.controller.dto.SubjectCreateRequest;
 import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.*;
+import com.college.backlog.controller.dto.SubjectUpdateRequest;
 import com.college.backlog.repository.DepartmentRepository;
+import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.SubjectRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -13,8 +15,11 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -33,8 +38,20 @@ public class SubjectService {
     @Autowired
     private EntityManager entityManager;
 
+    @Autowired
+    private RegistrationRepository registrationRepository;
+
     @Transactional
     public Subject createSubject(SubjectCreateRequest request) {
+        // Enforce the prefix=year invariant: the course code's first two digits are
+        // the academic-year start. The UI locks the prefix; this is the server-side
+        // backstop so a crafted request can't persist a mismatched code.
+        if (!CourseCodes.matchesYear(request.getCourseCode(), request.getAcademicYearOffered())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Course code must start with the academic year's two digits ("
+                    + CourseCodes.prefixForYear(request.getAcademicYearOffered()) + ").");
+        }
+
         Department department = departmentRepository.findById(request.getDeptId())
                 .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + request.getDeptId()));
 
@@ -56,6 +73,76 @@ public class SubjectService {
         }
 
         return subjectRepository.save(subject);
+    }
+
+    /**
+     * Edit an existing subject. The academic year is NOT editable (it's the binding
+     * key), so the course-code prefix stays locked to the existing year. callerDeptId
+     * is non-null for HOD/DEPT_OFFICE, who may only touch their own department.
+     */
+    @Transactional
+    public Subject updateSubject(Long id, SubjectUpdateRequest request, Long callerDeptId) {
+        Subject subject = subjectRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + id));
+
+        if (callerDeptId != null
+                && (subject.getDepartment() == null || !callerDeptId.equals(subject.getDepartment().getId()))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "You can only edit subjects for your own department.");
+        }
+
+        // year is fixed; the prefix must still match it (suffix-only edits)
+        if (!CourseCodes.matchesYear(request.getCourseCode(), subject.getAcademicYearOffered())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Course code must start with the academic year's two digits ("
+                    + CourseCodes.prefixForYear(subject.getAcademicYearOffered()) + ").");
+        }
+
+        subject.setSubjectName(request.getSubjectName());
+        subject.setCourseCode(request.getCourseCode());
+        subject.setSemester(request.getSemester());
+        subject.setCredits(request.getCredits());
+
+        SubjectType type = SubjectType.fromNullable(request.getSubjectType());
+        if (type == null) {
+            type = SubjectType.REGULAR;
+        }
+        subject.setSubjectType(type);
+        if (type == SubjectType.ELECTIVE
+                && request.getEligibleDeptIds() != null && !request.getEligibleDeptIds().isEmpty()) {
+            subject.setEligibleDepartments(departmentRepository.findAllById(request.getEligibleDeptIds()));
+        } else {
+            subject.setEligibleDepartments(new ArrayList<>());
+        }
+
+        try {
+            return subjectRepository.saveAndFlush(subject);
+        } catch (DataIntegrityViolationException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Another subject with course code '" + request.getCourseCode()
+                    + "' already exists for this academic year.");
+        }
+    }
+
+    /**
+     * Delete a subject, blocked if any registration references it (deleting it out
+     * from under a student's registration would corrupt that record). Dept-scoped.
+     */
+    @Transactional
+    public void deleteSubject(Long id, Long callerDeptId) {
+        Subject subject = subjectRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + id));
+
+        if (callerDeptId != null
+                && (subject.getDepartment() == null || !callerDeptId.equals(subject.getDepartment().getId()))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "You can only delete subjects for your own department.");
+        }
+        if (registrationRepository.existsBySubjects_Id(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This subject is referenced by existing registrations and cannot be deleted.");
+        }
+        subjectRepository.delete(subject);
     }
 
     public List<Subject> findDistinctSubjectsByRegistrationFilters(Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate) {

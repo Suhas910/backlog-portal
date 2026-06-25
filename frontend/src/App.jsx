@@ -5,6 +5,8 @@ import AdminPage from "./pages/AdminPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import { ThemeProvider } from "./context/ThemeContext";
 import AddSubjectPage from "./pages/AddSubjectPage";
+import CloneSubjectsPage from "./pages/CloneSubjectsPage";
+import ManageSubjectsPage from "./pages/ManageSubjectsPage";
 import ExamCyclePage from "./pages/ExamCyclePage";
 import DepartmentsPage from "./pages/DepartmentsPage";
 import ManageUsersPage from "./pages/ManageUsersPage";
@@ -52,6 +54,22 @@ function App() {
             element={
               <ProtectedAdminRoute>
                 <AddSubjectPage />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/clone-subjects"
+            element={
+              <ProtectedAdminRoute>
+                <CloneSubjectsPage />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/manage-subjects"
+            element={
+              <ProtectedAdminRoute>
+                <ManageSubjectsPage />
               </ProtectedAdminRoute>
             }
           />

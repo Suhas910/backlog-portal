@@ -122,8 +122,15 @@ public class AdminController {
 
     @PostMapping("/subjects")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('ADMIN', 'DEPT_OFFICE')")
-    public Subject addSubject(@Valid @RequestBody SubjectCreateRequest request) {
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    public Subject addSubject(@Valid @RequestBody SubjectCreateRequest request, Authentication authentication) {
+        // dept-scoped roles (HOD / DEPT_OFFICE) may only create subjects for their own
+        // department — enforced here on the server, not just pinned in the UI.
+        Long callerDeptId = resolveCallerDeptId(authentication);
+        if (callerDeptId != null && !callerDeptId.equals(request.getDeptId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "You can only add subjects for your own department.");
+        }
         return subjectService.createSubject(request);
     }
 
