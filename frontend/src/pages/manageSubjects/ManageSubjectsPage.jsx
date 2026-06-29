@@ -1,0 +1,112 @@
+import { useState, useEffect } from "react";
+import { ArrowLeft, BookOpen, Copy, PlusCircle } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import BrandIdentity from "../../components/layout/BrandIdentity";
+import api from "../../lib/api";
+import MobileActionBar from "../../components/layout/MobileActionBar";
+import ManageTab from "./ManageTab";
+import AddSubjectTab from "./AddSubjectTab";
+import CloneSubjectsTab from "./CloneSubjectsTab";
+
+const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
+const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
+
+// Tab identity → presentational component. The active tab is driven by the
+// ?tab= query param so it survives refresh and is shareable/bookmarkable; the
+// value is whitelisted to these keys (anything else falls back to "manage").
+const TABS = [
+  { key: "manage", label: "Manage", icon: BookOpen },
+  { key: "add", label: "Add", icon: PlusCircle },
+  { key: "clone", label: "Clone", icon: Copy },
+];
+const TAB_KEYS = new Set(TABS.map((t) => t.key));
+
+// The subject catalog lives behind a single route as three tabs (Manage / Add /
+// Clone). This shell owns everything the tabs share — the role guard, the one
+// departments fetch, and the dept-pin resolution — and passes them down so each
+// tab is purely presentational. Auth/dept scope is still enforced server-side on
+// every /api/admin/** call; the role/dept logic here is only UX gating.
+function ManageSubjectsPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const adminRole = sessionStorage.getItem("adminRole") || "";
+  const adminDepartment = sessionStorage.getItem("adminDepartment") || "";
+  const deptLocked = DEPT_ROLES.has(adminRole);
+
+  const [departments, setDepartments] = useState([]);
+  const [pinnedDeptId, setPinnedDeptId] = useState("");
+
+  // whitelist the query param; default + fall back to "manage"
+  const tabParam = searchParams.get("tab");
+  const activeTab = TAB_KEYS.has(tabParam) ? tabParam : "manage";
+  const setActiveTab = (key) => setSearchParams({ tab: key }, { replace: true });
+
+  useEffect(() => {
+    if (!ALLOWED_ROLES.includes(adminRole)) {
+      navigate("/admin");
+      return;
+    }
+    api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
+  }, [adminRole, navigate]);
+
+  // dept-scoped roles are pinned to their own department across every tab
+  useEffect(() => {
+    if (deptLocked && adminDepartment && departments.length > 0) {
+      const mine = departments.find((d) => d.deptName === adminDepartment);
+      if (mine) {
+        setPinnedDeptId(String(mine.id));
+      }
+    }
+  }, [departments, deptLocked, adminDepartment]);
+
+  const shared = { departments, adminRole, adminDepartment, deptLocked, pinnedDeptId };
+
+  return (
+    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-5xl pb-24 md:pb-8">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
+          <BrandIdentity compact />
+          <Link
+            to="/admin"
+            className="inline-flex items-center rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+          >
+            <ArrowLeft size={15} className="mr-1" /> Dashboard
+          </Link>
+        </header>
+
+        <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Subject catalog">
+          {TABS.map((t) => {
+            const Icon = t.icon;
+            const on = activeTab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setActiveTab(t.key)}
+                data-cy={`tab-${t.key}`}
+                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                  on
+                    ? "border-[var(--color-primary)] bg-[rgba(145,25,28,0.08)] text-[var(--color-primary)]"
+                    : "border-[var(--stroke)] bg-[var(--surface-muted)] text-[var(--text-main)] hover:border-[var(--color-primary)]"
+                }`}
+              >
+                <Icon size={15} /> {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {activeTab === "manage" && <ManageTab {...shared} />}
+        {activeTab === "add" && <AddSubjectTab {...shared} />}
+        {activeTab === "clone" && <CloneSubjectsTab {...shared} />}
+      </div>
+
+      <MobileActionBar />
+    </div>
+  );
+}
+
+export default ManageSubjectsPage;

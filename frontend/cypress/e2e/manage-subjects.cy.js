@@ -85,4 +85,22 @@ describe("Manage Subjects page", () => {
     cy.contains("Data Structures").should("not.exist");
     cy.get('[data-cy="subjects-empty"]').should("be.visible");
   });
+
+  it("switches to the Add and Clone tabs", () => {
+    cy.intercept("GET", "/api/departments", {
+      statusCode: 200,
+      body: [{ id: 1, deptName: "Computer Science" }],
+    }).as("getDepartments");
+    cy.visit("/admin/manage-subjects", { onBeforeLoad: seed });
+    cy.wait("@getDepartments");
+
+    // defaults to the Manage tab
+    cy.get('[data-cy="subjects-load"]').should("be.visible");
+
+    cy.get('[data-cy="tab-add"]').click();
+    cy.get("#academicYearOffered").should("be.visible");
+
+    cy.get('[data-cy="tab-clone"]').click();
+    cy.get('[data-cy="clone-preview"]').should("be.visible");
+  });
 });

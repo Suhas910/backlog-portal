@@ -1,8 +1,8 @@
-// Coverage for the Clone Subjects page: preview generates the bumped draft, the
-// grid is editable / rows removable, and apply posts the approved rows. Years are
-// entered in span format and sent as the start-year int; WOULD_SKIP rows (already
-// exist) are excluded from the apply.
-describe("Clone Subjects page", () => {
+// Coverage for the Clone Subjects tab (Manage Subjects → ?tab=clone): preview
+// generates the bumped draft, the grid is editable / rows removable, and apply
+// posts the approved rows. Years are entered in span format and sent as the
+// start-year int; WOULD_SKIP rows (already exist) are excluded from the apply.
+describe("Clone Subjects tab", () => {
   const seed = (win) => {
     win.sessionStorage.setItem("adminRole", "ADMIN");
     win.sessionStorage.setItem("adminToken", "admin-jwt-token");
@@ -14,7 +14,7 @@ describe("Clone Subjects page", () => {
       statusCode: 200,
       body: [{ id: 1, deptName: "Computer Science" }],
     }).as("getDepartments");
-    cy.visit("/admin/clone-subjects", { onBeforeLoad: seed });
+    cy.visit("/admin/manage-subjects?tab=clone", { onBeforeLoad: seed });
   };
 
   it("previews, edits, and applies a clone", () => {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
+  AlertTriangle,
   ArrowLeft,
   GraduationCap,
   LoaderCircle,
@@ -103,6 +104,13 @@ function ManageProgressionPage() {
   const [editSem, setEditSem] = useState("");
   const [editYear, setEditYear] = useState("");
 
+  // Progression gaps
+  const [gDeptId, setGDeptId] = useState("");
+  const [gAdmissionYear, setGAdmissionYear] = useState("");
+  const [gBusy, setGBusy] = useState(false);
+  const [gError, setGError] = useState("");
+  const [gaps, setGaps] = useState(null);
+
   // only admin roles reach here; the server enforces the same
   useEffect(() => {
     if (!["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole)) {
@@ -120,6 +128,7 @@ function ManageProgressionPage() {
         setPinnedDeptId(id);
         setPDeptId(id);
         setBDeptId(id);
+        setGDeptId(id);
       }
     }
   }, [departments, deptLocked, adminDepartment]);
@@ -221,13 +230,14 @@ function ManageProgressionPage() {
     [bDeptId, bAdmissionYear, deptLocked, pinnedDeptId],
   );
 
-  const loadStudent = useCallback(async () => {
+  const loadStudentRoll = useCallback(async (roll) => {
     setSError("");
     setStudent(null);
-    if (!lookupRoll.trim()) return;
+    const r = (roll || "").trim();
+    if (!r) return;
     setSBusy(true);
     try {
-      const res = await api.get(`/admin/progression/${lookupRoll.trim()}`, {
+      const res = await api.get(`/admin/progression/${r}`, {
         headers: getAdminHeaders(),
       });
       setStudent(res.data);
@@ -236,7 +246,35 @@ function ManageProgressionPage() {
     } finally {
       setSBusy(false);
     }
-  }, [lookupRoll]);
+  }, []);
+
+  const loadStudent = useCallback(() => loadStudentRoll(lookupRoll), [lookupRoll, loadStudentRoll]);
+
+  // jump from a gaps row into the correction tool, pre-loaded with that student
+  const fixGap = (roll) => {
+    setLookupRoll(roll);
+    loadStudentRoll(roll);
+  };
+
+  const runGaps = useCallback(async () => {
+    setGError("");
+    setGBusy(true);
+    try {
+      const params = {};
+      const deptId = deptLocked ? pinnedDeptId : gDeptId;
+      if (deptId) params.deptId = Number(deptId);
+      if (gAdmissionYear) params.admissionYear = Number(gAdmissionYear);
+      const res = await api.get("/admin/progression/gaps", {
+        headers: getAdminHeaders(),
+        params,
+      });
+      setGaps(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      setGError(err.response?.data?.message || "Could not load gaps.");
+    } finally {
+      setGBusy(false);
+    }
+  }, [deptLocked, pinnedDeptId, gDeptId, gAdmissionYear]);
 
   const saveOverride = async (semester, academicYear) => {
     if (!academicYear) {
@@ -445,6 +483,94 @@ function ManageProgressionPage() {
               </MagneticCta>
             </div>
             <ResultTable result={bResult} />
+          </Card>
+
+          {/* Progression gaps */}
+          <Card icon={<AlertTriangle size={18} />} title="Find students missing progression">
+            <p className="mb-3 text-xs text-[var(--text-muted)]">
+              Students with no academic-year row for one or more semesters in their eligibility
+              window — typically newly added students. Pick one to set its timeline below.
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em]">Department</label>
+                <DeptSelect
+                  deptLocked={deptLocked}
+                  pinnedDeptId={pinnedDeptId}
+                  departments={departments}
+                  value={gDeptId}
+                  onChange={setGDeptId}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold uppercase tracking-[0.08em]">
+                  Admission year (optional)
+                </label>
+                <input
+                  className={inputClass}
+                  type="number"
+                  placeholder="e.g. 2024"
+                  value={gAdmissionYear}
+                  onChange={(e) => setGAdmissionYear(e.target.value)}
+                />
+              </div>
+            </div>
+            {gError && <p className="mt-3 text-sm text-red-600" data-cy="prog-gaps-error">{gError}</p>}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={runGaps}
+                disabled={gBusy}
+                data-cy="prog-gaps-find"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+              >
+                {gBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Find gaps
+              </button>
+            </div>
+            {gaps && (
+              <div className="mt-4">
+                {gaps.length === 0 ? (
+                  <p
+                    className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+                    data-cy="prog-gaps-empty"
+                  >
+                    No students are missing progression for this selection.
+                  </p>
+                ) : (
+                  <div className="max-h-72 overflow-auto rounded-xl border border-[var(--stroke)]">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        <tr>
+                          <th className="px-3 py-2">USN</th>
+                          <th className="px-3 py-2">Name</th>
+                          <th className="px-3 py-2">Missing sems</th>
+                          <th className="px-3 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {gaps.map((g) => (
+                          <tr key={g.rollNo} className="border-t border-[var(--stroke)]">
+                            <td className="px-3 py-2 font-mono text-xs">{g.rollNo}</td>
+                            <td className="px-3 py-2">{g.name}</td>
+                            <td className="px-3 py-2">{g.missingSemesters.join(", ")}</td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => fixGap(g.rollNo)}
+                                data-cy={`prog-gaps-fix-${g.rollNo}`}
+                                className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1 text-xs font-semibold transition-colors hover:border-[var(--color-primary)]"
+                              >
+                                Fix
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* Lookup & correct */}

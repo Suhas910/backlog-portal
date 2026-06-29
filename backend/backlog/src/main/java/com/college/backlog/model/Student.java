@@ -1,6 +1,7 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 import java.time.LocalDate;
 
 @Entity
@@ -25,6 +26,18 @@ public class Student {
 
     @Column(name = "current_semester")
     private int currentSemester;
+
+    // The semester the student first entered the programme here: 1 for a normal
+    // intake, >1 for a lateral-entry/migrant student who joined mid-degree (e.g. 3
+    // for a 2nd-year transfer). Raises the backlog-eligibility floor to
+    // max(normalFloor, entrySemester) so a migrant is never offered semesters they
+    // never studied here. @ColumnDefault("1") backfills existing rows on the
+    // ddl-auto ADD COLUMN; NOT NULL is enforced at the DB level (see
+    // db/migrations/2026-06-29-students-entry-semester-not-null.sql), not via
+    // nullable=false here. See docs/adr/backlog-progression.md.
+    @Column(name = "entry_semester")
+    @ColumnDefault("1")
+    private int entrySemester = 1;
 
     private String branch;
 
@@ -60,6 +73,9 @@ public class Student {
 
     public int getCurrentSemester() { return currentSemester; }
     public void setCurrentSemester(int currentSemester) { this.currentSemester = currentSemester; }
+
+    public int getEntrySemester() { return entrySemester; }
+    public void setEntrySemester(int entrySemester) { this.entrySemester = entrySemester; }
 
     public String getBranch() { return branch; }
     public void setBranch(String branch) { this.branch = branch; }

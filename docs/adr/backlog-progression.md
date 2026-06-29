@@ -1,7 +1,12 @@
 # ADR: Backlog progression & academic-year subject binding
 
-Status: Implemented (Phases 0–5 + tests/docs) — 2026-06-13
-Branch: `rejectStatus` (uncommitted)
+Status: Implemented (Phases 0–5 + tests/docs) — 2026-06-13. Extended 2026-06-16 with
+academic-year display format, course-code prefix enforcement, subject cloning, and the Manage
+Subjects page (all committed on `rejectStatus`). 2026-06-29: the Add / Clone / Manage subject UIs
+were consolidated into one tabbed page at `/admin/manage-subjects` (`?tab=manage|add|clone`); the
+standalone `AddSubjectPage`/`CloneSubjectsPage` and their `/admin/add-subject` + `/admin/clone-subjects`
+routes were removed. Pure UI refactor — endpoints/services unchanged.
+Branch: `rejectStatus` (committed)
 
 Resolved (2026-06-16): `subjects.year_of_joining` retired (entity field removed; physical
 `DROP COLUMN` applied on Neon) and issue #7 closed — `AddSubjectPage` relabeled to "Academic
@@ -39,9 +44,12 @@ and the server validated only branch/elective membership of the chosen subjects
 ## Eligibility window (closed form)
 
 ```
-floor = currentSem <= 4 ? 1 : currentSem <= 6 ? 3 : 5
+floor = max(currentSem <= 4 ? 1 : currentSem <= 6 ? 3 : 5, entrySemester)
 eligible = { floor .. currentSem }
 ```
+
+For a normal intake (`entrySemester = 1`, the default for every existing student) the table below
+holds unchanged:
 
 | currentSem | eligible      |
 |------------|---------------|
@@ -57,13 +65,20 @@ eligible = { floor .. currentSem }
 Rationale: eligible = (current academic-year's sems) ∪ (previous academic-year's sems),
 capped at the current sem. Promotion to 3rd year (sem 5) drops 1st-year backlogs by design.
 
+**Lateral entry (2026-06-29):** `Student.entrySemester` (int, default 1; `>1` = a migrant who joined
+mid-degree) raises the floor to `max(normalFloor, entrySemester)`, so e.g. a transfer at
+`entrySemester=3`, `currentSem=5` sees `{3,4,5}` — never the sems 1–2 they didn't study here. The
+change is in `EligibilityService.eligibleSemesters(currentSemester, entrySemester)` (the one-arg
+overload delegates with `entry=1`, so existing callers/tests are untouched), threaded through
+`RegistrationService.register` and `StudentController`. Backward-compatible by construction.
+
 ## Data model
 
 | Entity | Change |
 |---|---|
 | `Subject` | new `academicYearOffered: int` (`2023` = AY 2023-24; odd sems = fall term, even = spring). Offering = `(academicYearOffered, semester, department, courseCode)`. New years = new rows; old rows kept forever. Replaces overloaded `yearOfJoining`. |
 | `StudentSemesterTerm` (**new**) | `rollNo` (FK), `semester` (1-8), `academicYear` (int). PK `(rollNo, semester)`. Write-once = "first studied". |
-| `Student` | `currentSemester` becomes authoritative (no schema change). |
+| `Student` | `currentSemester` becomes authoritative (no schema change). Later: new `entrySemester: int` (default 1; raises the eligibility floor for lateral-entry students — DB `NOT NULL DEFAULT 1` via db/migrations/2026-06-29-students-entry-semester-not-null.sql). |
 | `ExamCycle` | new `academicYear: int`, `term: ODD\|EVEN`. |
 | `Registration` | optional `snapAcademicYear` (form immutability, Phase 4). |
 
@@ -137,17 +152,38 @@ Scope: **DEPT_OFFICE + HOD → own department; ADMIN + PRINCIPAL → any** (serv
 `resolveDept`, mirroring `ProgressionController`). This expanded subject-creation rights: HOD and
 PRINCIPAL now also get the single-subject `AddSubject` flow, and `AdminController.addSubject` now
 enforces dept scope server-side (previously only pinned in the UI). The UI is the dept-scoped
-`CloneSubjectsPage` (`/admin/clone-subjects`): department + source/target year (span format) +
-semester selector (all default, odd/even/none shortcuts) → editable preview grid → apply.
+**Clone tab** (`/admin/manage-subjects?tab=clone`, `CloneSubjectsTab`): department + source/target
+year (span format) + semester selector (all default, odd/even/none shortcuts) → editable preview
+grid → apply.
 
-Maintenance — `SubjectController` (`GET/PUT/DELETE /api/admin/subjects`) + `ManageSubjectsPage`
-(`/admin/manage-subjects`): list/filter the catalog (dept/year/semester) and **edit** or **delete**.
+Maintenance — `SubjectController` (`GET/PUT/DELETE /api/admin/subjects`) + the **Manage tab**
+(`/admin/manage-subjects?tab=manage`, `ManageTab`): list/filter the catalog (dept/year/semester) and **edit** or **delete**.
 Edit changes name/credits/semester/type/eligibility and the course-code **suffix** (prefix locked
 to the year via `CourseCodeField`); **`academic_year_offered` is denied** (it's the binding key) and
 the dept can't be reassigned. **Delete is blocked (409) when any registration references the
 subject** (`RegistrationRepository.existsBySubjects_Id`) — registrations are immutable history, so a
 referenced subject is never deletable; discontinuation is handled by simply not cloning it forward.
 Same dept-scoping. No soft-delete/archive flag (deliberately — "don't clone next year" covers it).
+
+## Student account management (2026-06-29)
+
+Admins create/manage student records (previously out-of-band). Standalone tabbed page
+`/admin/students` (`?tab=manage|add|import`, shell `src/pages/students/StudentsPage.jsx`) →
+`StudentManagementController` (`/api/admin/students`) + `StudentManagementService`. Dept-scoped by USN
+branch code exactly like `ProgressionController` (ADMIN/PRINCIPAL broad; HOD/DEPT_OFFICE own-dept).
+- **Create / edit / import:** create one, edit (name/email/phone/currentSemester[warns]/entrySemester
+  — **USN and DOB are not editable here**), bulk CSV import (dry-run + per-row, batch-default
+  semesters, skip-existing). `1 ≤ entrySemester ≤ currentSemester ≤ 8` enforced.
+- **DOB is the login credential → write-only:** never returned by any endpoint (`StudentSummaryResponse`
+  omits it); set at create, corrected via `POST /{rollNo}/reset-dob`.
+- **Delete only if unreferenced** (409 via `RegistrationRepository.existsByStudent_RollNo`) — same
+  immutable-history rule as subjects.
+- **Progression is never auto-seeded** on create (no fabricated years — wrong years fail silently,
+  missing years fail loud). Instead: a post-create warning + a **"gaps" filter** on the Progression
+  page (`GET /api/admin/progression/gaps`) listing students missing term rows in their eligibility
+  window, plus a per-row "progression incomplete" badge on the Students list. The gaps check already
+  respects `entrySemester`, so a lateral entrant's pre-entry sems aren't flagged.
+- All sensitive writes (create/update/delete/DOB-reset) are audit-logged (mirrors `PROGRESSION_OVERRIDE`).
 
 ## Cross-cutting
 

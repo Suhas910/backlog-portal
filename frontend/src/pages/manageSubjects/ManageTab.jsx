@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
-  ArrowLeft,
   BookOpen,
   Check,
   LoaderCircle,
@@ -9,27 +8,16 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
-import api, { getAdminHeaders } from "../lib/api";
-import { formatAcademicYear, parseAcademicYear, courseCodeSuffix } from "../lib/academicYear";
-import CourseCodeField from "../components/ui/CourseCodeField";
-import MobileActionBar from "../components/layout/MobileActionBar";
-
-const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
+import api, { getAdminHeaders } from "../../lib/api";
+import { formatAcademicYear, parseAcademicYear, courseCodeSuffix } from "../../lib/academicYear";
+import CourseCodeField from "../../components/ui/CourseCodeField";
 
 const inputClass =
   "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
 
-function ManageSubjectsPage() {
-  const navigate = useNavigate();
-  const adminRole = sessionStorage.getItem("adminRole") || "";
-  const adminDepartment = sessionStorage.getItem("adminDepartment") || "";
-  const deptLocked = DEPT_ROLES.has(adminRole);
-
-  const [departments, setDepartments] = useState([]);
-  const [pinnedDeptId, setPinnedDeptId] = useState("");
-
+// Browse / edit / delete the subject catalog. Presentational tab — the shell
+// supplies departments + the dept-lock context; this tab only filters and loads.
+function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
   const [fDeptId, setFDeptId] = useState("");
   const [fYear, setFYear] = useState("");
   const [fSemester, setFSemester] = useState("");
@@ -37,22 +25,6 @@ function ManageSubjectsPage() {
   const [subjects, setSubjects] = useState(null); // null = not loaded yet
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole)) {
-      navigate("/admin");
-    }
-    api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
-  }, [adminRole, navigate]);
-
-  useEffect(() => {
-    if (deptLocked && adminDepartment && departments.length > 0) {
-      const mine = departments.find((d) => d.deptName === adminDepartment);
-      if (mine) {
-        setPinnedDeptId(String(mine.id));
-      }
-    }
-  }, [departments, deptLocked, adminDepartment]);
 
   const effectiveDeptId = deptLocked ? pinnedDeptId : fDeptId;
 
@@ -79,124 +51,110 @@ function ManageSubjectsPage() {
   const onRemoved = (id) => setSubjects((prev) => prev.filter((s) => s.id !== id));
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-4xl pb-24 md:pb-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
-          <BrandIdentity compact />
-          <Link
-            to="/admin"
-            className="inline-flex items-center rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-          >
-            <ArrowLeft size={15} className="mr-1" /> Dashboard
-          </Link>
-        </header>
-
-        <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-          <h1 className="mb-1 inline-flex items-center gap-2 text-xl font-semibold text-[var(--color-secondary)]">
-            <BookOpen size={18} /> Manage subjects
-          </h1>
-          <p className="mb-4 text-sm text-[var(--text-muted)]">
-            Browse the catalog and fix subjects. The academic year can't be changed (it's the
-            year-binding key); the course-code prefix stays locked to it.
+    <>
+      <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
+        <h1 className="mb-1 inline-flex items-center gap-2 text-xl font-semibold text-[var(--color-secondary)]">
+          <BookOpen size={18} /> Manage subjects
+        </h1>
+        <p className="mb-4 text-sm text-[var(--text-muted)]">
+          Browse the catalog and fix subjects. The academic year can't be changed (it's the
+          year-binding key); the course-code prefix stays locked to it.
+        </p>
+        {deptLocked && adminDepartment && (
+          <p className="mb-4 text-xs font-semibold text-[var(--color-primary)]">
+            Scoped to {adminDepartment}
           </p>
-          {deptLocked && adminDepartment && (
-            <p className="mb-4 text-xs font-semibold text-[var(--color-primary)]">
-              Scoped to {adminDepartment}
-            </p>
-          )}
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-[0.08em]">Department</label>
-              <select
-                className={inputClass}
-                value={effectiveDeptId}
-                onChange={(e) => setFDeptId(e.target.value)}
-                disabled={deptLocked}
-                data-cy="subjects-dept"
-              >
-                <option value="">All departments</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.deptName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-[0.08em]">Academic year</label>
-              <input
-                className={inputClass}
-                type="text"
-                placeholder="e.g. 2024-25 (optional)"
-                value={fYear}
-                onChange={(e) => setFYear(e.target.value)}
-                data-cy="subjects-year"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold uppercase tracking-[0.08em]">Semester</label>
-              <select
-                className={inputClass}
-                value={fSemester}
-                onChange={(e) => setFSemester(e.target.value)}
-                data-cy="subjects-sem"
-              >
-                <option value="">All</option>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                  <option key={s} value={s}>
-                    Semester {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {error && (
-            <p className="mt-3 text-sm text-red-600" role="alert" data-cy="subjects-error">
-              {error}
-            </p>
-          )}
-
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={loadSubjects}
-              disabled={busy}
-              data-cy="subjects-load"
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
-            >
-              {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Load subjects
-            </button>
-          </div>
-        </section>
-
-        {subjects && (
-          <section className="mt-6 flex flex-col gap-3">
-            {subjects.length === 0 ? (
-              <p
-                className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
-                data-cy="subjects-empty"
-              >
-                No subjects match these filters.
-              </p>
-            ) : (
-              subjects.map((subject) => (
-                <SubjectRow
-                  key={subject.id}
-                  subject={subject}
-                  departments={departments}
-                  onUpdated={onUpdated}
-                  onRemoved={onRemoved}
-                />
-              ))
-            )}
-          </section>
         )}
-      </div>
 
-      <MobileActionBar />
-    </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.08em]">Department</label>
+            <select
+              className={inputClass}
+              value={effectiveDeptId}
+              onChange={(e) => setFDeptId(e.target.value)}
+              disabled={deptLocked}
+              data-cy="subjects-dept"
+            >
+              <option value="">All departments</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.deptName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.08em]">Academic year</label>
+            <input
+              className={inputClass}
+              type="text"
+              placeholder="e.g. 2024-25 (optional)"
+              value={fYear}
+              onChange={(e) => setFYear(e.target.value)}
+              data-cy="subjects-year"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold uppercase tracking-[0.08em]">Semester</label>
+            <select
+              className={inputClass}
+              value={fSemester}
+              onChange={(e) => setFSemester(e.target.value)}
+              data-cy="subjects-sem"
+            >
+              <option value="">All</option>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                <option key={s} value={s}>
+                  Semester {s}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {error && (
+          <p className="mt-3 text-sm text-red-600" role="alert" data-cy="subjects-error">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={loadSubjects}
+            disabled={busy}
+            data-cy="subjects-load"
+            className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+          >
+            {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Load subjects
+          </button>
+        </div>
+      </section>
+
+      {subjects && (
+        <section className="mt-6 flex flex-col gap-3">
+          {subjects.length === 0 ? (
+            <p
+              className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+              data-cy="subjects-empty"
+            >
+              No subjects match these filters.
+            </p>
+          ) : (
+            subjects.map((subject) => (
+              <SubjectRow
+                key={subject.id}
+                subject={subject}
+                departments={departments}
+                onUpdated={onUpdated}
+                onRemoved={onRemoved}
+              />
+            ))
+          )}
+        </section>
+      )}
+    </>
   );
 }
 
@@ -427,4 +385,4 @@ function SubjectRow({ subject, departments, onUpdated, onRemoved }) {
   );
 }
 
-export default ManageSubjectsPage;
+export default ManageTab;

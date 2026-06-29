@@ -1,0 +1,221 @@
+import { useState, useCallback } from "react";
+import { Download, LoaderCircle, Search, UploadCloud } from "lucide-react";
+import MagneticCta from "../../components/ui/MagneticCta";
+import api, { getAdminHeaders } from "../../lib/api";
+
+const inputClass =
+  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
+
+const STATUS_STYLES = {
+  CREATED: "text-[var(--color-primary)]",
+  WOULD_CREATE: "text-[var(--color-primary)]",
+  SKIPPED_EXISTS: "text-[var(--text-muted)]",
+  ERROR: "text-red-600",
+};
+
+const HEADER = "USN,name,phone,dateOfBirth,currentSemester,entrySemester";
+const TEMPLATE =
+  HEADER + "\n1MS24CS001,Asha Rao,9999999999,2006-04-12,1,1\n1MS24CS002,Migrant Kid,,2005-09-01,3,3";
+
+// Parse a CSV body into import rows. Blank semester cells fall back to the batch
+// defaults server-side. The header line (if present) is skipped.
+function parseCsv(text) {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line && !/^usn|^rollno/i.test(line))
+    .map((line) => {
+      const [rollNo, name, phone, dateOfBirth, currentSemester, entrySemester] = line
+        .split(",")
+        .map((c) => (c == null ? "" : c.trim()));
+      return {
+        rollNo,
+        name,
+        phone: phone ? phone.replace(/\D/g, "").slice(0, 10) : null,
+        dateOfBirth: dateOfBirth || null,
+        currentSemester: currentSemester ? Number(currentSemester) : null,
+        entrySemester: entrySemester ? Number(entrySemester) : null,
+      };
+    });
+}
+
+function ResultTable({ result }) {
+  if (!result) return null;
+  return (
+    <div className="mt-4" data-cy="students-import-result">
+      <p className="mb-2 text-sm font-medium text-[var(--text-main)]">
+        {result.dryRun ? "Preview" : "Imported"} — {result.created} created, {result.skipped} skipped,{" "}
+        {result.errors} error(s)
+      </p>
+      <div className="max-h-72 overflow-auto rounded-xl border border-[var(--stroke)]">
+        <table className="w-full text-left text-sm">
+          <thead className="sticky top-0 bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+            <tr>
+              <th className="px-3 py-2">USN</th>
+              <th className="px-3 py-2">Sem</th>
+              <th className="px-3 py-2">Status</th>
+              <th className="px-3 py-2">Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.results.map((r, i) => (
+              <tr key={`${r.rollNo}-${i}`} className="border-t border-[var(--stroke)]">
+                <td className="px-3 py-2 font-mono text-xs">{r.rollNo}</td>
+                <td className="px-3 py-2">{r.semester ?? "—"}</td>
+                <td className={`px-3 py-2 font-semibold ${STATUS_STYLES[r.status] || ""}`}>{r.status}</td>
+                <td className="px-3 py-2 text-[var(--text-muted)]">{r.message || ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// Bulk-import students from CSV. Presentational tab. Per-row semesters fall back to
+// the batch defaults; existing USNs are skipped. dryRun previews without writing.
+function ImportStudentsTab() {
+  const [csv, setCsv] = useState("");
+  const [defaultCurrent, setDefaultCurrent] = useState("1");
+  const [defaultEntry, setDefaultEntry] = useState("1");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+
+  const run = useCallback(
+    async (dryRun) => {
+      setError("");
+      const rows = parseCsv(csv);
+      if (rows.length === 0) {
+        setError("Paste at least one row: " + HEADER);
+        return;
+      }
+      setBusy(true);
+      try {
+        const res = await api.post(
+          "/admin/students/import",
+          {
+            rows,
+            defaultCurrentSemester: defaultCurrent ? Number(defaultCurrent) : null,
+            defaultEntrySemester: defaultEntry ? Number(defaultEntry) : null,
+            dryRun,
+          },
+          { headers: getAdminHeaders() },
+        );
+        setResult(res.data);
+      } catch (err) {
+        setError(err.response?.data?.message || "Import failed.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [csv, defaultCurrent, defaultEntry],
+  );
+
+  const downloadTemplate = () => {
+    const blob = new Blob([TEMPLATE], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "students-template.csv");
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  return (
+    <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
+      <h2 className="mb-1 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+        <UploadCloud size={18} /> Import students (CSV)
+      </h2>
+      <p className="mb-3 text-sm text-[var(--text-muted)]">
+        One row per line: <code>{HEADER}</code>. Date of birth is <code>yyyy-MM-dd</code>. Phone is
+        optional; email is assigned automatically as <code>usn@msrit.edu</code>. Leave the two semester
+        columns blank to use the batch defaults below. Existing USNs are skipped, so it's safe to re-run.
+        Preview first to check.
+      </p>
+
+      <div className="mb-3 flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-[0.08em]">Default current sem</label>
+          <select
+            className={`${inputClass} w-32`}
+            value={defaultCurrent}
+            onChange={(e) => setDefaultCurrent(e.target.value)}
+            data-cy="students-import-default-current"
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-[0.08em]">Default entry sem</label>
+          <select
+            className={`${inputClass} w-32`}
+            value={defaultEntry}
+            onChange={(e) => setDefaultEntry(e.target.value)}
+            data-cy="students-import-default-entry"
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={downloadTemplate}
+          className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)]"
+          data-cy="students-import-template"
+        >
+          <Download size={15} /> Template
+        </button>
+      </div>
+
+      <textarea
+        className={`${inputClass} min-h-32 font-mono`}
+        placeholder={"1MS24CS001,Asha Rao,9999999999,2006-04-12,1,1"}
+        value={csv}
+        onChange={(e) => setCsv(e.target.value)}
+        data-cy="students-import-csv"
+      />
+
+      {error && (
+        <p className="mt-3 text-sm text-red-600" role="alert" data-cy="students-import-error">
+          {error}
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => run(true)}
+          disabled={busy}
+          data-cy="students-import-preview"
+          className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+        >
+          {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Preview
+        </button>
+        <MagneticCta
+          type="button"
+          onClick={() => run(false)}
+          disabled={busy}
+          className="gap-2 rounded-xl"
+          data-cy="students-import-apply"
+        >
+          <UploadCloud size={15} /> Import
+        </MagneticCta>
+      </div>
+
+      <ResultTable result={result} />
+    </section>
+  );
+}
+
+export default ImportStudentsTab;

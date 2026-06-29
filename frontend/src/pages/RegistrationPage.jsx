@@ -291,7 +291,9 @@ function RegistrationPage() {
                         {subject.subjectName}
                       </p>
                       <p className="text-xs text-[var(--text-main)] sm:text-sm">
-                        {subject.department?.deptName} • Sem {subject.semester || searchSemester}
+                        <span className="font-mono">{subject.courseCode}</span> •{" "}
+                        {subject.department?.deptName} • Sem {subject.semester || searchSemester} •{" "}
+                        {subject.credits} {subject.credits === 1 ? "credit" : "credits"}
                       </p>
                     </div>
                     <button
@@ -303,6 +305,19 @@ function RegistrationPage() {
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {selectedSubjects.length > 0 && (
+              <div className="mb-6 flex items-center justify-between rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+                <span className="font-semibold text-[var(--text-main)]">
+                  {selectedSubjects.length}{" "}
+                  {selectedSubjects.length === 1 ? "subject" : "subjects"} selected
+                </span>
+                <span className="font-semibold text-[var(--text-main)]">
+                  Total credits:{" "}
+                  {selectedSubjects.reduce((sum, s) => sum + (s.credits || 0), 0)}
+                </span>
               </div>
             )}
 
@@ -390,9 +405,17 @@ function RegistrationPage() {
                           htmlFor={`subject-${subject.id}`}
                           className="flex flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-[var(--text-main)] sm:text-base"
                         >
-                          <span>{subject.subjectName}</span>
-                          <span className="text-xs text-[var(--text-main)] sm:text-sm">
+                          <span className="flex min-w-0 flex-col">
+                            <span className="truncate">{subject.subjectName}</span>
+                            <span className="font-mono text-xs text-[var(--text-muted)]">
+                              {subject.courseCode}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-right text-xs text-[var(--text-main)] sm:text-sm">
                             {subject.department?.deptName}
+                            <span className="block text-[var(--text-muted)]">
+                              {subject.credits} {subject.credits === 1 ? "credit" : "credits"}
+                            </span>
                           </span>
                         </label>
                       </div>

@@ -8,6 +8,7 @@ import com.college.backlog.exception.ResourceNotFoundException;
 import org.springframework.web.server.ResponseStatusException;
 import com.college.backlog.model.Department;
 import com.college.backlog.model.Registration;
+import com.college.backlog.model.RegistrationStatus;
 import com.college.backlog.model.Subject;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
@@ -237,7 +238,12 @@ public class AdminController {
                 endDate.orElse(null),
                 examCycleId.orElse(null));
 
-        List<Registration> registrations = registrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
+        // the summary report covers only verified registrations, not pending/rejected ones
+        List<Registration> registrations = registrationRepository
+                .findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"))
+                .stream()
+                .filter(reg -> reg.getStatus() == RegistrationStatus.VERIFIED)
+                .toList();
         byte[] pdfBytes = pdfService.generateRegistrationsSummaryPdf(registrations);
 
         HttpHeaders headers = new HttpHeaders();

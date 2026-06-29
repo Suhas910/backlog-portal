@@ -1,7 +1,8 @@
-// Coverage for the Add Subject page. The academic year is authoritative: it stamps
-// the locked two-digit prefix of the course code, and the admin types only the
-// suffix. The composed code is what gets posted; the year drives the prefix.
-describe("Add Subject page", () => {
+// Coverage for the Add Subject tab (Manage Subjects → ?tab=add). The academic year
+// is authoritative: it stamps the locked two-digit prefix of the course code, and
+// the admin types only the suffix. The composed code is what gets posted; the year
+// drives the prefix.
+describe("Add Subject tab", () => {
   const seed = (win) => {
     win.sessionStorage.setItem("adminRole", "ADMIN");
     win.sessionStorage.setItem("adminToken", "admin-jwt-token");
@@ -13,7 +14,7 @@ describe("Add Subject page", () => {
       statusCode: 200,
       body: [{ id: 1, deptName: "Computer Science" }],
     }).as("getDepartments");
-    cy.visit("/admin/add-subject", { onBeforeLoad: seed });
+    cy.visit("/admin/manage-subjects?tab=add", { onBeforeLoad: seed });
     cy.wait("@getDepartments");
   };
 

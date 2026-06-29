@@ -4,13 +4,12 @@ import RegistrationPage from "./pages/RegistrationPage";
 import AdminPage from "./pages/AdminPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import { ThemeProvider } from "./context/ThemeContext";
-import AddSubjectPage from "./pages/AddSubjectPage";
-import CloneSubjectsPage from "./pages/CloneSubjectsPage";
-import ManageSubjectsPage from "./pages/ManageSubjectsPage";
+import ManageSubjectsPage from "./pages/manageSubjects/ManageSubjectsPage";
 import ExamCyclePage from "./pages/ExamCyclePage";
 import DepartmentsPage from "./pages/DepartmentsPage";
 import ManageUsersPage from "./pages/ManageUsersPage";
 import ManageProgressionPage from "./pages/ManageProgressionPage";
+import StudentsPage from "./pages/students/StudentsPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import StudentLoginPage from "./pages/StudentLoginPage";
 import StudentDashboardPage from "./pages/StudentDashboardPage";
@@ -46,22 +45,6 @@ function App() {
             element={
               <ProtectedAdminRoute>
                 <AdminPage />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/add-subject"
-            element={
-              <ProtectedAdminRoute>
-                <AddSubjectPage />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/clone-subjects"
-            element={
-              <ProtectedAdminRoute>
-                <CloneSubjectsPage />
               </ProtectedAdminRoute>
             }
           />
@@ -102,6 +85,14 @@ function App() {
             element={
               <ProtectedAdminRoute>
                 <ManageProgressionPage />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/students"
+            element={
+              <ProtectedAdminRoute>
+                <StudentsPage />
               </ProtectedAdminRoute>
             }
           />

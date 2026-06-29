@@ -35,4 +35,32 @@ class EligibilityServiceTest {
         assertThat(service.isEligible(6, 2)).isFalse();
         assertThat(service.isEligible(6, 7)).isFalse();
     }
+
+    @Test
+    void entrySemesterOfOneIsIdenticalToTheNormalWindow() {
+        for (int cur = 1; cur <= 8; cur++) {
+            assertThat(service.eligibleSemesters(cur, 1))
+                .isEqualTo(service.eligibleSemesters(cur));
+        }
+    }
+
+    @Test
+    void entrySemesterRaisesTheFloorForLateralEntrants() {
+        // a migrant who joined at sem 3, now in sem 5: never offered sems 1-2
+        assertThat(service.eligibleSemesters(5, 3)).containsExactlyInAnyOrder(3, 4, 5);
+        // joined at sem 3, now in sem 4: {3,4} (normal floor 1 raised to 3)
+        assertThat(service.eligibleSemesters(4, 3)).containsExactlyInAnyOrder(3, 4);
+        // entry below the normal floor has no effect (normal floor wins)
+        assertThat(service.eligibleSemesters(6, 2)).containsExactlyInAnyOrder(3, 4, 5, 6);
+        // entry equal to current: only that one semester
+        assertThat(service.eligibleSemesters(5, 5)).containsExactlyInAnyOrder(5);
+    }
+
+    @Test
+    void entryAwareIsEligibleExcludesPreEntrySemesters() {
+        // entry 3, current 5: sem 2 excluded, sem 3 allowed
+        assertThat(service.isEligible(5, 3, 2)).isFalse();
+        assertThat(service.isEligible(5, 3, 3)).isTrue();
+        assertThat(service.isEligible(5, 3, 5)).isTrue();
+    }
 }

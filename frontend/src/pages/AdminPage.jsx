@@ -7,13 +7,12 @@ import {
   Building2,
   CalendarRange,
   CircleDashed,
-  Copy,
   Download,
   GraduationCap,
   History,
+  IdCard,
   LoaderCircle,
   LogOut,
-  PlusCircle,
   Shield,
   Users,
   X,
@@ -384,22 +383,6 @@ function AdminPage() {
             </Link>
             {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole) && (
               <Link
-                to="/admin/add-subject"
-                className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
-              >
-                <PlusCircle size={14} /> Add Subject
-              </Link>
-            )}
-            {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole) && (
-              <Link
-                to="/admin/clone-subjects"
-                className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
-              >
-                <Copy size={14} /> Clone Subjects
-              </Link>
-            )}
-            {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole) && (
-              <Link
                 to="/admin/manage-subjects"
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >
@@ -420,6 +403,14 @@ function AdminPage() {
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >
                 <Users size={14} /> Manage Users
+              </Link>
+            )}
+            {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole) && (
+              <Link
+                to="/admin/students"
+                className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+              >
+                <IdCard size={14} /> Students
               </Link>
             )}
             {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole) && (

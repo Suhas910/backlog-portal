@@ -10,6 +10,7 @@ import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.StudentRepository;
 import com.college.backlog.repository.StudentSemesterTermRepository;
 import com.college.backlog.repository.UserRepository;
+import com.college.backlog.service.EligibilityService;
 import com.college.backlog.service.ProgressionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,6 +46,7 @@ public class ProgressionController {
     @Autowired private StudentSemesterTermRepository termRepository;
     @Autowired private DepartmentRepository departmentRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private EligibilityService eligibilityService;
 
     // ---- view ----
 
@@ -54,6 +57,44 @@ public class ProgressionController {
         Student student = studentRepository.findByRollNo(rollNo)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + rollNo));
         return toProgressionResponse(student);
+    }
+
+    // ---- progression gaps ----
+
+    /**
+     * Students missing a term row for one or more semesters in their eligibility
+     * window — i.e. whose academic-year timeline isn't fully set (typically newly
+     * added students). Dept-scoped like the rest of this controller. The eligibility
+     * window already respects entrySemester, so a lateral entrant's pre-entry
+     * semesters are not counted as gaps.
+     */
+    @GetMapping("/gaps")
+    public List<StudentGapResponse> gaps(@RequestParam(required = false) Long deptId,
+                                         @RequestParam(required = false) Integer admissionYear,
+                                         Authentication auth) {
+        User actor = requireActor(auth);
+        List<Student> cohort = resolveCohort(actor, deptId, admissionYear, null);
+
+        Map<String, Set<Integer>> termsByRoll = cohort.isEmpty() ? Map.of()
+            : termRepository.findByRollNoIn(
+                    cohort.stream().map(Student::getRollNo).collect(Collectors.toList())).stream()
+                .collect(Collectors.groupingBy(StudentSemesterTerm::getRollNo,
+                    Collectors.mapping(StudentSemesterTerm::getSemester, Collectors.toSet())));
+
+        List<StudentGapResponse> gaps = new ArrayList<>();
+        for (Student s : cohort) {
+            Set<Integer> recorded = termsByRoll.getOrDefault(s.getRollNo(), Set.of());
+            List<Integer> missing = eligibilityService
+                .eligibleSemesters(s.getCurrentSemester(), s.getEntrySemester()).stream()
+                .filter(sem -> !recorded.contains(sem))
+                .sorted()
+                .collect(Collectors.toList());
+            if (!missing.isEmpty()) {
+                gaps.add(new StudentGapResponse(s.getRollNo(), s.getName(),
+                        s.getCurrentSemester(), s.getEntrySemester(), missing));
+            }
+        }
+        return gaps;
     }
 
     // ---- bulk promote ----

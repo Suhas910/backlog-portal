@@ -91,10 +91,10 @@ public class PdfService {
                 .setMarginBottom(15f);
         doc.add(title);
 
-        float[] columnWidths = { 4f, 13f, 20f, 6f, 32f, 10f, 15f };
+        float[] columnWidths = { 4f, 13f, 20f, 6f, 42f, 15f };
         Table table = new Table(UnitValue.createPercentArray(columnWidths)).useAllAvailableWidth();
 
-        String[] headers = { "Sl.", "USN", "Name", "Sem", "Subjects", "Status", "Date" };
+        String[] headers = { "Sl.", "USN", "Name", "Sem", "Subjects", "Date" };
         for (String h : headers) {
             table.addHeaderCell(new Cell().add(new Paragraph(h).setFont(bold).setFontSize(9f))
                     .setBackgroundColor(new DeviceRgb(230, 230, 230))
@@ -112,8 +112,7 @@ public class PdfService {
 
             String subjectsStr = reg.getSubjects() != null ? reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.joining(", ")) : "";
             table.addCell(dataCell(subjectsStr, regular));
-            table.addCell(dataCellCentre(safe(reg, r -> r.getStatus() != null ? r.getStatus().name() : null), regular));
-            
+
             String dateStr = reg.getRegisteredAt() != null ? reg.getRegisteredAt().format(dtf) : "";
             table.addCell(dataCellCentre(dateStr, regular));
         }

@@ -81,7 +81,7 @@ public class StudentController {
 
         // semester must be in the student's eligibility window (defence in depth —
         // the UI already constrains the dropdown to these)
-        if (!eligibilityService.isEligible(student.getCurrentSemester(), semester)) {
+        if (!eligibilityService.isEligible(student.getCurrentSemester(), student.getEntrySemester(), semester)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "You are not eligible to register backlogs for semester " + semester + ".");
         }
@@ -134,7 +134,7 @@ public class StudentController {
         return new StudentProfileResponse(
             s.getRollNo(), s.getName(), s.getEmail(),
             deriveBranch(s.getRollNo()), s.getPhone(), s.getCurrentSemester(),
-            new ArrayList<>(eligibilityService.eligibleSemesters(s.getCurrentSemester())));
+            new ArrayList<>(eligibilityService.eligibleSemesters(s.getCurrentSemester(), s.getEntrySemester())));
     }
 
     private String deriveBranch(String rollNo) {

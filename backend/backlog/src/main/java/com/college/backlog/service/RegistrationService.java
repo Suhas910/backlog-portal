@@ -76,7 +76,7 @@ public class RegistrationService {
         // semester-eligibility window is derived from the authoritative, admin-maintained
         // current semester on the student record — never from the client request.
         java.util.Set<Integer> eligibleSemesters =
-            eligibilityService.eligibleSemesters(student.getCurrentSemester());
+            eligibilityService.eligibleSemesters(student.getCurrentSemester(), student.getEntrySemester());
         if (eligibleSemesters.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Your current semester is not set up for registration. Contact the department office.");
