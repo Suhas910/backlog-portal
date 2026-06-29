@@ -13,6 +13,7 @@ import {
   IdCard,
   LoaderCircle,
   LogOut,
+  Search,
   Shield,
   Users,
   X,
@@ -57,6 +58,18 @@ function AdminPage() {
   const [examCycles, setExamCycles] = useState([]);
   const [cycleFilter, setCycleFilter] = useState("");
 
+  // The above filter states are the DRAFT (what the user is editing). The
+  // registrations fetch keys off appliedFilters instead, so the table only
+  // updates when the user clicks Apply — never mid-edit on a half-built combo.
+  const [appliedFilters, setAppliedFilters] = useState({
+    subjectId: "",
+    subjectType: "",
+    searchQuery: "",
+    startDate: "",
+    endDate: "",
+    examCycleId: "",
+  });
+
   // Audit history modal
   const [historyRegId, setHistoryRegId] = useState("");
   const [historyEvents, setHistoryEvents] = useState([]);
@@ -95,13 +108,9 @@ function AdminPage() {
       })
       .then((res) => {
         if (ignore) return;
+        // narrow the dropdown options live, but never auto-clear the user's
+        // current selection — applying a now-unlisted subject just yields no rows
         setAllSubjects(res.data);
-        if (
-          subjectFilter &&
-          !res.data.some((s) => String(s.id) === subjectFilter)
-        ) {
-          setSubjectFilter("");
-        }
       })
       .catch((err) => {
         if (ignore) return;
@@ -123,7 +132,16 @@ function AdminPage() {
     api
       .get("/admin/exam-cycles", { headers: getAdminHeaders() })
       .then((res) => {
-        if (!ignore) setExamCycles(res.data);
+        if (ignore) return;
+        setExamCycles(res.data);
+        // default the filter to the active cycle so the list + PDF export both
+        // scope to it; "All Cycles" stays an explicit opt-in.
+        const active = Array.isArray(res.data) ? res.data.find((c) => c.active) : null;
+        if (active) {
+          // seed both draft and applied so the page auto-loads the active cycle
+          setCycleFilter(String(active.id));
+          setAppliedFilters((prev) => ({ ...prev, examCycleId: String(active.id) }));
+        }
       })
       .catch((err) => {
         if (ignore) return;
@@ -139,12 +157,12 @@ function AdminPage() {
     // tag this request; only the latest one is allowed to apply its result
     const seq = ++registrationsReqRef.current;
     const params = new URLSearchParams();
-    if (subjectFilter) params.append("subjectId", subjectFilter);
-    if (typeFilter) params.append("subjectType", typeFilter);
-    if (searchFilter) params.append("searchQuery", searchFilter);
-    if (startDateFilter) params.append("startDate", startDateFilter);
-    if (endDateFilter) params.append("endDate", endDateFilter);
-    if (cycleFilter) params.append("examCycleId", cycleFilter);
+    if (appliedFilters.subjectId) params.append("subjectId", appliedFilters.subjectId);
+    if (appliedFilters.subjectType) params.append("subjectType", appliedFilters.subjectType);
+    if (appliedFilters.searchQuery) params.append("searchQuery", appliedFilters.searchQuery);
+    if (appliedFilters.startDate) params.append("startDate", appliedFilters.startDate);
+    if (appliedFilters.endDate) params.append("endDate", appliedFilters.endDate);
+    if (appliedFilters.examCycleId) params.append("examCycleId", appliedFilters.examCycleId);
 
     return api
       .get(`/admin/registrations?${params.toString()}`, {
@@ -165,19 +183,45 @@ function AdminPage() {
           navigate("/admin/login");
         }
       });
-  }, [
-    navigate,
-    subjectFilter,
-    typeFilter,
-    searchFilter,
-    startDateFilter,
-    endDateFilter,
-    cycleFilter,
-  ]);
+  }, [navigate, appliedFilters]);
 
   useEffect(() => {
     fetchRegistrations();
   }, [isAdmin, adminToken, fetchRegistrations]);
+
+  // ---- filter apply / clear (draft -> applied) ----
+  const draftFilters = {
+    subjectId: subjectFilter,
+    subjectType: typeFilter,
+    searchQuery: searchInput,
+    startDate: startDateFilter,
+    endDate: endDateFilter,
+    examCycleId: cycleFilter,
+  };
+  const filtersDirty =
+    JSON.stringify(draftFilters) !== JSON.stringify(appliedFilters);
+
+  const applyFilters = () => setAppliedFilters(draftFilters);
+
+  const clearFilters = () => {
+    // reset to defaults: the active cycle (the page's default scope), no other filters
+    const activeId = examCycles.find((c) => c.active)?.id;
+    const cyc = activeId != null ? String(activeId) : "";
+    setSubjectFilter("");
+    setTypeFilter("");
+    setSearchInput("");
+    setStartDateFilter("");
+    setEndDateFilter("");
+    setCycleFilter(cyc);
+    setAppliedFilters({
+      subjectId: "",
+      subjectType: "",
+      searchQuery: "",
+      startDate: "",
+      endDate: "",
+      examCycleId: cyc,
+    });
+  };
 
   const clearRowError = (regId) =>
     setRowErrors((prev) => {
@@ -270,13 +314,14 @@ function AdminPage() {
 
   const handleExportPdf = () => {
     setIsExporting(true);
+    // export the applied combination (what's shown), not unapplied draft edits
     const params = new URLSearchParams();
-    if (subjectFilter) params.append("subjectId", subjectFilter);
-    if (typeFilter) params.append("subjectType", typeFilter);
-    if (searchFilter) params.append("searchQuery", searchFilter);
-    if (startDateFilter) params.append("startDate", startDateFilter);
-    if (endDateFilter) params.append("endDate", endDateFilter);
-    if (cycleFilter) params.append("examCycleId", cycleFilter);
+    if (appliedFilters.subjectId) params.append("subjectId", appliedFilters.subjectId);
+    if (appliedFilters.subjectType) params.append("subjectType", appliedFilters.subjectType);
+    if (appliedFilters.searchQuery) params.append("searchQuery", appliedFilters.searchQuery);
+    if (appliedFilters.startDate) params.append("startDate", appliedFilters.startDate);
+    if (appliedFilters.endDate) params.append("endDate", appliedFilters.endDate);
+    if (appliedFilters.examCycleId) params.append("examCycleId", appliedFilters.examCycleId);
 
     api
       .get(`/admin/export-pdf?${params.toString()}`, {
@@ -318,6 +363,9 @@ function AdminPage() {
       ? registrations
       : registrations.filter((r) => r.status === filter);
 
+  // Stat cards follow the selected exam-cycle filter: the loaded `registrations`
+  // are already scoped to it server-side (active cycle by default, a specific cycle
+  // when chosen, or all cycles under "All Cycles").
   const totalCount = registrations.length;
   const pendingCount = registrations.filter(
     (r) => r.status === "SUBMITTED",
@@ -614,6 +662,33 @@ function AdminPage() {
                 className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
               />
             </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--stroke)] pt-4">
+            <MagneticCta
+              type="button"
+              onClick={applyFilters}
+              className="gap-2 rounded-xl"
+              data-cy="admin-filters-apply"
+            >
+              <Search size={15} /> Apply filters
+            </MagneticCta>
+            <button
+              type="button"
+              onClick={clearFilters}
+              data-cy="admin-filters-clear"
+              className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)]"
+            >
+              <X size={15} /> Clear all filters
+            </button>
+            {filtersDirty && (
+              <span
+                className="text-xs font-semibold text-amber-600"
+                data-cy="admin-filters-dirty"
+              >
+                Unapplied changes — click Apply
+              </span>
+            )}
           </div>
         </section>
 

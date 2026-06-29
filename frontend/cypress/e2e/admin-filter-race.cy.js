@@ -52,9 +52,10 @@ describe("Admin dashboard — filter stale-response race", () => {
     cy.get('[data-cy="admin-login-submit"]').click();
     cy.wait("@adminLogin");
 
-    // type a search — fires the narrow request (debounced); the slow initial
+    // type a search and Apply — fires the narrow request; the slow initial
     // request is still in flight and resolves ~1s later
     cy.get("#search-filter").type("Alice");
+    cy.get('[data-cy="admin-filters-apply"]').click();
 
     cy.wait("@searchReg"); // narrow result [Alice] applied
     cy.contains("td", "Alice").should("exist");

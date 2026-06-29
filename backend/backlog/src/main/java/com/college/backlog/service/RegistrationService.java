@@ -14,6 +14,9 @@ import java.util.UUID;
 @Service
 public class RegistrationService {
 
+    /** Max simultaneous pending (SUBMITTED) registrations a student may hold per exam cycle. */
+    private static final int MAX_PENDING_PER_CYCLE = 2;
+
     @Autowired
     private RegistrationRepository registrationRepository;
 
@@ -128,14 +131,17 @@ public class RegistrationService {
             }
         }
 
-        // duplicate guard: only one pending submission per student per exam cycle.
-        // VERIFIED/REJECTED rows in the cycle may be followed by a new submission.
-        for (Registration existing : registrationRepository
-                .findByStudent_RollNoAndExamCycle_Id(rollNo, cycle.getId())) {
-            if (existing.getStatus() == RegistrationStatus.SUBMITTED) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "You already have a pending registration for this exam cycle.");
-            }
+        // limit: at most MAX_PENDING_PER_CYCLE pending submissions per student per exam
+        // cycle. VERIFIED/REJECTED rows in the cycle don't count toward the limit.
+        long pendingCount = registrationRepository
+                .findByStudent_RollNoAndExamCycle_Id(rollNo, cycle.getId())
+                .stream()
+                .filter(existing -> existing.getStatus() == RegistrationStatus.SUBMITTED)
+                .count();
+        if (pendingCount >= MAX_PENDING_PER_CYCLE) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "You already have " + MAX_PENDING_PER_CYCLE
+                    + " pending registrations for this exam cycle.");
         }
 
         // the student row is immutable identity (set at import; phone via dashboard).
@@ -169,8 +175,10 @@ public class RegistrationService {
             // saveAndFlush so the partial-unique-index race backstop fires here, not later
             saved = registrationRepository.saveAndFlush(reg);
         } catch (DataIntegrityViolationException e) {
+            // race backstop — concurrent submit, or the legacy single-pending DB index
+            // (drop it via 2026-06-30-registrations-allow-two-pending.sql to allow two).
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "You already have a pending registration for this exam cycle.");
+                "You've reached the limit of pending registrations for this exam cycle.");
         }
 
         registrationEventRepository.save(new RegistrationEvent(

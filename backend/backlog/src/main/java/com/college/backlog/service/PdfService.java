@@ -110,7 +110,12 @@ public class PdfService {
             table.addCell(dataCell(safe(reg, r -> r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()), regular));
             table.addCell(dataCellCentre(safe(reg, r -> String.valueOf(r.getSnapSemester() != null ? r.getSnapSemester() : r.getStudent().getCurrentSemester())), regular));
 
-            String subjectsStr = reg.getSubjects() != null ? reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.joining(", ")) : "";
+            // include the course code with each subject — the canonical identifier
+            String subjectsStr = reg.getSubjects() != null
+                    ? reg.getSubjects().stream()
+                        .map(s -> (s.getCourseCode() != null ? s.getCourseCode() + " " : "") + s.getSubjectName())
+                        .collect(Collectors.joining(", "))
+                    : "";
             table.addCell(dataCell(subjectsStr, regular));
 
             String dateStr = reg.getRegisteredAt() != null ? reg.getRegisteredAt().format(dtf) : "";

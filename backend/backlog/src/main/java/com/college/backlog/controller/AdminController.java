@@ -7,12 +7,14 @@ import com.college.backlog.controller.dto.RegistrationEventResponse;
 import com.college.backlog.exception.ResourceNotFoundException;
 import org.springframework.web.server.ResponseStatusException;
 import com.college.backlog.model.Department;
+import com.college.backlog.model.ExamCycle;
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.RegistrationStatus;
 import com.college.backlog.model.Subject;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
+import com.college.backlog.repository.ExamCycleRepository;
 import com.college.backlog.repository.RegistrationEventRepository;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.SubjectRepository;
@@ -64,6 +66,9 @@ public class AdminController {
 
     @Autowired
     private RegistrationEventRepository registrationEventRepository;
+
+    @Autowired
+    private ExamCycleRepository examCycleRepository;
 
     private Long resolveCallerDeptId(Authentication auth) {
         if (auth == null) return null;
@@ -229,21 +234,33 @@ public class AdminController {
             Authentication authentication
     ) throws Exception {
         Long callerDeptId = resolveCallerDeptId(authentication);
-        Specification<Registration> spec = new RegistrationSpecification(
-                subjectId.orElse(null),
-                callerDeptId,
-                subjectType.orElse(null),
-                searchQuery.orElse(null),
-                startDate.orElse(null),
-                endDate.orElse(null),
-                examCycleId.orElse(null));
 
-        // the summary report covers only verified registrations, not pending/rejected ones
-        List<Registration> registrations = registrationRepository
-                .findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"))
-                .stream()
-                .filter(reg -> reg.getStatus() == RegistrationStatus.VERIFIED)
-                .toList();
+        // Scope to a single exam cycle: the one explicitly selected, else the active
+        // cycle. Without this the report would span every cycle. If nothing is
+        // selected and no cycle is active, there is nothing to export.
+        Long effectiveCycleId = examCycleId.orElseGet(() ->
+                examCycleRepository.findByActiveTrue().map(ExamCycle::getId).orElse(null));
+
+        List<Registration> registrations;
+        if (effectiveCycleId == null) {
+            registrations = List.of();
+        } else {
+            Specification<Registration> spec = new RegistrationSpecification(
+                    subjectId.orElse(null),
+                    callerDeptId,
+                    subjectType.orElse(null),
+                    searchQuery.orElse(null),
+                    startDate.orElse(null),
+                    endDate.orElse(null),
+                    effectiveCycleId);
+
+            // the summary report covers only verified registrations, not pending/rejected ones
+            registrations = registrationRepository
+                    .findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"))
+                    .stream()
+                    .filter(reg -> reg.getStatus() == RegistrationStatus.VERIFIED)
+                    .toList();
+        }
         byte[] pdfBytes = pdfService.generateRegistrationsSummaryPdf(registrations);
 
         HttpHeaders headers = new HttpHeaders();
