@@ -35,6 +35,7 @@ describe("Manage Progression page", () => {
     }).as("promote");
 
     visitAs("ADMIN");
+    cy.get('[data-cy="prog-tab-bulk"]').click();
 
     cy.get('[data-cy="prog-promote-sem"]').select("5");
     // entered in span format; the client parses it back to the start-year int
@@ -57,6 +58,7 @@ describe("Manage Progression page", () => {
 
   it("validates the promote form before calling the server", () => {
     visitAs("ADMIN");
+    cy.get('[data-cy="prog-tab-bulk"]').click();
 
     // preview with no target semester -> client-side error, no request
     cy.get('[data-cy="prog-promote-preview"]').click();
@@ -87,6 +89,7 @@ describe("Manage Progression page", () => {
     }).as("importProg");
 
     visitAs("ADMIN");
+    cy.get('[data-cy="prog-tab-bulk"]').click();
 
     cy.get('[data-cy="prog-import-csv"]').type(
       "1MS24CS191,1,2024-25\n1MS24CS191,2,2024-25",

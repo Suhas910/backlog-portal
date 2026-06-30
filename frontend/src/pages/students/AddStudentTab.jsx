@@ -145,7 +145,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
               className={`${inputClass} font-mono`}
               placeholder="e.g. 1MS22CS001"
               value={form.rollNo}
-              onChange={(e) => set("rollNo", e.target.value)}
+              onChange={(e) => set("rollNo", e.target.value.toUpperCase())}
               data-cy="student-usn"
             />
           </div>

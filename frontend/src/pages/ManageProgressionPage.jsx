@@ -10,7 +10,7 @@ import {
   Users,
   Wand2,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
@@ -72,6 +72,18 @@ function ManageProgressionPage() {
 
   const [departments, setDepartments] = useState([]);
   const [pinnedDeptId, setPinnedDeptId] = useState("");
+
+  // Two tabs, by intent: "find" (gaps + per-student correct) and "bulk"
+  // (promote / import / backfill). Whitelisted ?tab= mirrors Subjects/Students.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = ["find", "bulk"].includes(searchParams.get("tab"))
+    ? searchParams.get("tab")
+    : "find";
+  const setTab = (t) => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", t);
+    setSearchParams(next, { replace: true });
+  };
 
   // Promote Batch
   const [pDeptId, setPDeptId] = useState("");
@@ -328,7 +340,30 @@ function ManageProgressionPage() {
           </p>
         </div>
 
+        <div className="mb-5 inline-flex rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-1 shadow-soft">
+          {[
+            { key: "find", label: "Find & correct" },
+            { key: "bulk", label: "Bulk tools" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              data-cy={`prog-tab-${t.key}`}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                tab === t.key
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "text-[var(--color-secondary)] hover:bg-[var(--surface-muted)]"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-col gap-5">
+          {tab === "bulk" && (
+            <>
           {/* Promote Batch */}
           <Card icon={<Users size={18} />} title="Promote a batch">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -484,7 +519,11 @@ function ManageProgressionPage() {
             </div>
             <ResultTable result={bResult} />
           </Card>
+            </>
+          )}
 
+          {tab === "find" && (
+            <>
           {/* Progression gaps */}
           <Card icon={<AlertTriangle size={18} />} title="Find students missing progression">
             <p className="mb-3 text-xs text-[var(--text-muted)]">
@@ -660,6 +699,8 @@ function ManageProgressionPage() {
               </div>
             )}
           </Card>
+            </>
+          )}
         </div>
       </div>
 
