@@ -118,13 +118,22 @@ public class ProgressionService {
         return created;
     }
 
-    private Student validate(String rollNo, int semester, int academicYear) {
+    /**
+     * Range-check a semester + academic year. Shared by the write path and the CSV
+     * import dry-run preview so the preview flags the same bad rows the apply would
+     * reject (no WOULD_CREATE that then errors on apply).
+     */
+    public void validateSemesterAndYear(int semester, int academicYear) {
         if (semester < 1 || semester > 8) {
             throw new IllegalArgumentException("Semester must be between 1 and 8.");
         }
         if (academicYear < MIN_ACADEMIC_YEAR || academicYear > Year.now().getValue() + 1) {
             throw new IllegalArgumentException("Academic year " + academicYear + " is out of range.");
         }
+    }
+
+    private Student validate(String rollNo, int semester, int academicYear) {
+        validateSemesterAndYear(semester, academicYear);
         return studentRepository.findByRollNo(rollNo)
                 .orElseThrow(() -> new IllegalArgumentException("Student not found: " + rollNo));
     }

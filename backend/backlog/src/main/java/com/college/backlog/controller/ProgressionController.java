@@ -160,12 +160,12 @@ public class ProgressionController {
                     throw new IllegalArgumentException("Outside your department's scope.");
                 }
                 if (req.isDryRun()) {
-                    // validate without writing: student + ranges
+                    // validate without writing: student + semester + academic-year range
+                    // (same checks the apply path runs, so the preview can't say
+                    // WOULD_CREATE for a row that would then error on apply)
                     studentRepository.findByRollNo(roll)
                             .orElseThrow(() -> new IllegalArgumentException("Student not found: " + roll));
-                    if (row.getSemester() < 1 || row.getSemester() > 8) {
-                        throw new IllegalArgumentException("Semester must be between 1 and 8.");
-                    }
+                    progressionService.validateSemesterAndYear(row.getSemester(), row.getAcademicYear());
                     boolean exists = termRepository.existsByRollNoAndSemester(roll, row.getSemester());
                     results.add(new ProgressionRowResult(roll, row.getSemester(),
                             exists ? "WOULD_SKIP" : "WOULD_CREATE", null));

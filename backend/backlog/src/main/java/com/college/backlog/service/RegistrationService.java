@@ -41,7 +41,7 @@ public class RegistrationService {
     @Autowired
     private StudentSemesterTermRepository studentSemesterTermRepository;
 
-    public Registration register(String rollNo, int currentSemester, List<Long> subjectIds) {
+    public Registration register(String rollNo, List<Long> subjectIds) {
 
         // an exam cycle must be open for registrations to be accepted
         ExamCycle cycle = examCycleRepository.findByActiveTrue()
@@ -160,7 +160,11 @@ public class RegistrationService {
         reg.setSnapEmail(student.getEmail());
         reg.setSnapPhone(student.getPhone());
         reg.setSnapBranch(branch);
-        reg.setSnapSemester(currentSemester);
+        // "current semester of the student" on the printed form — snapshot the
+        // authoritative, admin-maintained value from the account, never a client
+        // value. (The form is for a backlog of an earlier semester; the label still
+        // reflects where the student currently stands.)
+        reg.setSnapSemester(student.getCurrentSemester());
         reg.setSnapYearOfJoining(yearOfJoining);
         // capture the academic-year offering when unambiguous (single-semester
         // submission); null if the selection spans multiple years

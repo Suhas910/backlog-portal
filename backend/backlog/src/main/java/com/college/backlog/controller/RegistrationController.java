@@ -68,7 +68,6 @@ public class RegistrationController {
         // owner is taken from the authenticated token, never from the request body
         Registration reg = registrationService.register(
             authentication.getName(),
-            request.getCurrentSemester(),
             request.getSubjectIds()
         );
 
@@ -95,8 +94,17 @@ public class RegistrationController {
                 "This registration has already been actioned.");
         }
 
-        RegistrationStatus action = (body != null && "REJECTED".equals(body.get("action")))
-            ? RegistrationStatus.REJECTED : RegistrationStatus.VERIFIED;
+        // require an explicit, known action — never default a typo to VERIFIED
+        String requested = body != null ? body.get("action") : null;
+        RegistrationStatus action;
+        if ("VERIFIED".equals(requested)) {
+            action = RegistrationStatus.VERIFIED;
+        } else if ("REJECTED".equals(requested)) {
+            action = RegistrationStatus.REJECTED;
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "action must be 'VERIFIED' or 'REJECTED'.");
+        }
         reg.setStatus(action);
 
         String actor = authentication != null ? authentication.getName() : null;

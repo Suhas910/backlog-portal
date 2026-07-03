@@ -29,11 +29,12 @@ class EligibilityServiceTest {
 
     @Test
     void isEligibleReflectsTheWindow() {
-        // a 3rd-year student (sem 6) may carry sems 3..6, not 1st-year backlogs
-        assertThat(service.isEligible(6, 3)).isTrue();
-        assertThat(service.isEligible(6, 6)).isTrue();
-        assertThat(service.isEligible(6, 2)).isFalse();
-        assertThat(service.isEligible(6, 7)).isFalse();
+        // a 3rd-year student (sem 6), normal intake (entry 1): may carry sems 3..6,
+        // not 1st-year backlogs
+        assertThat(service.isEligible(6, 1, 3)).isTrue();
+        assertThat(service.isEligible(6, 1, 6)).isTrue();
+        assertThat(service.isEligible(6, 1, 2)).isFalse();
+        assertThat(service.isEligible(6, 1, 7)).isFalse();
     }
 
     @Test

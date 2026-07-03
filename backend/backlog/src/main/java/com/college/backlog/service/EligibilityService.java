@@ -48,10 +48,12 @@ public class EligibilityService {
         return eligible;
     }
 
-    public boolean isEligible(int currentSemester, int targetSemester) {
-        return eligibleSemesters(currentSemester).contains(targetSemester);
-    }
-
+    /**
+     * Whether {@code targetSemester} is in the student's backlog window. Always pass
+     * {@code entrySemester} explicitly — there is deliberately no two-arg overload,
+     * because {@code isEligible(current, target)} reads ambiguously as if the second
+     * argument were the entry semester. For a normal intake pass {@code entrySemester = 1}.
+     */
     public boolean isEligible(int currentSemester, int entrySemester, int targetSemester) {
         return eligibleSemesters(currentSemester, entrySemester).contains(targetSemester);
     }

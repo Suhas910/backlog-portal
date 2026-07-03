@@ -96,8 +96,9 @@ describe("Student registration flow", () => {
     cy.wait("@registerStudent")
       .its("request.body")
       .should((body) => {
-        // the body carries only subject selection + semester — never identity
-        expect(body).to.have.keys(["currentSemester", "subjectIds"]);
+        // the body carries only the subject selection — never identity or semester
+        // (current semester is snapshotted server-side from the account)
+        expect(body).to.have.keys(["subjectIds"]);
         expect(body.subjectIds).to.deep.equal([101]);
       });
 

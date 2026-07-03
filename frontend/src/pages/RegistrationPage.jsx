@@ -129,7 +129,6 @@ function RegistrationPage() {
       const res = await api.post(
         "/register",
         {
-          currentSemester: parseInt(searchSemester || "0", 10),
           subjectIds: selectedSubjects.map((s) => s.id),
         },
         { headers: getStudentHeaders() },
