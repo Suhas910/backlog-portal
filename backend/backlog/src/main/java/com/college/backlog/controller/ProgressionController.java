@@ -197,7 +197,7 @@ public class ProgressionController {
             String roll = s.getRollNo();
             try {
                 if (req.isDryRun()) {
-                    int missing = countMissingLinear(roll, s.getCurrentSemester());
+                    int missing = countMissingLinear(roll, s.getEntrySemester(), s.getCurrentSemester());
                     results.add(new ProgressionRowResult(roll, null,
                             missing > 0 ? "WOULD_CREATE" : "WOULD_SKIP", missing + " row(s)"));
                     if (missing > 0) created += missing; else skipped++;
@@ -286,9 +286,12 @@ public class ProgressionController {
         return studentRepository.findByRollNoLikeOrderByRollNo(pattern);
     }
 
-    private int countMissingLinear(String rollNo, int currentSemester) {
+    // Count how many rows backfill would create — from the entry semester (not sem 1)
+    // so a lateral entrant's pre-entry semesters aren't counted as missing. Mirrors
+    // ProgressionService.backfillLinear's range so the preview matches the apply.
+    private int countMissingLinear(String rollNo, int entrySemester, int currentSemester) {
         int missing = 0;
-        for (int sem = 1; sem <= currentSemester && sem <= 8; sem++) {
+        for (int sem = Math.max(1, entrySemester); sem <= currentSemester && sem <= 8; sem++) {
             if (!termRepository.existsByRollNoAndSemester(rollNo, sem)) missing++;
         }
         return missing;

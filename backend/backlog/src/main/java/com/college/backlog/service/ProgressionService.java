@@ -85,9 +85,14 @@ public class ProgressionService {
 
     /**
      * Linear-default backfill for one student: assume no detention and stamp every
-     * semester up to currentSemester with the year derived from the admission year
-     * (sem k -> admissionYear + floor((k-1)/2)). Write-once, so any hand-corrected
-     * rows are preserved.
+     * semester from their entry semester up to currentSemester with the year derived
+     * from the admission year. The entry semester is the one the student started in
+     * (their admission year), so sem k -> admissionYear + floor((k - entrySem)/2).
+     * For a regular student (entrySem 1) this is admissionYear + floor((k-1)/2); for
+     * a lateral entrant it anchors correctly at their entry year and never invents
+     * the semesters below entry that they never sat. Write-once, so any hand-corrected
+     * rows are preserved. (Assumes entry at the start of an academic year, i.e. an odd
+     * semester — the realistic lateral case; anything else is a hand-correct.)
      *
      * @return number of rows created
      */
@@ -101,10 +106,11 @@ public class ProgressionService {
         if (admissionYear < 0) {
             throw new IllegalArgumentException("Cannot derive admission year from USN: " + rollNo);
         }
+        int entry = Math.max(1, student.getEntrySemester());
         int created = 0;
-        for (int sem = 1; sem <= student.getCurrentSemester() && sem <= 8; sem++) {
+        for (int sem = entry; sem <= student.getCurrentSemester() && sem <= 8; sem++) {
             if (!termRepository.existsByRollNoAndSemester(rollNo, sem)) {
-                int ay = admissionYear + (sem - 1) / 2;
+                int ay = admissionYear + (sem - entry) / 2;
                 termRepository.save(new StudentSemesterTerm(rollNo, sem, ay));
                 created++;
             }

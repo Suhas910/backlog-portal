@@ -89,7 +89,8 @@ class ProgressionServiceTest {
         assertThat(created).isEqualTo(4);
         ArgumentCaptor<StudentSemesterTerm> captor = ArgumentCaptor.forClass(StudentSemesterTerm.class);
         verify(termRepository, times(4)).save(captor.capture());
-        // sem 1,2 -> 2024 ; sem 3,4 -> 2025 (admissionYear + floor((k-1)/2))
+        // regular (entry sem 1): sem 1,2 -> 2024 ; sem 3,4 -> 2025
+        // (admissionYear + floor((k - entrySem)/2))
         assertThat(captor.getAllValues())
                 .extracting(StudentSemesterTerm::getSemester, StudentSemesterTerm::getAcademicYear)
                 .containsExactly(
@@ -97,6 +98,29 @@ class ProgressionServiceTest {
                         org.assertj.core.groups.Tuple.tuple(2, 2024),
                         org.assertj.core.groups.Tuple.tuple(3, 2025),
                         org.assertj.core.groups.Tuple.tuple(4, 2025));
+    }
+
+    @Test
+    void backfillLinearForLateralEntryStartsAtEntrySemesterAndAnchorsYearThere() {
+        Student s = student("1MS24CS191", 6); // admission 2024 from USN
+        s.setEntrySemester(3);                // lateral entrant: started at sem 3
+        when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
+        when(termRepository.existsByRollNoAndSemester(eq("1MS24CS191"), anyInt())).thenReturn(false);
+
+        int created = service.backfillLinear("1MS24CS191");
+
+        // no sem 1-2 (never sat them); entry sem 3 anchors to the admission year
+        assertThat(created).isEqualTo(4);
+        ArgumentCaptor<StudentSemesterTerm> captor = ArgumentCaptor.forClass(StudentSemesterTerm.class);
+        verify(termRepository, times(4)).save(captor.capture());
+        // sem 3,4 -> 2024 ; sem 5,6 -> 2025
+        assertThat(captor.getAllValues())
+                .extracting(StudentSemesterTerm::getSemester, StudentSemesterTerm::getAcademicYear)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(3, 2024),
+                        org.assertj.core.groups.Tuple.tuple(4, 2024),
+                        org.assertj.core.groups.Tuple.tuple(5, 2025),
+                        org.assertj.core.groups.Tuple.tuple(6, 2025));
     }
 
     @Test
