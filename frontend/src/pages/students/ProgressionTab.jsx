@@ -93,8 +93,6 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
   const [student, setStudent] = useState(null);
   const [sBusy, setSBusy] = useState(false);
   const [sError, setSError] = useState("");
-  const [editSem, setEditSem] = useState("");
-  const [editYear, setEditYear] = useState("");
 
   // Progression gaps
   const [gDeptId, setGDeptId] = useState("");
@@ -265,8 +263,6 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
         { headers: getAdminHeaders() },
       );
       setStudent(res.data);
-      setEditSem("");
-      setEditYear("");
     } catch (err) {
       setSError(err.response?.data?.message || "Could not save.");
     } finally {
@@ -577,9 +573,14 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
               {sError && <p className="mt-3 text-sm text-red-600">{sError}</p>}
               {student && (
                 <div className="mt-4">
-                  <p className="mb-3 text-sm">
+                  <p className="mb-1 text-sm">
                     <span className="font-semibold">{student.name}</span> ({student.rollNo}) — current
                     semester <span className="font-semibold">{student.currentSemester}</span>
+                    {student.entrySemester > 1 ? ` · entry sem ${student.entrySemester}` : ""}
+                  </p>
+                  <p className="mb-3 text-xs text-[var(--text-muted)]">
+                    Every semester up to their current one is listed. Blank rows have no academic year
+                    recorded yet — fill and save each to complete their timeline.
                   </p>
                   <div className="overflow-hidden rounded-xl border border-[var(--stroke)]">
                     <table className="w-full text-left text-sm">
@@ -591,52 +592,17 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                         </tr>
                       </thead>
                       <tbody>
-                        {student.terms.length === 0 ? (
-                          <tr>
-                            <td colSpan={3} className="px-3 py-3 text-[var(--text-muted)]">
-                              No progression rows yet.
-                            </td>
-                          </tr>
-                        ) : (
-                          student.terms.map((t) => (
-                            <TermRow key={t.semester} term={t} onSave={saveOverride} busy={sBusy} />
-                          ))
-                        )}
+                        {buildTimelineRows(student).map((r) => (
+                          <TermRow
+                            key={`${r.semester}-${r.academicYear ?? "none"}`}
+                            semester={r.semester}
+                            academicYear={r.academicYear}
+                            onSave={saveOverride}
+                            busy={sBusy}
+                          />
+                        ))}
                       </tbody>
                     </table>
-                  </div>
-
-                  {/* add / correct a specific semester */}
-                  <div className="mt-4 flex flex-wrap items-end gap-3">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-[0.08em]">Semester</label>
-                      <select className={`${inputClass} w-32`} value={editSem} onChange={(e) => setEditSem(e.target.value)}>
-                        <option value="">Select</option>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-[0.08em]">Academic year</label>
-                      <input
-                        className={`${inputClass} w-40`}
-                        type="text"
-                        placeholder="e.g. 2024-25"
-                        value={editYear}
-                        onChange={(e) => setEditYear(e.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => editSem && saveOverride(Number(editSem), editYear)}
-                      disabled={sBusy || !editSem}
-                      className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
-                    >
-                      Set / correct
-                    </button>
                   </div>
                 </div>
               )}
@@ -680,26 +646,49 @@ function DeptSelect({ deptLocked, pinnedDeptId, departments, value, onChange }) 
   );
 }
 
-function TermRow({ term, onSave, busy }) {
-  const [year, setYear] = useState(formatAcademicYear(term.academicYear));
+// Full timeline for the correction table: one entry per semester from the student's
+// entry semester up to their current semester. A recorded year is prefilled;
+// semesters with no row come through as academicYear === null (blank + editable).
+function buildTimelineRows(student) {
+  const floor = Math.max(1, student.entrySemester || 1);
+  const bySem = new Map((student.terms || []).map((t) => [t.semester, t.academicYear]));
+  const rows = [];
+  for (let s = floor; s <= student.currentSemester; s++) {
+    rows.push({ semester: s, academicYear: bySem.has(s) ? bySem.get(s) : null });
+  }
+  return rows;
+}
+
+function TermRow({ semester, academicYear, onSave, busy }) {
+  const isMissing = academicYear == null;
+  const original = isMissing ? "" : formatAcademicYear(academicYear);
+  const [year, setYear] = useState(original);
   return (
     <tr className="border-t border-[var(--stroke)]">
-      <td className="px-3 py-2">Semester {term.semester}</td>
+      <td className="px-3 py-2">Semester {semester}</td>
       <td className="px-3 py-2">
-        <input
-          className={`${inputClass} w-32`}
-          type="text"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          data-cy={`prog-term-year-${term.semester}`}
-        />
+        <div className="flex items-center gap-2">
+          <input
+            className={`${inputClass} w-32`}
+            type="text"
+            placeholder="e.g. 2024-25"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            data-cy={`prog-term-year-${semester}`}
+          />
+          {isMissing && (
+            <span className="text-xs font-semibold text-amber-700" data-cy={`prog-term-missing-${semester}`}>
+              not set
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-3 py-2">
         <button
           type="button"
-          onClick={() => onSave(term.semester, year)}
-          disabled={busy || year === formatAcademicYear(term.academicYear)}
-          data-cy={`prog-term-save-${term.semester}`}
+          onClick={() => onSave(semester, year)}
+          disabled={busy || !year.trim() || year === original}
+          data-cy={`prog-term-save-${semester}`}
           className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-50"
         >
           Save

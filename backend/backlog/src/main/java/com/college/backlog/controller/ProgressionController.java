@@ -300,6 +300,6 @@ public class ProgressionController {
                 .map(t -> new StudentProgressionResponse.Term(t.getSemester(), t.getAcademicYear()))
                 .collect(Collectors.toList());
         return new StudentProgressionResponse(student.getRollNo(), student.getName(),
-                student.getCurrentSemester(), terms);
+                student.getCurrentSemester(), student.getEntrySemester(), terms);
     }
 }

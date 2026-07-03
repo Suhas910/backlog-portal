@@ -155,6 +155,51 @@ describe("Manage Students — Progression tab", () => {
     cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2024-25");
   });
 
+  it("shows every semester up to current, with missing ones blank and editable", () => {
+    cy.intercept("GET", "/api/admin/progression/1MS24CS191", {
+      statusCode: 200,
+      body: {
+        rollNo: "1MS24CS191",
+        name: "Progression Pat",
+        currentSemester: 3,
+        entrySemester: 1,
+        terms: [{ semester: 1, academicYear: 2024 }],
+      },
+    }).as("lookup");
+
+    cy.intercept("PUT", "/api/admin/progression/1MS24CS191/semester/2", {
+      statusCode: 200,
+      body: {
+        rollNo: "1MS24CS191",
+        name: "Progression Pat",
+        currentSemester: 3,
+        entrySemester: 1,
+        terms: [
+          { semester: 1, academicYear: 2024 },
+          { semester: 2, academicYear: 2024 },
+        ],
+      },
+    }).as("setSem2");
+
+    visitAs("ADMIN");
+
+    cy.get('[data-cy="prog-lookup-input"]').type("1MS24CS191");
+    cy.get('[data-cy="prog-lookup-load"]').click();
+    cy.wait("@lookup");
+
+    // sem 1 is prefilled; sems 2 and 3 (up to current) render blank + flagged
+    cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2024-25");
+    cy.get('[data-cy="prog-term-year-2"]').should("have.value", "");
+    cy.get('[data-cy="prog-term-missing-2"]').should("contain", "not set");
+    cy.get('[data-cy="prog-term-year-3"]').should("have.value", "");
+    cy.get('[data-cy="prog-term-missing-3"]').should("exist");
+
+    // fill a blank row -> PUT override carries the parsed start-year int
+    cy.get('[data-cy="prog-term-year-2"]').type("2024-25");
+    cy.get('[data-cy="prog-term-save-2"]').click();
+    cy.wait("@setSem2").its("request.body").should("deep.equal", { academicYear: 2024 });
+  });
+
   it("pins the department for a dept-scoped role (HOD)", () => {
     visitAs("HOD", "Computer Science", [
       { id: 1, deptName: "Computer Science" },

@@ -44,6 +44,9 @@ public class StudentManagementService {
     @Autowired
     private RegistrationRepository registrationRepository;
 
+    @Autowired
+    private ProgressionService progressionService;
+
     /**
      * Create one student. Each create runs in its own transaction so one bad row
      * can never poison a bulk import. The caller has already enforced uniqueness
@@ -80,6 +83,18 @@ public class StudentManagementService {
         Student saved = studentRepository.save(s);
         log.info("STUDENT_CREATE rollNo={} currentSem={} entrySem={}",
                 rollNo, saved.getCurrentSemester(), saved.getEntrySemester());
+
+        // A regular (non-lateral) student always studies sems 1 and 2 in their
+        // admission year — the USN's YY. Seed those progression rows so the admin
+        // doesn't have to, and the "progression incomplete" gap shrinks. Only seed
+        // sems the student has actually reached, so recordProgression (write-once)
+        // never bumps currentSemester. Lateral entrants (entrySem > 1) skip this —
+        // they never sat sems 1–2.
+        if (saved.getEntrySemester() <= 1) {
+            for (int sem = 1; sem <= 2 && sem <= saved.getCurrentSemester(); sem++) {
+                progressionService.recordProgression(rollNo, sem, saved.getYearOfJoining());
+            }
+        }
         return saved;
     }
 

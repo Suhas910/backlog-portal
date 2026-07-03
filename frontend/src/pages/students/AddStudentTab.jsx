@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, LoaderCircle, UserPlus } from "lucide-react";
+import { AlertTriangle, BadgeCheck, LoaderCircle, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
@@ -36,6 +36,9 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [createdRollNo, setCreatedRollNo] = useState("");
+  // whether the just-created student's progression is already complete — true for a
+  // regular first-year (sems 1-2 auto-seeded on create and nothing else is due yet)
+  const [createdComplete, setCreatedComplete] = useState(false);
 
   // dept code a dept-scoped admin's USNs must carry, shown as a hint
   const myDeptCode = useMemo(() => {
@@ -53,6 +56,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
     e.preventDefault();
     setError("");
     setCreatedRollNo("");
+    setCreatedComplete(false);
 
     const rollNo = form.rollNo.trim().toUpperCase();
     if (!USN_RE.test(rollNo)) {
@@ -75,7 +79,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
 
     setLoading(true);
     try {
-      await api.post(
+      const res = await api.post(
         "/admin/students",
         {
           rollNo,
@@ -88,6 +92,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
         { headers: getAdminHeaders() },
       );
       setCreatedRollNo(rollNo);
+      setCreatedComplete(!!res.data?.progressionComplete);
       setForm(blank);
     } catch (err) {
       setError(err.response?.data?.message || "Could not create the student.");
@@ -108,7 +113,24 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
         {deptLocked && myDeptCode ? ` Your USNs must use the ${myDeptCode} branch code.` : ""}
       </p>
 
-      {createdRollNo && (
+      {createdRollNo && createdComplete && (
+        <div
+          className="mb-6 flex items-start gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900"
+          role="status"
+          data-cy="student-created-complete"
+        >
+          <BadgeCheck size={20} className="mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <p className="font-semibold">{createdRollNo} added — progression is all set.</p>
+            <p className="mt-1">
+              Their first-year semesters were recorded automatically. You can register backlogs for
+              them right away.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {createdRollNo && !createdComplete && (
         <div
           className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900"
           role="status"
@@ -117,11 +139,11 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
           <AlertTriangle size={20} className="mt-0.5 shrink-0" />
           <div className="text-sm">
             <p className="font-semibold">
-              {createdRollNo} added — but their progression is not set yet.
+              {createdRollNo} added — but their progression is not fully set yet.
             </p>
             <p className="mt-1">
-              Until you record which academic year they studied each semester, they can't register
-              backlogs.{" "}
+              Until you record which academic year they studied each remaining semester, they can't
+              register those backlogs.{" "}
               <Link
                 to="/admin/students?tab=progression"
                 className="font-semibold underline hover:text-amber-700"

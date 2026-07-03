@@ -19,6 +19,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,6 +32,7 @@ class StudentManagementServiceTest {
     @Mock private StudentRepository studentRepository;
     @Mock private DepartmentRepository departmentRepository;
     @Mock private RegistrationRepository registrationRepository;
+    @Mock private ProgressionService progressionService;
     @InjectMocks private StudentManagementService service;
 
     private StudentCreateRequest req(String usn, int current, int entry) {
@@ -86,6 +89,41 @@ class StudentManagementServiceTest {
         Student saved = service.updateStudent(s, u);
 
         assertThat(saved.getEmail()).isEqualTo("1ms22cs001@msrit.edu");
+    }
+
+    @Test
+    void createSeedsSem1And2ForRegularStudentWithJoiningYear() {
+        stubCsDept();
+        when(studentRepository.save(any(Student.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.createStudent(req("1MS22CS001", 4, 1));
+
+        // regular (entry sem 1): sems 1 and 2 seeded with the admission year (2022)
+        verify(progressionService).recordProgression("1MS22CS001", 1, 2022);
+        verify(progressionService).recordProgression("1MS22CS001", 2, 2022);
+    }
+
+    @Test
+    void createSeedsOnlyReachedSemesterForFirstSemRegular() {
+        stubCsDept();
+        when(studentRepository.save(any(Student.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.createStudent(req("1MS22CS001", 1, 1));
+
+        // current sem 1: only sem 1 is seeded — sem 2 hasn't been reached yet
+        verify(progressionService).recordProgression("1MS22CS001", 1, 2022);
+        verify(progressionService, never()).recordProgression(eq("1MS22CS001"), eq(2), anyInt());
+    }
+
+    @Test
+    void createDoesNotSeedForLateralEntry() {
+        stubCsDept();
+        when(studentRepository.save(any(Student.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.createStudent(req("1MS22CS001", 5, 3));
+
+        // lateral entrant (entry sem 3): never sat sems 1-2, so nothing is seeded
+        verify(progressionService, never()).recordProgression(any(), anyInt(), anyInt());
     }
 
     @Test

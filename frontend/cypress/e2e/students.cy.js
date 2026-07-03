@@ -110,8 +110,30 @@ describe("Students page", () => {
       expect(request.body.entrySemester).to.eq(1);
       expect(request.body.dateOfBirth).to.eq("2004-05-01");
     });
-    cy.get('[data-cy="student-created-warning"]').should("contain", "progression is not set");
+    cy.get('[data-cy="student-created-warning"]').should("contain", "progression is not fully set");
     cy.get('[data-cy="student-set-progression-link"]').should("have.attr", "href", "/admin/students?tab=progression");
+  });
+
+  it("shows an all-set banner when a regular first-year's progression is auto-complete", () => {
+    // sems 1-2 are auto-seeded on create; a current-sem-2 regular student is complete
+    cy.intercept("POST", "/api/admin/students", {
+      statusCode: 201,
+      body: { ...student, currentSemester: 2, progressionComplete: true },
+    }).as("createStudent");
+
+    stubDepartments();
+    cy.visit("/admin/students?tab=add", { onBeforeLoad: seed });
+    cy.wait("@getDepartments");
+
+    cy.get('[data-cy="student-usn"]').type("1ms22cs001");
+    cy.get('[data-cy="student-name"]').type("Asha Rao");
+    cy.get('[data-cy="student-dob"]').type("2004-05-01");
+    cy.get('[data-cy="student-current-sem"]').select("2");
+    cy.get('[data-cy="student-add-submit"]').click();
+
+    cy.wait("@createStudent");
+    cy.get('[data-cy="student-created-complete"]').should("contain", "progression is all set");
+    cy.get('[data-cy="student-created-warning"]').should("not.exist");
   });
 
   it("previews a bulk import (dry-run) on the Import tab", () => {

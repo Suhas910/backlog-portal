@@ -7,18 +7,24 @@ public class StudentProgressionResponse {
     private String rollNo;
     private String name;
     private int currentSemester;
+    // entry semester (1 = regular; >1 = lateral entry) — lets the admin screen render
+    // rows only from the semester the student actually started, not phantom sems 1–2.
+    private int entrySemester;
     private List<Term> terms;
 
-    public StudentProgressionResponse(String rollNo, String name, int currentSemester, List<Term> terms) {
+    public StudentProgressionResponse(String rollNo, String name, int currentSemester,
+                                      int entrySemester, List<Term> terms) {
         this.rollNo = rollNo;
         this.name = name;
         this.currentSemester = currentSemester;
+        this.entrySemester = entrySemester;
         this.terms = terms;
     }
 
     public String getRollNo() { return rollNo; }
     public String getName() { return name; }
     public int getCurrentSemester() { return currentSemester; }
+    public int getEntrySemester() { return entrySemester; }
     public List<Term> getTerms() { return terms; }
 
     public static class Term {
