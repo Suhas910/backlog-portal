@@ -50,7 +50,7 @@ public class RegistrationService {
 
         // year of joining and branch are encoded in the USN: 1MS<YY><BR><NNN>.
         // The USN format is validated upstream, so the substrings are safe here.
-        if (rollNo == null || !rollNo.matches("^1MS\\d{2}[A-Za-z]{2}\\d{3}$")) {
+        if (!Usn.isValid(rollNo)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "USN must be in the format 1MS22CS001.");
         }
@@ -69,8 +69,8 @@ public class RegistrationService {
                 "Add your phone number in your profile before registering.");
         }
 
-        int yearOfJoining = 2000 + Integer.parseInt(rollNo.substring(3, 5));
-        String branchCode = rollNo.substring(5, 7).toUpperCase();
+        int yearOfJoining = Usn.admissionYear(rollNo);
+        String branchCode = Usn.branchCode(rollNo);
         Department department = departmentRepository.findByCodeIgnoreCase(branchCode)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Unknown branch code '" + branchCode + "' in USN. Contact the department office."));

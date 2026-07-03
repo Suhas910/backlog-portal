@@ -140,8 +140,10 @@ public class AdminController {
         return subjectService.createSubject(request);
     }
 
+    // Read is open to all admin-type roles (matches the other read endpoints here);
+    // creating/editing departments below stays restricted to ADMIN/PRINCIPAL.
     @GetMapping("/departments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
     public List<Department> getDepartments() {
         return departmentRepository.findAll(Sort.by("deptName"));
     }

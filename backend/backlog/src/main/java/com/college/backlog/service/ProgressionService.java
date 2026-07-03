@@ -140,9 +140,6 @@ public class ProgressionService {
 
     /** Admission year from USN 1MS<YY>..., or -1 if malformed. */
     public int admissionYearFromUsn(String rollNo) {
-        if (rollNo == null || !rollNo.matches("^1MS\\d{2}[A-Za-z]{2}\\d{3}$")) {
-            return -1;
-        }
-        return 2000 + Integer.parseInt(rollNo.substring(3, 5));
+        return Usn.admissionYear(rollNo);
     }
 }

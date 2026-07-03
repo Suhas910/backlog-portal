@@ -18,6 +18,7 @@ import com.college.backlog.repository.StudentSemesterTermRepository;
 import com.college.backlog.repository.SubjectRepository;
 import com.college.backlog.service.EligibilityService;
 import com.college.backlog.service.PdfService;
+import com.college.backlog.service.Usn;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -138,10 +139,10 @@ public class StudentController {
     }
 
     private String deriveBranch(String rollNo) {
-        if (rollNo == null || !rollNo.matches("^1MS\\d{2}[A-Za-z]{2}\\d{3}$")) {
+        String code = Usn.branchCode(rollNo);
+        if (code == null) {
             return null;
         }
-        String code = rollNo.substring(5, 7).toUpperCase();
         return departmentRepository.findByCodeIgnoreCase(code)
             .map(Department::getDeptName)
             .orElse(null);

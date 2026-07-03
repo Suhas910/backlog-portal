@@ -12,6 +12,7 @@ import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.EligibilityService;
 import com.college.backlog.service.StudentManagementService;
 import com.college.backlog.service.StudentSpecification;
+import com.college.backlog.service.Usn;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -212,8 +213,7 @@ public class StudentManagementController {
     }
 
     private String studentDeptCode(String rollNo) {
-        if (rollNo == null || !rollNo.matches(StudentManagementService.USN_REGEX)) return null;
-        return rollNo.substring(5, 7).toUpperCase();
+        return Usn.branchCode(rollNo);
     }
 
     /** The dept code to filter by: the caller's own (if scoped), else a requested deptId. */

@@ -32,7 +32,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String jwt = authHeader.substring(7);
-        final String username = jwtService.getUsernameFromToken(jwt);
+
+        // Parsing verifies the signature and can throw on an expired/tampered/malformed
+        // token (ExpiredJwtException et al). This runs in a servlet filter, so such an
+        // exception would escape the DispatcherServlet and surface as a 500 rather than
+        // being handled as "unauthenticated" — stranding any client whose token simply
+        // expired. Treat any parse failure as anonymous and continue the chain; the
+        // downstream authorization rules then produce a clean 401/403.
+        String username;
+        try {
+            username = jwtService.getUsernameFromToken(jwt);
+        } catch (Exception e) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             if (jwtService.validateToken(jwt)) {

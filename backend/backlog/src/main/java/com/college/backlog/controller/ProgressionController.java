@@ -12,6 +12,7 @@ import com.college.backlog.repository.StudentSemesterTermRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.EligibilityService;
 import com.college.backlog.service.ProgressionService;
+import com.college.backlog.service.Usn;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -125,6 +126,10 @@ public class ProgressionController {
             }
             try {
                 if (req.isDryRun()) {
+                    // validate the academic year too, so the preview flags the same
+                    // bad rows the apply (recordProgression) would reject — no
+                    // WOULD_CREATE that then errors on apply (parity with the import path)
+                    progressionService.validateSemesterAndYear(req.getTargetSemester(), req.getAcademicYear());
                     boolean exists = termRepository.existsByRollNoAndSemester(roll, req.getTargetSemester());
                     results.add(new ProgressionRowResult(roll, req.getTargetSemester(),
                             exists ? "WOULD_SKIP" : "WOULD_CREATE",
@@ -251,8 +256,7 @@ public class ProgressionController {
     }
 
     private String studentDeptCode(String rollNo) {
-        if (rollNo == null || !rollNo.matches("^1MS\\d{2}[A-Za-z]{2}\\d{3}$")) return null;
-        return rollNo.substring(5, 7).toUpperCase();
+        return Usn.branchCode(rollNo);
     }
 
     private void assertInScope(User actor, String rollNo) {

@@ -32,9 +32,6 @@ public class StudentManagementService {
 
     private static final Logger log = LoggerFactory.getLogger(StudentManagementService.class);
 
-    /** USN format 1MS<YY><BR><NNN>, e.g. 1MS22CS001. Shared with the registration paths. */
-    public static final String USN_REGEX = "^1MS\\d{2}[A-Za-z]{2}\\d{3}$";
-
     @Autowired
     private StudentRepository studentRepository;
 
@@ -78,7 +75,7 @@ public class StudentManagementService {
         s.setEntrySemester(req.getEntrySemester());
         // keep the stored branch/year consistent with what the USN derives elsewhere
         s.setBranch(dept.getDeptName());
-        s.setYearOfJoining(2000 + Integer.parseInt(rollNo.substring(3, 5)));
+        s.setYearOfJoining(Usn.admissionYear(rollNo));
 
         Student saved = studentRepository.save(s);
         log.info("STUDENT_CREATE rollNo={} currentSem={} entrySem={}",
@@ -146,14 +143,14 @@ public class StudentManagementService {
     }
 
     public void validateUsn(String rollNo) {
-        if (rollNo == null || !rollNo.matches(USN_REGEX)) {
+        if (!Usn.isValid(rollNo)) {
             throw new IllegalArgumentException("USN must be in the format 1MS22CS001.");
         }
     }
 
     /** Resolve and validate the department from the USN's branch code. */
     public Department resolveBranchDept(String rollNo) {
-        String branchCode = rollNo.substring(5, 7).toUpperCase();
+        String branchCode = Usn.branchCode(rollNo);
         return departmentRepository.findByCodeIgnoreCase(branchCode)
             .orElseThrow(() -> new IllegalArgumentException(
                 "Unknown branch code '" + branchCode + "' in USN. Add the department first."));
