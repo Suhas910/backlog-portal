@@ -275,7 +275,7 @@ function StudentRow({ student, onUpdated, onRemoved }) {
             </p>
             {!student.progressionComplete && (
               <Link
-                to="/admin/progression"
+                to="/admin/students?tab=progression"
                 data-cy={`student-gap-${student.rollNo}`}
                 className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"
               >

@@ -39,7 +39,7 @@ describe("Students page", () => {
     visitManageAndLoad();
     cy.get('[data-cy="student-gap-1MS22CS001"]')
       .should("contain", "Progression incomplete")
-      .and("have.attr", "href", "/admin/progression");
+      .and("have.attr", "href", "/admin/students?tab=progression");
   });
 
   it("edits a student's name and semester", () => {
@@ -111,7 +111,7 @@ describe("Students page", () => {
       expect(request.body.dateOfBirth).to.eq("2004-05-01");
     });
     cy.get('[data-cy="student-created-warning"]').should("contain", "progression is not set");
-    cy.get('[data-cy="student-set-progression-link"]').should("have.attr", "href", "/admin/progression");
+    cy.get('[data-cy="student-set-progression-link"]').should("have.attr", "href", "/admin/students?tab=progression");
   });
 
   it("previews a bulk import (dry-run) on the Import tab", () => {

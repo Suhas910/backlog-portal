@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, GraduationCap, UploadCloud, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, CalendarClock, GraduationCap, UploadCloud, UserPlus, Users } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../../components/layout/BrandIdentity";
 import api from "../../lib/api";
@@ -7,6 +7,7 @@ import MobileActionBar from "../../components/layout/MobileActionBar";
 import StudentsManageTab from "./StudentsManageTab";
 import AddStudentTab from "./AddStudentTab";
 import ImportStudentsTab from "./ImportStudentsTab";
+import ProgressionTab from "./ProgressionTab";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
 const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
@@ -15,13 +16,15 @@ const TABS = [
   { key: "manage", label: "Manage", icon: Users },
   { key: "add", label: "Add", icon: UserPlus },
   { key: "import", label: "Import", icon: UploadCloud },
+  { key: "progression", label: "Progression", icon: CalendarClock },
 ];
 const TAB_KEYS = new Set(TABS.map((t) => t.key));
 
-// Admin student-account management behind one route as three tabs (Manage / Add /
-// Import). The shell owns what the tabs share — the role guard, the single
-// departments fetch, and dept-pin resolution — so each tab is presentational.
-// All auth/dept scope is enforced server-side on /api/admin/students/**.
+// Admin student management behind one route as four tabs (Manage / Add / Import /
+// Progression). The shell owns what the tabs share — the role guard, the single
+// departments fetch, and dept-pin resolution — so each tab is presentational. All
+// auth/dept scope is enforced server-side on /api/admin/students/** and
+// /api/admin/progression/**.
 function StudentsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -71,11 +74,11 @@ function StudentsPage() {
 
         <div className="mb-3">
           <h1 className="inline-flex items-center gap-2 text-2xl font-semibold text-[var(--color-secondary)] sm:text-3xl">
-            <GraduationCap size={26} /> Students
+            <GraduationCap size={26} /> Manage Students
           </h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Create and manage student accounts. After adding a student, set their academic-year
-            progression so their backlogs resolve to the right year.
+            Create and manage student accounts, then set their academic-year progression in the
+            Progression tab so their backlogs resolve to the right year.
             {deptLocked && adminDepartment ? ` Scoped to ${adminDepartment}.` : ""}
           </p>
         </div>
@@ -107,6 +110,7 @@ function StudentsPage() {
         {activeTab === "manage" && <StudentsManageTab {...shared} />}
         {activeTab === "add" && <AddStudentTab {...shared} />}
         {activeTab === "import" && <ImportStudentsTab {...shared} />}
+        {activeTab === "progression" && <ProgressionTab {...shared} />}
       </div>
 
       <MobileActionBar />

@@ -1,7 +1,7 @@
-// Coverage for the Student Progression admin page (promote batch, CSV import,
+// Coverage for the Progression tab of Manage Students (promote batch, CSV import,
 // lookup & correct, and dept pinning). Sessions are seeded so each test lands
-// straight on the page and exercises one tool.
-describe("Manage Progression page", () => {
+// straight on the tab and exercises one tool.
+describe("Manage Students — Progression tab", () => {
   const seed = (win, role, department) => {
     win.sessionStorage.setItem("adminRole", role);
     win.sessionStorage.setItem("adminToken", "admin-jwt-token");
@@ -14,7 +14,7 @@ describe("Manage Progression page", () => {
       statusCode: 200,
       body: departments,
     }).as("getDepartments");
-    cy.visit("/admin/progression", {
+    cy.visit("/admin/students?tab=progression", {
       onBeforeLoad: (win) => seed(win, role, department),
     });
     cy.wait("@getDepartments");

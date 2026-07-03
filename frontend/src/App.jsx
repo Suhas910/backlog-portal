@@ -8,7 +8,6 @@ import ManageSubjectsPage from "./pages/manageSubjects/ManageSubjectsPage";
 import ExamCyclePage from "./pages/ExamCyclePage";
 import DepartmentsPage from "./pages/DepartmentsPage";
 import ManageUsersPage from "./pages/ManageUsersPage";
-import ManageProgressionPage from "./pages/ManageProgressionPage";
 import StudentsPage from "./pages/students/StudentsPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import StudentLoginPage from "./pages/StudentLoginPage";
@@ -77,14 +76,6 @@ function App() {
             element={
               <ProtectedAdminRoute>
                 <ManageUsersPage />
-              </ProtectedAdminRoute>
-            }
-          />
-          <Route
-            path="/admin/progression"
-            element={
-              <ProtectedAdminRoute>
-                <ManageProgressionPage />
               </ProtectedAdminRoute>
             }
           />

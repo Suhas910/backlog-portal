@@ -123,7 +123,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
               Until you record which academic year they studied each semester, they can't register
               backlogs.{" "}
               <Link
-                to="/admin/progression"
+                to="/admin/students?tab=progression"
                 className="font-semibold underline hover:text-amber-700"
                 data-cy="student-set-progression-link"
               >
