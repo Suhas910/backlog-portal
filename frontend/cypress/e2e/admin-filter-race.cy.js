@@ -35,14 +35,25 @@ describe("Admin dashboard — filter stale-response race", () => {
     // Alias the two requests separately so we can deterministically wait for the
     // SLOW stale one to land before asserting — otherwise the assertion could run
     // before it arrives and pass for the wrong reason.
+    const pageOf = (rows) => ({
+      content: rows,
+      totalElements: rows.length,
+      totalPages: 1,
+      number: 0,
+    });
     cy.intercept("GET", "/api/admin/registrations*", (req) => {
       if (req.query.searchQuery) {
         req.alias = "searchReg";
-        req.reply({ delay: 50, statusCode: 200, body: [ALICE] });
+        req.reply({ delay: 50, statusCode: 200, body: pageOf([ALICE]) });
       } else {
         req.alias = "initialReg"; // stale, slow, broad response — lands last
-        req.reply({ delay: 1000, statusCode: 200, body: [ALICE, BOB] });
+        req.reply({ delay: 1000, statusCode: 200, body: pageOf([ALICE, BOB]) });
       }
+    });
+    // defined after the list intercept so it wins for the /summary-counts sub-path
+    cy.intercept("GET", "/api/admin/registrations/summary-counts*", {
+      statusCode: 200,
+      body: { total: 2, submitted: 2, verified: 0, rejected: 0 },
     });
 
     cy.visit("/admin/login");

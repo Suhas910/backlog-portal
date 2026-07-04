@@ -22,6 +22,12 @@ spring.sql.init.mode=${SQL_INIT_MODE:always}
 app.cors.allowed-origins=${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
 app.jwt.secret=${JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_BASE64_SECRET}
 app.jwt.expiration-ms=${JWT_EXPIRATION_MS:3600000}
+# absolute session ceiling — total lifetime a session may slide via refresh before
+# a full re-login is forced, regardless of activity. Default 12h.
+app.jwt.max-session-ms=${JWT_MAX_SESSION_MS:43200000}
+# session cookie Secure flag. MUST stay true in production (https). Set false ONLY
+# for local http dev, else the browser drops the httpOnly session cookie.
+app.cookie.secure=${APP_COOKIE_SECURE:true}
 
 # Initial admin-account seed passwords. No fallback default: a blank value means
 # that account is NOT created on a fresh DB (no guessable default). Set via env.

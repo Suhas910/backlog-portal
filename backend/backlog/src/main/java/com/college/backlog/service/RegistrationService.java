@@ -14,8 +14,11 @@ import java.util.UUID;
 @Service
 public class RegistrationService {
 
-    /** Max simultaneous pending (SUBMITTED) registrations a student may hold per exam cycle. */
-    private static final int MAX_PENDING_PER_CYCLE = 2;
+    /** Max simultaneous pending (SUBMITTED) registrations a student may hold per exam cycle.
+     *  At 1, the partial unique index uq_pending_reg_per_cycle (roll_no, exam_cycle_id) WHERE
+     *  status='SUBMITTED' enforces this at the DB level too — see
+     *  db/migrations/2026-07-04-registrations-one-pending.sql. */
+    private static final int MAX_PENDING_PER_CYCLE = 1;
 
     @Autowired
     private RegistrationRepository registrationRepository;
@@ -131,7 +134,7 @@ public class RegistrationService {
             }
         }
 
-        // limit: at most MAX_PENDING_PER_CYCLE pending submissions per student per exam
+        // limit: at most MAX_PENDING_PER_CYCLE pending submission(s) per student per exam
         // cycle. VERIFIED/REJECTED rows in the cycle don't count toward the limit.
         long pendingCount = registrationRepository
                 .findByStudent_RollNoAndExamCycle_Id(rollNo, cycle.getId())
@@ -140,8 +143,8 @@ public class RegistrationService {
                 .count();
         if (pendingCount >= MAX_PENDING_PER_CYCLE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "You already have " + MAX_PENDING_PER_CYCLE
-                    + " pending registrations for this exam cycle.");
+                "You already have a pending registration for this exam cycle. "
+                    + "Wait for it to be verified or rejected before submitting another.");
         }
 
         // the student row is immutable identity (set at import; phone via dashboard).
@@ -179,10 +182,12 @@ public class RegistrationService {
             // saveAndFlush so the partial-unique-index race backstop fires here, not later
             saved = registrationRepository.saveAndFlush(reg);
         } catch (DataIntegrityViolationException e) {
-            // race backstop — concurrent submit, or the legacy single-pending DB index
-            // (drop it via 2026-06-30-registrations-allow-two-pending.sql to allow two).
+            // race backstop — a concurrent submit that slipped past the count check above
+            // is caught here by the partial unique index uq_pending_reg_per_cycle
+            // (db/migrations/2026-07-04-registrations-one-pending.sql).
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "You've reached the limit of pending registrations for this exam cycle.");
+                "You already have a pending registration for this exam cycle. "
+                    + "Wait for it to be verified or rejected before submitting another.");
         }
 
         registrationEventRepository.save(new RegistrationEvent(

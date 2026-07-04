@@ -13,7 +13,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
-import api, { getStudentHeaders, clearStudentSession } from "../lib/api";
+import api, { getStudentHeaders, logoutStudent } from "../lib/api";
 
 function statusBadgeClass(status) {
   if (status === "VERIFIED")
@@ -60,8 +60,8 @@ function StudentDashboardPage() {
     load();
   }, [load]);
 
-  const handleLogout = () => {
-    clearStudentSession();
+  const handleLogout = async () => {
+    await logoutStudent(); // expire the httpOnly cookie, then clear local state
     navigate("/student/login");
   };
 

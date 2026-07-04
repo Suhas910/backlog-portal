@@ -11,10 +11,31 @@ describe("Admin dashboard — role & department scoped access", () => {
   };
 
   const stubDashboard = (registrations) => {
-    cy.intercept("GET", "/api/admin/registrations*", {
-      statusCode: 200,
-      body: registrations,
+    // paginated list: honor the server-side status filter (dept roles default to
+    // the SUBMITTED tab) and return the Spring Page envelope
+    cy.intercept("GET", "/api/admin/registrations*", (req) => {
+      const status = req.query.status;
+      const content = status
+        ? registrations.filter((r) => r.status === status)
+        : registrations;
+      req.reply({
+        statusCode: 200,
+        body: { content, totalElements: content.length, totalPages: 1, number: 0 },
+      });
     }).as("getRegistrations");
+    // defined after the list intercept so it wins for the /summary-counts sub-path
+    cy.intercept("GET", "/api/admin/registrations/summary-counts*", (req) => {
+      const n = (s) => registrations.filter((r) => r.status === s).length;
+      req.reply({
+        statusCode: 200,
+        body: {
+          total: registrations.length,
+          submitted: n("SUBMITTED"),
+          verified: n("VERIFIED"),
+          rejected: n("REJECTED"),
+        },
+      });
+    });
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
   };
@@ -95,6 +116,10 @@ describe("Admin dashboard — role & department scoped access", () => {
       statusCode: 401,
       body: { message: "Token expired" },
     }).as("getRegistrations");
+    cy.intercept("GET", "/api/admin/registrations/summary-counts*", {
+      statusCode: 401,
+      body: { message: "Token expired" },
+    });
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
 

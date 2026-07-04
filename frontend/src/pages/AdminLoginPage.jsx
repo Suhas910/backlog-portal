@@ -12,7 +12,8 @@ import {
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
-import api, { clearAdminSession } from "../lib/api";
+import api, { logoutAdmin } from "../lib/api";
+import { rememberExpiry } from "../lib/session";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
@@ -20,6 +21,7 @@ const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
 function AdminLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("expired") === "1";
   const [step, setStep] = useState(1);
   const [roleTitle, setRoleTitle] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
@@ -63,10 +65,13 @@ function AdminLoginPage() {
       const res = await api.post("/auth/login", payload);
 
       const validRoles = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
-      if (validRoles.includes(res.data.role) && res.data.token) {
+      if (validRoles.includes(res.data.role)) {
+        // the JWT is now in an httpOnly cookie set by the server; store only a
+        // presence marker + UI state + the refresh schedule (expiresIn)
         sessionStorage.setItem("adminRole", res.data.role);
-        sessionStorage.setItem("adminToken", res.data.token);
+        sessionStorage.setItem("adminToken", "cookie");
         sessionStorage.setItem("adminUsername", username);
+        rememberExpiry("admin", res.data.expiresIn);
         if (res.data.departmentName) {
           sessionStorage.setItem("adminDepartment", res.data.departmentName);
         } else {
@@ -87,7 +92,9 @@ function AdminLoginPage() {
           navigate("/admin");
         }
       } else {
-        clearAdminSession();
+        // login succeeded server-side (cookie was set) but the role is unexpected —
+        // clear the cookie too, not just local state
+        logoutAdmin();
         setError("Unauthorized role.");
       }
     } catch (apiError) {
@@ -126,6 +133,16 @@ function AdminLoginPage() {
               : `Sign in as ${roleTitle} to manage registrations.`}
           </p>
         </div>
+
+        {sessionExpired ? (
+          <p
+            role="status"
+            className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+            data-cy="session-expired"
+          >
+            Your session expired. Please sign in again.
+          </p>
+        ) : null}
 
         {step === 1 ? (
           <div className="flex flex-col gap-4">

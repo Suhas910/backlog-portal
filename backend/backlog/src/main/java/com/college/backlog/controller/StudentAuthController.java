@@ -4,9 +4,12 @@ import com.college.backlog.model.Student;
 import com.college.backlog.repository.StudentRepository;
 import com.college.backlog.security.JwtService;
 import com.college.backlog.security.LoginThrottleService;
+import com.college.backlog.security.SessionCookieService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -30,8 +33,12 @@ public class StudentAuthController {
     @Autowired
     private LoginThrottleService throttle;
 
+    @Autowired
+    private SessionCookieService sessionCookieService;
+
     @PostMapping("/login")
-    public Map<String, String> login(@RequestBody Map<String, String> body, HttpServletRequest request) {
+    public Map<String, String> login(@RequestBody Map<String, String> body,
+                                     HttpServletRequest request, HttpServletResponse response) {
 
         String rollNo = body.getOrDefault("rollNo", "").trim();
         String dob = body.getOrDefault("dateOfBirth", "").trim();
@@ -62,13 +69,53 @@ public class StudentAuthController {
 
         throttle.clearFailures(SCOPE, rollNo, request);
         String token = jwtService.generateToken(student.getRollNo(), "STUDENT");
+        sessionCookieService.write(response, SessionCookieService.STUDENT_COOKIE, token);
 
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Login success");
-        response.put("token", token);
-        response.put("rollNo", student.getRollNo());
-        response.put("name", student.getName());
-        return response;
+        Map<String, String> body2 = new HashMap<>();
+        body2.put("message", "Login success");
+        body2.put("expiresIn", String.valueOf(jwtService.secondsUntilExpiry(token)));
+        body2.put("rollNo", student.getRollNo());
+        body2.put("name", student.getName());
+        return body2;
+    }
+
+    /** Log out: expire the student session cookie. */
+    @PostMapping("/logout")
+    public Map<String, String> logout(HttpServletResponse response) {
+        sessionCookieService.clear(response, SessionCookieService.STUDENT_COOKIE);
+        Map<String, String> resp = new HashMap<>();
+        resp.put("message", "Logged out");
+        return resp;
+    }
+
+    /**
+     * Slide the student session: re-mint a fresh-expiry token for the already-
+     * authenticated student (a valid token must have authenticated the request).
+     * Keeps an active student from being logged out mid-form at the 1h mark; an
+     * idle student whose token lapses falls back to re-login. The account is
+     * re-read so a since-deleted student can't refresh.
+     */
+    @PostMapping("/refresh")
+    public Map<String, String> refresh(HttpServletRequest request, HttpServletResponse response,
+                                       Authentication auth) {
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        Student student = studentRepository.findByRollNo(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Student account not found"));
+        String currentToken = sessionCookieService.read(request, SessionCookieService.STUDENT_COOKIE);
+        // preserve the original session start and enforce the absolute cap
+        String token = currentToken == null ? null
+                : jwtService.refreshToken(currentToken, student.getRollNo(), "STUDENT");
+        if (token == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Session expired. Please sign in again.");
+        }
+        sessionCookieService.write(response, SessionCookieService.STUDENT_COOKIE, token);
+        Map<String, String> resp = new HashMap<>();
+        resp.put("expiresIn", String.valueOf(jwtService.secondsUntilExpiry(token)));
+        resp.put("rollNo", student.getRollNo());
+        resp.put("name", student.getName());
+        return resp;
     }
 
     private ResponseStatusException invalidCredentials() {

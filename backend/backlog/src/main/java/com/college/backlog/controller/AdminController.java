@@ -24,12 +24,15 @@ import com.college.backlog.service.PdfService;
 import com.college.backlog.service.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -37,6 +40,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -77,15 +81,23 @@ public class AdminController {
         return user.getDepartment().getId();
     }
 
+    // Max page size a client can request — a guard so `size` can't be used to pull
+    // the whole (append-only, ever-growing) table in one shot.
+    private static final int MAX_PAGE_SIZE = 200;
+    private static final int DEFAULT_PAGE_SIZE = 25;
+
     @GetMapping("/registrations")
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
-    public List<RegistrationSummaryResponse> getFilteredRegistrations(
+    public Page<RegistrationSummaryResponse> getFilteredRegistrations(
             @RequestParam Optional<Long> subjectId,
             @RequestParam Optional<String> subjectType,
             @RequestParam Optional<String> searchQuery,
             @RequestParam Optional<LocalDate> startDate,
             @RequestParam Optional<LocalDate> endDate,
             @RequestParam Optional<Long> examCycleId,
+            @RequestParam Optional<String> status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
             Authentication authentication
     ) {
         Long callerDeptId = resolveCallerDeptId(authentication);
@@ -96,10 +108,63 @@ public class AdminController {
                 searchQuery.orElse(null),
                 startDate.orElse(null),
                 endDate.orElse(null),
-                examCycleId.orElse(null));
+                examCycleId.orElse(null),
+                parseStatus(status.orElse(null)));
 
-        List<Registration> registrations = registrationRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
-        return registrations.stream().map(reg -> new RegistrationSummaryResponse(
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int safePage = Math.max(page, 0);
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "registeredAt"));
+        return registrationRepository.findAll(spec, pageable).map(this::toSummary);
+    }
+
+    // Status-bucketed counts for the dashboard stat cards, over the SAME filters as
+    // the list but WITHOUT the status filter — so the cards show the totals for the
+    // filtered set regardless of which status tab is open. Cheap count queries; no
+    // rows hydrated.
+    @GetMapping("/registrations/summary-counts")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    public Map<String, Long> getRegistrationSummaryCounts(
+            @RequestParam Optional<Long> subjectId,
+            @RequestParam Optional<String> subjectType,
+            @RequestParam Optional<String> searchQuery,
+            @RequestParam Optional<LocalDate> startDate,
+            @RequestParam Optional<LocalDate> endDate,
+            @RequestParam Optional<Long> examCycleId,
+            Authentication authentication
+    ) {
+        Long callerDeptId = resolveCallerDeptId(authentication);
+        long submitted = countByStatus(subjectId, callerDeptId, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.SUBMITTED);
+        long verified = countByStatus(subjectId, callerDeptId, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.VERIFIED);
+        long rejected = countByStatus(subjectId, callerDeptId, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.REJECTED);
+        return Map.of(
+            "total", submitted + verified + rejected,
+            "submitted", submitted,
+            "verified", verified,
+            "rejected", rejected);
+    }
+
+    private long countByStatus(Optional<Long> subjectId, Long callerDeptId, Optional<String> subjectType,
+                               Optional<String> searchQuery, Optional<LocalDate> startDate, Optional<LocalDate> endDate,
+                               Optional<Long> examCycleId, RegistrationStatus status) {
+        return registrationRepository.count(new RegistrationSpecification(
+                subjectId.orElse(null), callerDeptId, subjectType.orElse(null), searchQuery.orElse(null),
+                startDate.orElse(null), endDate.orElse(null), examCycleId.orElse(null), status));
+    }
+
+    /** Parse the optional status filter; blank/absent means "all statuses". 400 on an unknown value. */
+    private RegistrationStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            return RegistrationStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown status filter: " + status);
+        }
+    }
+
+    private RegistrationSummaryResponse toSummary(Registration reg) {
+        return new RegistrationSummaryResponse(
             reg.getRegId(),
             reg.getStudent().getRollNo(),
             reg.getSnapName() != null ? reg.getSnapName() : reg.getStudent().getName(),
@@ -109,8 +174,7 @@ public class AdminController {
             reg.getStatus().name(),
             reg.getRegisteredAt().toString(),
             reg.getVerifiedBy(),
-            reg.getExamCycle() != null ? reg.getExamCycle().getName() : null
-        )).collect(Collectors.toList());
+            reg.getExamCycle() != null ? reg.getExamCycle().getName() : null);
     }
 
     @GetMapping("/registrations/{regId}/events")
@@ -226,14 +290,15 @@ public class AdminController {
 
     @GetMapping("/export-pdf")
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
-    public ResponseEntity<byte[]> exportRegistrationsPdf(
+    public void exportRegistrationsPdf(
             @RequestParam Optional<Long> subjectId,
             @RequestParam Optional<String> subjectType,
             @RequestParam Optional<String> searchQuery,
             @RequestParam Optional<LocalDate> startDate,
             @RequestParam Optional<LocalDate> endDate,
             @RequestParam Optional<Long> examCycleId,
-            Authentication authentication
+            Authentication authentication,
+            HttpServletResponse response
     ) throws Exception {
         Long callerDeptId = resolveCallerDeptId(authentication);
 
@@ -247,6 +312,9 @@ public class AdminController {
         if (effectiveCycleId == null) {
             registrations = List.of();
         } else {
+            // the summary report covers only verified registrations — push the status
+            // filter into the query so only those rows are hydrated (never load
+            // pending/rejected just to discard them)
             Specification<Registration> spec = new RegistrationSpecification(
                     subjectId.orElse(null),
                     callerDeptId,
@@ -254,21 +322,18 @@ public class AdminController {
                     searchQuery.orElse(null),
                     startDate.orElse(null),
                     endDate.orElse(null),
-                    effectiveCycleId);
+                    effectiveCycleId,
+                    RegistrationStatus.VERIFIED);
 
-            // the summary report covers only verified registrations, not pending/rejected ones
             registrations = registrationRepository
-                    .findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"))
-                    .stream()
-                    .filter(reg -> reg.getStatus() == RegistrationStatus.VERIFIED)
-                    .toList();
+                    .findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
         }
-        byte[] pdfBytes = pdfService.generateRegistrationsSummaryPdf(registrations);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDispositionFormData("attachment", "registrations-summary.pdf");
-
-        return ResponseEntity.ok().headers(headers).body(pdfBytes);
+        // Stream the PDF straight to the response — no full-document byte[] buffered
+        // in heap. Set headers before the first byte is written.
+        response.setContentType(MediaType.APPLICATION_PDF_VALUE);
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
+                "attachment; filename=\"registrations-summary.pdf\"");
+        pdfService.generateRegistrationsSummaryPdf(registrations, response.getOutputStream());
     }
 }

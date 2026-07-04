@@ -21,17 +21,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private SessionCookieService sessionCookieService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        // The JWT now travels in an httpOnly cookie (not the Authorization header),
+        // so it can't be read/stolen by page scripts. Pick the cookie that matches
+        // the request's audience (student endpoints vs admin) so an admin+student
+        // dual session in one browser resolves to the right identity.
+        final String jwt = sessionCookieService.read(
+                request, sessionCookieService.cookieNameForPath(request.getRequestURI()));
+        if (jwt == null) {
             filterChain.doFilter(request, response);
             return;
         }
-
-        final String jwt = authHeader.substring(7);
 
         // Parsing verifies the signature and can throw on an expired/tampered/malformed
         // token (ExpiredJwtException et al). This runs in a servlet filter, so such an

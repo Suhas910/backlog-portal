@@ -8,7 +8,9 @@ import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.JwtService;
 import com.college.backlog.security.LoginThrottleService;
+import com.college.backlog.security.SessionCookieService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -44,8 +46,12 @@ public class AuthController {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private SessionCookieService sessionCookieService;
+
     @PostMapping("/login")
-    public Map<String, String> login(@RequestBody Map<String, String> body, HttpServletRequest request) {
+    public Map<String, String> login(@RequestBody Map<String, String> body,
+                                     HttpServletRequest request, HttpServletResponse response) {
 
         String username = body.getOrDefault("username", "").trim();
         String password = body.getOrDefault("password", "");
@@ -88,17 +94,59 @@ public class AuthController {
 
         throttle.clearFailures(SCOPE, username, request);
         String token = jwtService.generateToken(user.getUsername(), user.getRole().name());
+        // token goes in an httpOnly cookie (not the body) so page scripts can't read it
+        sessionCookieService.write(response, SessionCookieService.ADMIN_COOKIE, token);
 
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Login success");
-        response.put("role", user.getRole().name());
-        response.put("token", token);
-        response.put("mustChangePassword", String.valueOf(user.isMustChangePassword()));
+        Map<String, String> body2 = new HashMap<>();
+        body2.put("message", "Login success");
+        body2.put("role", user.getRole().name());
+        // expiresIn lets the SPA schedule its refresh without reading the token
+        body2.put("expiresIn", String.valueOf(jwtService.secondsUntilExpiry(token)));
+        body2.put("mustChangePassword", String.valueOf(user.isMustChangePassword()));
         if (user.getDepartment() != null) {
-            response.put("departmentId", String.valueOf(user.getDepartment().getId()));
-            response.put("departmentName", user.getDepartment().getDeptName());
+            body2.put("departmentId", String.valueOf(user.getDepartment().getId()));
+            body2.put("departmentName", user.getDepartment().getDeptName());
         }
-        return response;
+        return body2;
+    }
+
+    /** Log out: expire the admin session cookie. */
+    @PostMapping("/logout")
+    public Map<String, String> logout(HttpServletResponse response) {
+        sessionCookieService.clear(response, SessionCookieService.ADMIN_COOKIE);
+        Map<String, String> resp = new HashMap<>();
+        resp.put("message", "Logged out");
+        return resp;
+    }
+
+    /**
+     * Slide the session: re-mint a fresh-expiry token for the already-authenticated
+     * caller. Requires a still-valid token (the JWT filter must have authenticated
+     * the request) — so an active user's session never hard-expires at the 1h mark,
+     * while an idle user (whose token lapses) simply falls back to re-login. The
+     * account is re-read so a since-deleted/renamed user can't refresh.
+     */
+    @PostMapping("/refresh")
+    public Map<String, String> refresh(HttpServletRequest request, HttpServletResponse response,
+                                       Authentication auth) {
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        User user = userRepository.findById(auth.getName())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
+        String currentToken = sessionCookieService.read(request, SessionCookieService.ADMIN_COOKIE);
+        // preserve the original session start and enforce the absolute cap — null
+        // means the session has outlived maxSessionMs, so force a fresh login
+        String token = currentToken == null ? null
+                : jwtService.refreshToken(currentToken, user.getUsername(), user.getRole().name());
+        if (token == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Session expired. Please sign in again.");
+        }
+        sessionCookieService.write(response, SessionCookieService.ADMIN_COOKIE, token);
+        Map<String, String> resp = new HashMap<>();
+        resp.put("expiresIn", String.valueOf(jwtService.secondsUntilExpiry(token)));
+        resp.put("role", user.getRole().name());
+        return resp;
     }
 
     /**

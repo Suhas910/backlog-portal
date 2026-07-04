@@ -1,6 +1,7 @@
 package com.college.backlog.service;
 
 import com.college.backlog.model.Registration;
+import com.college.backlog.model.RegistrationStatus;
 import com.college.backlog.model.Student;
 import com.college.backlog.model.Subject;
 import com.college.backlog.model.SubjectType;
@@ -20,8 +21,13 @@ public class RegistrationSpecification implements Specification<Registration> {
     private final LocalDate startDate;
     private final LocalDate endDate;
     private final Long examCycleId;
+    private final RegistrationStatus status;
 
     public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate, Long examCycleId) {
+        this(subjectId, departmentId, subjectType, searchQuery, startDate, endDate, examCycleId, (RegistrationStatus) null);
+    }
+
+    public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate, Long examCycleId, RegistrationStatus status) {
         this.subjectId = subjectId;
         this.departmentId = departmentId;
         this.subjectType = subjectType;
@@ -29,6 +35,7 @@ public class RegistrationSpecification implements Specification<Registration> {
         this.startDate = startDate;
         this.endDate = endDate;
         this.examCycleId = examCycleId;
+        this.status = status;
     }
 
     @Override
@@ -66,6 +73,10 @@ public class RegistrationSpecification implements Specification<Registration> {
 
         if (examCycleId != null) {
             predicates.add(cb.equal(root.join("examCycle", JoinType.LEFT).get("id"), examCycleId));
+        }
+
+        if (status != null) {
+            predicates.add(cb.equal(root.get("status"), status));
         }
 
         return cb.and(predicates.toArray(new Predicate[0]));

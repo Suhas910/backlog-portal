@@ -1,6 +1,8 @@
 package com.college.backlog.repository;
 
 import com.college.backlog.model.Registration;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -29,9 +31,16 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     // referenced by immutable registration history.
     boolean existsByStudent_RollNo(String rollNo);
 
-    // Fetch-joins the relations the list/PDF mappers touch per row; without
-    // this, student/subjects/examCycle each fire a separate query per result
+    // Fetch-joins the relations the PDF export touches per row; safe here because
+    // this overload is unpaginated (export streams every matching row).
     @Override
     @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
     List<Registration> findAll(Specification<Registration> spec, Sort sort);
+
+    // Paginated admin list. Only the ManyToOne relations are fetch-joined —
+    // fetching the `subjects` collection here would force Hibernate to paginate
+    // in memory. `subjects` is loaded per row via @BatchSize during mapping.
+    @Override
+    @EntityGraph(attributePaths = {"student", "examCycle"})
+    Page<Registration> findAll(Specification<Registration> spec, Pageable pageable);
 }

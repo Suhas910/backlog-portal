@@ -1,6 +1,7 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,7 +20,13 @@ public class Registration {
     @JoinColumn(name = "roll_no")
     private Student student;
 
+    // @BatchSize: the paginated admin list fetches only the ManyToOne relations
+    // (student, examCycle) to keep pagination a real SQL LIMIT — a collection
+    // fetch-join would force in-memory paging. The per-row `subjects` are then
+    // lazily loaded during response mapping (OSIV keeps the session open), and
+    // BatchSize collapses those N loads into a few IN queries per page.
     @ManyToMany
+    @BatchSize(size = 30)
     @JoinTable(
         name = "registration_subjects",
         joinColumns = @JoinColumn(

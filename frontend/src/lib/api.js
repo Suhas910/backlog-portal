@@ -1,42 +1,72 @@
 import axios from "axios";
 
+// The JWT now travels in an httpOnly cookie the browser attaches automatically —
+// it is never readable by JS (so it can't be stolen via XSS). withCredentials sends
+// that cookie; the xsrf* options make axios echo the readable XSRF-TOKEN cookie back
+// as the X-XSRF-TOKEN header so Spring's CSRF check passes on mutating requests.
 const api = axios.create({
   baseURL: "/api",
   timeout: 15000,
+  withCredentials: true,
+  xsrfCookieName: "XSRF-TOKEN",
+  xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
+// NOTE: these sessionStorage values are NOT the credential. The real token is in the
+// httpOnly cookie. "adminToken"/"studentToken" hold only a presence marker ("cookie")
+// so the existing "is a session present?" checks and route guards keep working; the
+// other keys are UI state (role/name) + the refresh schedule (expiresAt).
 export function getAdminToken() {
-  return sessionStorage.getItem("adminToken");
-}
-
-export function getAdminHeaders() {
-  const token = getAdminToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return sessionStorage.getItem("adminToken"); // presence marker, not the JWT
 }
 
 export function getStudentToken() {
-  return sessionStorage.getItem("studentToken");
+  return sessionStorage.getItem("studentToken"); // presence marker, not the JWT
+}
+
+// Auth is cookie-based now, so no Authorization header is needed. Kept as no-ops so
+// the many `{ headers: getAdminHeaders() }` call sites don't all need editing.
+export function getAdminHeaders() {
+  return {};
 }
 
 export function getStudentHeaders() {
-  const token = getStudentToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {};
 }
 
 export function clearStudentSession() {
-  sessionStorage.removeItem("studentToken");
-  sessionStorage.removeItem("studentRollNo");
-  sessionStorage.removeItem("studentName");
+  ["studentToken", "studentRollNo", "studentName", "studentExpiresAt"].forEach((k) =>
+    sessionStorage.removeItem(k),
+  );
 }
 
 export function clearAdminSession() {
-  sessionStorage.removeItem("adminToken");
-  sessionStorage.removeItem("adminRole");
-  sessionStorage.removeItem("adminUsername");
-  sessionStorage.removeItem("adminDepartment");
+  ["adminToken", "adminRole", "adminUsername", "adminDepartment", "adminExpiresAt"].forEach((k) =>
+    sessionStorage.removeItem(k),
+  );
 }
 
-// Student-scoped auth failures: if a student's token is missing/expired, send
+// Best-effort server logout (expires the httpOnly cookie) then local cleanup. The
+// logout endpoints are CSRF-exempt and succeed even with a lapsed session.
+export async function logoutAdmin() {
+  try {
+    await api.post("/auth/logout");
+  } catch {
+    /* clear locally regardless */
+  }
+  clearAdminSession();
+}
+
+export async function logoutStudent() {
+  try {
+    await api.post("/student/auth/logout");
+  } catch {
+    /* clear locally regardless */
+  }
+  clearStudentSession();
+}
+
+// Student-scoped auth failures: if a student's session is missing/expired, send
 // them back to login. Scoped by URL so admin flows (which handle their own 401s)
 // are untouched. The student login endpoint itself is excluded.
 function isStudentScopedUrl(url = "") {
@@ -54,7 +84,7 @@ function isAdminScopedUrl(url = "") {
   return false;
 }
 
-// Centralized auth-failure handling: an expired/missing token sends the matching
+// Centralized auth-failure handling: an expired/missing session sends the matching
 // audience back to its login screen, scoped by URL so the two flows don't collide.
 api.interceptors.response.use(
   (response) => response,
@@ -71,15 +101,18 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
     if (status === 401 || status === 403) {
+      // a 401 on an authenticated call means the session lapsed/was invalid — flag it
+      // so the login screen can explain the redirect. 403 is a real authz denial.
+      const expiredSuffix = status === 401 ? "?expired=1" : "";
       if (isStudentScopedUrl(url)) {
         clearStudentSession();
         if (!window.location.pathname.startsWith("/student/login")) {
-          window.location.assign("/student/login");
+          window.location.assign("/student/login" + expiredSuffix);
         }
       } else if (isAdminScopedUrl(url)) {
         clearAdminSession();
         if (!window.location.pathname.startsWith("/admin/login")) {
-          window.location.assign("/admin/login");
+          window.location.assign("/admin/login" + expiredSuffix);
         }
       }
     }

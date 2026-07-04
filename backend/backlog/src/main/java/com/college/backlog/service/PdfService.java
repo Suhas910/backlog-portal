@@ -74,9 +74,12 @@ public class PdfService {
     // =========================================================================
     //  EXPORT SUMMARY PDF (ADMIN)
     // =========================================================================
-    public byte[] generateRegistrationsSummaryPdf(List<Registration> registrations) throws Exception {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PdfWriter writer = new PdfWriter(baos);
+    // Writes straight to the caller's stream (the HTTP response) instead of
+    // buffering the whole PDF in a byte[] on the heap — so a large cycle's
+    // summary streams out with bounded memory. Runs synchronously on the request
+    // thread so the still-open (OSIV) session can lazily read each registration.
+    public void generateRegistrationsSummaryPdf(List<Registration> registrations, java.io.OutputStream out) throws Exception {
+        PdfWriter writer = new PdfWriter(out);
         PdfDocument pdfDoc = new PdfDocument(writer);
         // Using landscape orientation to fit the table columns
         Document doc = new Document(pdfDoc, PageSize.A4.rotate());
@@ -123,8 +126,7 @@ public class PdfService {
         }
 
         doc.add(table);
-        doc.close();
-        return baos.toByteArray();
+        doc.close(); // flushes and closes the underlying OutputStream
     }
 
     // =========================================================================

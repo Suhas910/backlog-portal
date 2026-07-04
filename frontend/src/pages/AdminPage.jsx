@@ -21,8 +21,10 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
-import api, { getAdminHeaders } from "../lib/api";
+import api, { getAdminHeaders, clearAdminSession, logoutAdmin } from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
+
+const PAGE_SIZE = 25;
 
 function AdminPage() {
   const adminRole = sessionStorage.getItem("adminRole") || "";
@@ -37,6 +39,12 @@ function AdminPage() {
   const [filter, setFilter] = useState(
     ["HOD", "DEPT_OFFICE"].includes(adminRole) ? "SUBMITTED" : "ALL",
   );
+  // server-side pagination: `page` is 0-based; pageInfo mirrors the Spring Page envelope
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0, number: 0 });
+  // stat-card counts come from the server (summary-counts) so they reflect the whole
+  // filtered set, not just the loaded page
+  const [counts, setCounts] = useState({ total: 0, submitted: 0, verified: 0, rejected: 0 });
   const [verifyingRegId, setVerifyingRegId] = useState("");
   const [rejectingRegId, setRejectingRegId] = useState("");
   const [rowErrors, setRowErrors] = useState({});
@@ -152,16 +160,27 @@ function AdminPage() {
     };
   }, [isAdmin, adminToken]);
 
-  const fetchRegistrations = useCallback(() => {
-    // tag this request; only the latest one is allowed to apply its result
-    const seq = ++registrationsReqRef.current;
-    const params = new URLSearchParams();
+  // shared filter params (everything except status/page) for both the list and
+  // the counts endpoint, so the cards and the table stay on the same filtered set
+  const appendFilterParams = useCallback((params) => {
     if (appliedFilters.subjectId) params.append("subjectId", appliedFilters.subjectId);
     if (appliedFilters.subjectType) params.append("subjectType", appliedFilters.subjectType);
     if (appliedFilters.searchQuery) params.append("searchQuery", appliedFilters.searchQuery);
     if (appliedFilters.startDate) params.append("startDate", appliedFilters.startDate);
     if (appliedFilters.endDate) params.append("endDate", appliedFilters.endDate);
     if (appliedFilters.examCycleId) params.append("examCycleId", appliedFilters.examCycleId);
+  }, [appliedFilters]);
+
+  const fetchRegistrations = useCallback(() => {
+    if (!isAdmin || !adminToken) return Promise.resolve();
+    // tag this request; only the latest one is allowed to apply its result
+    const seq = ++registrationsReqRef.current;
+    const params = new URLSearchParams();
+    appendFilterParams(params);
+    // status filtering is now server-side (a page only holds part of the result)
+    if (filter !== "ALL") params.append("status", filter);
+    params.append("page", String(page));
+    params.append("size", String(PAGE_SIZE));
 
     return api
       .get(`/admin/registrations?${params.toString()}`, {
@@ -169,7 +188,12 @@ function AdminPage() {
       })
       .then((res) => {
         if (seq !== registrationsReqRef.current) return; // superseded
-        setRegistrations(res.data);
+        setRegistrations(res.data.content || []);
+        setPageInfo({
+          totalPages: res.data.totalPages ?? 0,
+          totalElements: res.data.totalElements ?? 0,
+          number: res.data.number ?? 0,
+        });
         setLoading(false);
       })
       .catch((error) => {
@@ -177,16 +201,31 @@ function AdminPage() {
         // An auth failure invalidates the session regardless of ordering, so the
         // redirect is not gated on seq; only the success state-write is.
         if (error.response?.status === 401 || error.response?.status === 403) {
-          sessionStorage.removeItem("adminRole");
-          sessionStorage.removeItem("adminToken");
+          clearAdminSession();
           navigate("/admin/login");
         }
       });
-  }, [navigate, appliedFilters]);
+  }, [navigate, isAdmin, adminToken, appendFilterParams, filter, page]);
+
+  const fetchCounts = useCallback(() => {
+    if (!isAdmin || !adminToken) return Promise.resolve();
+    const params = new URLSearchParams();
+    appendFilterParams(params); // no status: cards span all statuses of the filtered set
+    return api
+      .get(`/admin/registrations/summary-counts?${params.toString()}`, {
+        headers: getAdminHeaders(),
+      })
+      .then((res) => setCounts(res.data))
+      .catch((err) => console.error("Failed to fetch summary counts", err));
+  }, [isAdmin, adminToken, appendFilterParams]);
 
   useEffect(() => {
     fetchRegistrations();
-  }, [isAdmin, adminToken, fetchRegistrations]);
+  }, [fetchRegistrations]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [fetchCounts]);
 
   // ---- filter apply / clear (draft -> applied) ----
   const draftFilters = {
@@ -200,7 +239,10 @@ function AdminPage() {
   const filtersDirty =
     JSON.stringify(draftFilters) !== JSON.stringify(appliedFilters);
 
-  const applyFilters = () => setAppliedFilters(draftFilters);
+  const applyFilters = () => {
+    setPage(0); // a new filter set always starts from the first page
+    setAppliedFilters(draftFilters);
+  };
 
   const clearFilters = () => {
     // reset to defaults: the active cycle (the page's default scope), no other filters
@@ -212,6 +254,7 @@ function AdminPage() {
     setStartDateFilter("");
     setEndDateFilter("");
     setCycleFilter(cyc);
+    setPage(0);
     setAppliedFilters({
       subjectId: "",
       subjectType: "",
@@ -243,7 +286,7 @@ function AdminPage() {
       [regId]: err.response?.data?.message || fallback,
     }));
     if (status === 404 || status === 409 || status === 410) {
-      await fetchRegistrations();
+      await Promise.all([fetchRegistrations(), fetchCounts()]);
     }
   };
 
@@ -256,14 +299,9 @@ function AdminPage() {
         { action: "VERIFIED" },
         { headers: getAdminHeaders() },
       );
-      const adminUsername = sessionStorage.getItem("adminUsername") || "";
-      setRegistrations((current) =>
-        current.map((reg) =>
-          reg.regId === regId
-            ? { ...reg, status: "VERIFIED", verifiedBy: adminUsername }
-            : reg,
-        ),
-      );
+      // refetch: with server-side status filtering the row may leave the current
+      // (e.g. SUBMITTED) page, and the stat cards need the fresh counts
+      await Promise.all([fetchRegistrations(), fetchCounts()]);
     } catch (err) {
       await handleActionError(regId, err, "Failed to verify. Please refresh and try again.");
     } finally {
@@ -280,14 +318,7 @@ function AdminPage() {
         { action: "REJECTED" },
         { headers: getAdminHeaders() },
       );
-      const adminUsername = sessionStorage.getItem("adminUsername") || "";
-      setRegistrations((current) =>
-        current.map((reg) =>
-          reg.regId === regId
-            ? { ...reg, status: "REJECTED", verifiedBy: adminUsername }
-            : reg,
-        ),
-      );
+      await Promise.all([fetchRegistrations(), fetchCounts()]);
     } catch (err) {
       await handleActionError(regId, err, "Failed to reject. Please refresh and try again.");
     } finally {
@@ -357,24 +388,17 @@ function AdminPage() {
       });
   };
 
-  const filtered =
-    filter === "ALL"
-      ? registrations
-      : registrations.filter((r) => r.status === filter);
+  // The table shows exactly the current server page — status filtering and paging
+  // are server-side, so no client-side slicing.
+  const filtered = registrations;
 
-  // Stat cards follow the selected exam-cycle filter: the loaded `registrations`
-  // are already scoped to it server-side (active cycle by default, a specific cycle
-  // when chosen, or all cycles under "All Cycles").
-  const totalCount = registrations.length;
-  const pendingCount = registrations.filter(
-    (r) => r.status === "SUBMITTED",
-  ).length;
-  const verifiedCount = registrations.filter(
-    (r) => r.status === "VERIFIED",
-  ).length;
-  const rejectedCount = registrations.filter(
-    (r) => r.status === "REJECTED",
-  ).length;
+  // Stat cards come from the server counts endpoint: they span every status of the
+  // filtered set (same filters as the list, minus the status tab), regardless of
+  // which tab/page is open.
+  const totalCount = counts.total;
+  const pendingCount = counts.submitted;
+  const verifiedCount = counts.verified;
+  const rejectedCount = counts.rejected;
 
   if (!isAdmin || !adminToken) {
     return (
@@ -468,11 +492,8 @@ function AdminPage() {
             </Link>
             <button
               type="button"
-              onClick={() => {
-                sessionStorage.removeItem("adminRole");
-                sessionStorage.removeItem("adminToken");
-                sessionStorage.removeItem("adminUsername");
-                sessionStorage.removeItem("adminDepartment");
+              onClick={async () => {
+                await logoutAdmin(); // expire the httpOnly cookie, then clear local state
                 navigate("/admin/login");
               }}
               className="inline-flex items-center gap-1 rounded-full bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-white"
@@ -690,7 +711,10 @@ function AdminPage() {
                 <button
                   type="button"
                   key={f}
-                  onClick={() => setFilter(f)}
+                  onClick={() => {
+                    setPage(0); // switching status tab restarts at the first page
+                    setFilter(f);
+                  }}
                   className={`rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.06em] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)] ${
                     filter === f
                       ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
@@ -859,6 +883,38 @@ function AdminPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {!loading && pageInfo.totalPages > 1 && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p
+                className="text-xs text-[var(--text-muted)]"
+                data-cy="admin-page-info"
+              >
+                Page {pageInfo.number + 1} of {pageInfo.totalPages} ·{" "}
+                {pageInfo.totalElements} total
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page <= 0}
+                  data-cy="admin-page-prev"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-secondary)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ArrowLeft size={14} /> Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(pageInfo.totalPages - 1, p + 1))}
+                  disabled={page >= pageInfo.totalPages - 1}
+                  data-cy="admin-page-next"
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-secondary)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next <ArrowLeft size={14} className="rotate-180" />
+                </button>
+              </div>
             </div>
           )}
         </section>

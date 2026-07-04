@@ -2,6 +2,7 @@ package com.college.backlog.security;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -23,11 +24,22 @@ class JwtAuthenticationFilterTest {
 
     JwtAuthenticationFilterTest() {
         ReflectionTestUtils.setField(filter, "jwtService", jwtService);
+        // real cookie service — read() only inspects request cookies, no config needed
+        ReflectionTestUtils.setField(filter, "sessionCookieService", new SessionCookieService());
     }
 
     @AfterEach
     void clearContext() {
         SecurityContextHolder.clearContext();
+    }
+
+    private MockHttpServletRequest adminRequestWithSessionCookie(String token) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI("/api/admin/registrations");
+        if (token != null) {
+            request.setCookies(new Cookie(SessionCookieService.ADMIN_COOKIE, token));
+        }
+        return request;
     }
 
     /**
@@ -37,8 +49,7 @@ class JwtAuthenticationFilterTest {
      */
     @Test
     void expiredTokenIsTreatedAsAnonymousAndDoesNotThrow() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("Authorization", "Bearer expired.token.value");
+        MockHttpServletRequest request = adminRequestWithSessionCookie("expired.token.value");
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain chain = mock(FilterChain.class);
 
@@ -53,8 +64,8 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void noAuthorizationHeaderJustContinuesTheChain() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest();
+    void noSessionCookieJustContinuesTheChain() throws Exception {
+        MockHttpServletRequest request = adminRequestWithSessionCookie(null);
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain chain = mock(FilterChain.class);
 
@@ -66,21 +77,20 @@ class JwtAuthenticationFilterTest {
 
     @Test
     void validTokenSetsAuthentication() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("Authorization", "Bearer good.token.value");
+        MockHttpServletRequest request = adminRequestWithSessionCookie("good.token.value");
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain chain = mock(FilterChain.class);
 
-        when(jwtService.getUsernameFromToken("good.token.value")).thenReturn("1MS22CS001");
+        when(jwtService.getUsernameFromToken("good.token.value")).thenReturn("admin");
         when(jwtService.validateToken("good.token.value")).thenReturn(true);
-        when(jwtService.getRoleFromToken("good.token.value")).thenReturn("STUDENT");
+        when(jwtService.getRoleFromToken("good.token.value")).thenReturn("ADMIN");
 
         filter.doFilter(request, response, chain);
 
         verify(chain, times(1)).doFilter(request, response);
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
-        assertThat(SecurityContextHolder.getContext().getAuthentication().getName()).isEqualTo("1MS22CS001");
+        assertThat(SecurityContextHolder.getContext().getAuthentication().getName()).isEqualTo("admin");
         assertThat(SecurityContextHolder.getContext().getAuthentication().getAuthorities())
-                .anyMatch(a -> a.getAuthority().equals("ROLE_STUDENT"));
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }
