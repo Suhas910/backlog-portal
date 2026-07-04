@@ -17,7 +17,6 @@ import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.ExamCycleRepository;
 import com.college.backlog.repository.RegistrationEventRepository;
 import com.college.backlog.repository.RegistrationRepository;
-import com.college.backlog.repository.SubjectRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.RegistrationSpecification;
 import com.college.backlog.service.PdfService;
@@ -58,9 +57,6 @@ public class AdminController {
 
     @Autowired
     private DepartmentRepository departmentRepository;
-
-    @Autowired
-    private SubjectRepository subjectRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -262,12 +258,6 @@ public class AdminController {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "This department was just changed by someone else. Reload and try again.");
         }
-    }
-
-    @GetMapping("/all-subjects")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
-    public List<Subject> getAllSubjects() {
-        return subjectRepository.findAll(Sort.by("subjectName"));
     }
 
     @GetMapping("/subjects-for-filter")
