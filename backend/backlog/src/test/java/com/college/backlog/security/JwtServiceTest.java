@@ -51,9 +51,15 @@ class JwtServiceTest {
     void tamperedTokenFailsValidation() {
         JwtService service = newService(SECRET, 3_600_000L);
         String token = service.generateToken("admin", "ADMIN");
-        // flip the last character of the signature
-        char last = token.charAt(token.length() - 1);
-        String tampered = token.substring(0, token.length() - 1) + (last == 'a' ? 'b' : 'a');
+        // Flip the FIRST character of the payload — a full 6-bit base64url char, so the
+        // decoded bytes always change and the signature no longer matches. (Flipping the
+        // last char of the signature is unreliable: its trailing padding bits can decode
+        // to the same bytes, leaving the token valid.)
+        int payloadStart = token.indexOf('.') + 1;
+        char c = token.charAt(payloadStart);
+        String tampered = token.substring(0, payloadStart)
+                + (c == 'A' ? 'B' : 'A')
+                + token.substring(payloadStart + 1);
 
         assertThat(service.validateToken(tampered)).isFalse();
     }

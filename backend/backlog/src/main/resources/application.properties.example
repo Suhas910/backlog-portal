@@ -9,15 +9,21 @@ spring.datasource.password=${DB_PASSWORD:YOUR_PASSWORD_HERE}
 spring.datasource.hikari.maximum-pool-size=${DB_POOL_MAX_SIZE:5}
 spring.datasource.hikari.minimum-idle=${DB_POOL_MIN_IDLE:1}
 
-# Boot behavior — dev-friendly defaults; override via env in production.
-#   JPA_DDL_AUTO=validate  -> verify schema only, never auto-migrate (add Neon columns manually first)
-#   JPA_SHOW_SQL=true      -> log every SQL statement (debugging only; off by default)
-#   SQL_INIT_MODE=never    -> skip schema.sql/data.sql demo seeding (set this against an already-seeded DB)
-spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:update}
+# Boot behavior. Flyway owns the schema (src/main/resources/db/migration); Hibernate
+# only VALIDATES it (never mutates). Leave these at the defaults.
+#   JPA_DDL_AUTO=validate  -> assert entities match the DB, never auto-migrate
+#   JPA_SHOW_SQL=true       -> log every SQL statement (debugging only; off by default)
+#   SQL_INIT_MODE=never     -> schema.sql/data.sql are retired; Flyway builds the schema
+spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:validate}
 spring.jpa.show-sql=${JPA_SHOW_SQL:false}
 spring.jpa.properties.hibernate.format_sql=${JPA_FORMAT_SQL:false}
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.sql.init.mode=${SQL_INIT_MODE:always}
+spring.sql.init.mode=${SQL_INIT_MODE:never}
+
+# Flyway: baseline an existing (already-populated) DB at V1; a fresh empty DB runs V1
+# to build the whole schema. New schema changes go in db/migration/V2__*.sql (V3, ...).
+spring.flyway.baseline-on-migrate=true
+spring.flyway.baseline-version=1
 
 app.cors.allowed-origins=${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
 app.jwt.secret=${JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_BASE64_SECRET}
