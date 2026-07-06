@@ -92,38 +92,28 @@ class StudentManagementServiceTest {
     }
 
     @Test
-    void createSeedsSem1And2ForRegularStudentWithJoiningYear() {
+    void createSeedsFullTimelineViaBackfill() {
         stubCsDept();
         when(studentRepository.save(any(Student.class))).thenAnswer(i -> i.getArgument(0));
 
         service.createStudent(req("1MS22CS001", 4, 1));
 
-        // regular (entry sem 1): sems 1 and 2 seeded with the admission year (2022)
-        verify(progressionService).recordProgression("1MS22CS001", 1, 2022);
-        verify(progressionService).recordProgression("1MS22CS001", 2, 2022);
+        // the whole sem 1..8 academic-year timeline is seeded up front (linear from
+        // the admission year); the per-semester year math is covered in
+        // ProgressionServiceTest.backfillLinear*. currentSemester is never bumped here.
+        verify(progressionService).backfillLinear("1MS22CS001");
     }
 
     @Test
-    void createSeedsOnlyReachedSemesterForFirstSemRegular() {
-        stubCsDept();
-        when(studentRepository.save(any(Student.class))).thenAnswer(i -> i.getArgument(0));
-
-        service.createStudent(req("1MS22CS001", 1, 1));
-
-        // current sem 1: only sem 1 is seeded — sem 2 hasn't been reached yet
-        verify(progressionService).recordProgression("1MS22CS001", 1, 2022);
-        verify(progressionService, never()).recordProgression(eq("1MS22CS001"), eq(2), anyInt());
-    }
-
-    @Test
-    void createDoesNotSeedForLateralEntry() {
+    void createSeedsFullTimelineForLateralEntryToo() {
         stubCsDept();
         when(studentRepository.save(any(Student.class))).thenAnswer(i -> i.getArgument(0));
 
         service.createStudent(req("1MS22CS001", 5, 3));
 
-        // lateral entrant (entry sem 3): never sat sems 1-2, so nothing is seeded
-        verify(progressionService, never()).recordProgression(any(), anyInt(), anyInt());
+        // lateral entrants are seeded the same way (backfillLinear ranges entry..8,
+        // leaving pre-entry sems empty) — no special-casing at the create layer.
+        verify(progressionService).backfillLinear("1MS22CS001");
     }
 
     @Test

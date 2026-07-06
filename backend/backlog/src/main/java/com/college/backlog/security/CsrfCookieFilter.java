@@ -14,6 +14,11 @@ import java.io.IOException;
  * actually writes the {@code XSRF-TOKEN} cookie on the response. Without this,
  * Spring Security 6 loads the token lazily and the SPA never receives a cookie to
  * echo back as the {@code X-XSRF-TOKEN} header. Runs on every request; cheap.
+ *
+ * Note: the CSRF token is kept STABLE across requests by disabling the per-request
+ * CsrfAuthenticationStrategy rotation in {@link SecurityConfig} — under the stateless
+ * JWT setup that rotation fired on every request and deleted this cookie, which broke
+ * back-to-back mutations (see SecurityConfig for details).
  */
 public class CsrfCookieFilter extends OncePerRequestFilter {
 

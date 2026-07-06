@@ -155,7 +155,7 @@ describe("Manage Students — Progression tab", () => {
     cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2024-25");
   });
 
-  it("shows every semester up to current, with missing ones blank and editable", () => {
+  it("shows every semester through sem 8, with missing ones blank and editable", () => {
     cy.intercept("GET", "/api/admin/progression/1MS24CS191", {
       statusCode: 200,
       body: {
@@ -187,12 +187,14 @@ describe("Manage Students — Progression tab", () => {
     cy.get('[data-cy="prog-lookup-load"]').click();
     cy.wait("@lookup");
 
-    // sem 1 is prefilled; sems 2 and 3 (up to current) render blank + flagged
+    // sem 1 is prefilled; sems 2 and 3 render blank + flagged; the timeline runs all
+    // the way to sem 8 (sems past the current one are shown but muted)
     cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2024-25");
     cy.get('[data-cy="prog-term-year-2"]').should("have.value", "");
     cy.get('[data-cy="prog-term-missing-2"]').should("contain", "not set");
     cy.get('[data-cy="prog-term-year-3"]').should("have.value", "");
     cy.get('[data-cy="prog-term-missing-3"]').should("exist");
+    cy.get('[data-cy="prog-term-year-8"]').should("exist");
 
     // fill a blank row -> PUT override carries the parsed start-year int
     cy.get('[data-cy="prog-term-year-2"]').type("2024-25");

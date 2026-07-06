@@ -44,8 +44,13 @@ public class SecurityConfig {
         // handler so the header value matches the cookie verbatim (what axios sends).
         // Login is exempt — the SPA has no token before it authenticates; every other
         // mutation is protected (the cookie is issued on the login response).
+        // Keep the double-submit token STABLE across requests. See StableCsrfTokenRepository:
+        // the stateless per-request JWT auth otherwise makes CsrfAuthenticationStrategy delete
+        // the XSRF-TOKEN cookie every request, which breaks back-to-back mutations (403 → logout).
+        StableCsrfTokenRepository csrfTokenRepository =
+                new StableCsrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse());
         http.csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository)
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                         .ignoringRequestMatchers("/api/auth/login", "/api/student/auth/login",
                                 "/api/auth/logout", "/api/student/auth/logout"))

@@ -19,12 +19,6 @@ const blank = {
   entrySemester: "1",
 };
 
-// Institutional email derived from the USN: 1MS22CS001 → 1ms22cs001@msrit.edu.
-const deriveEmail = (usn) => {
-  const u = usn.trim();
-  return u ? `${u.toLowerCase()}@msrit.edu` : "";
-};
-
 // keep only digits, max 10
 const cleanPhone = (v) => v.replace(/\D/g, "").slice(0, 10);
 
@@ -109,7 +103,9 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
     >
       <h2 className="mb-2 text-xl font-semibold text-[var(--color-secondary)]">Add a student</h2>
       <p className="mb-6 text-sm text-[var(--text-muted)]">
-        The USN sets the branch and admission year. Date of birth is the student's login credential.
+        The USN sets the branch and admission year, and the email is assigned automatically
+        (usn@msrit.edu). Date of birth is the student's login credential. All eight semesters' academic
+        years are seeded automatically from the USN on create.
         {deptLocked && myDeptCode ? ` Your USNs must use the ${myDeptCode} branch code.` : ""}
       </p>
 
@@ -121,10 +117,17 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
         >
           <BadgeCheck size={20} className="mt-0.5 shrink-0" />
           <div className="text-sm">
-            <p className="font-semibold">{createdRollNo} added — progression is all set.</p>
+            <p className="font-semibold">{createdRollNo} added — full semester timeline seeded.</p>
             <p className="mt-1">
-              Their first-year semesters were recorded automatically. You can register backlogs for
-              them right away.
+              Every semester's academic year (sems 1–8) was recorded automatically from the USN. Adjust
+              the current semester or fix any year on the{" "}
+              <Link
+                to="/admin/students?tab=progression"
+                className="font-semibold underline hover:text-emerald-700"
+              >
+                Progression page
+              </Link>{" "}
+              as the student progresses.
             </p>
           </div>
         </div>
@@ -182,21 +185,6 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
               data-cy="student-name"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="email" className="text-xs font-semibold uppercase tracking-[0.08em]">
-              Email <span className="text-[var(--text-muted)]">(auto, from USN)</span>
-            </label>
-            <input
-              id="email"
-              type="email"
-              className={inputClass}
-              placeholder="usn@msrit.edu"
-              value={deriveEmail(form.rollNo)}
-              readOnly
-              tabIndex={-1}
-              data-cy="student-email"
             />
           </div>
           <div className="flex flex-col gap-1.5">

@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
-import { formatAcademicYear, parseAcademicYear } from "../../lib/academicYear";
+import { parseAcademicYear } from "../../lib/academicYear";
+import { SemesterTimeline } from "./SemesterTimeline";
 
 const inputClass =
   "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
@@ -201,7 +202,9 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
   const loadStudentRoll = useCallback(async (roll) => {
     setSError("");
     setStudent(null);
-    const r = (roll || "").trim();
+    // USNs are stored/validated uppercase; normalize here so a lowercase entry still
+    // resolves (and can't hit the dept-scope 403 path that logs the user out).
+    const r = (roll || "").trim().toUpperCase();
     if (!r) return;
     setSBusy(true);
     try {
@@ -243,6 +246,23 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
       setGBusy(false);
     }
   }, [deptLocked, pinnedDeptId, gDeptId, gAdmissionYear]);
+
+  const saveSemesters = async (currentSemester, entrySemester) => {
+    setSBusy(true);
+    setSError("");
+    try {
+      const res = await api.put(
+        `/admin/progression/${student.rollNo}/current-semester`,
+        { currentSemester, entrySemester },
+        { headers: getAdminHeaders() },
+      );
+      setStudent(res.data);
+    } catch (err) {
+      setSError(err.response?.data?.message || "Could not update semester.");
+    } finally {
+      setSBusy(false);
+    }
+  };
 
   const saveOverride = async (semester, academicYear) => {
     if (!academicYear) {
@@ -557,7 +577,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                   className={`${inputClass} max-w-xs font-mono`}
                   placeholder="USN e.g. 1MS24CS191"
                   value={lookupRoll}
-                  onChange={(e) => setLookupRoll(e.target.value)}
+                  onChange={(e) => setLookupRoll(e.target.value.toUpperCase())}
                   data-cy="prog-lookup-input"
                 />
                 <button
@@ -573,37 +593,22 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
               {sError && <p className="mt-3 text-sm text-red-600">{sError}</p>}
               {student && (
                 <div className="mt-4">
-                  <p className="mb-1 text-sm">
-                    <span className="font-semibold">{student.name}</span> ({student.rollNo}) — current
-                    semester <span className="font-semibold">{student.currentSemester}</span>
-                    {student.entrySemester > 1 ? ` · entry sem ${student.entrySemester}` : ""}
+                  <p className="mb-3 text-sm">
+                    <span className="font-semibold">{student.name}</span>{" "}
+                    <span className="font-mono text-xs text-[var(--text-muted)]">{student.rollNo}</span>
                   </p>
-                  <p className="mb-3 text-xs text-[var(--text-muted)]">
-                    Every semester up to their current one is listed. Blank rows have no academic year
-                    recorded yet — fill and save each to complete their timeline.
+                  <SemesterEditor
+                    key={`${student.rollNo}-${student.currentSemester}-${student.entrySemester}`}
+                    student={student}
+                    onSave={saveSemesters}
+                    busy={sBusy}
+                  />
+                  <p className="mb-3 mt-4 text-xs text-[var(--text-muted)]">
+                    Every semester from entry through semester 8 is listed below — all are editable.
+                    Rows showing a dash have no academic year recorded yet; semesters past the current
+                    one are muted (not yet reached) but can still be set.
                   </p>
-                  <div className="overflow-hidden rounded-xl border border-[var(--stroke)]">
-                    <table className="w-full text-left text-sm">
-                      <thead className="bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                        <tr>
-                          <th className="px-3 py-2">Semester</th>
-                          <th className="px-3 py-2">Academic year</th>
-                          <th className="px-3 py-2"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {buildTimelineRows(student).map((r) => (
-                          <TermRow
-                            key={`${r.semester}-${r.academicYear ?? "none"}`}
-                            semester={r.semester}
-                            academicYear={r.academicYear}
-                            onSave={saveOverride}
-                            busy={sBusy}
-                          />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <SemesterTimeline student={student} onSaveYear={saveOverride} busy={sBusy} />
                 </div>
               )}
             </Card>
@@ -646,55 +651,74 @@ function DeptSelect({ deptLocked, pinnedDeptId, departments, value, onChange }) 
   );
 }
 
-// Full timeline for the correction table: one entry per semester from the student's
-// entry semester up to their current semester. A recorded year is prefilled;
-// semesters with no row come through as academicYear === null (blank + editable).
-function buildTimelineRows(student) {
-  const floor = Math.max(1, student.entrySemester || 1);
-  const bySem = new Map((student.terms || []).map((t) => [t.semester, t.academicYear]));
-  const rows = [];
-  for (let s = floor; s <= student.currentSemester; s++) {
-    rows.push({ semester: s, academicYear: bySem.has(s) ? bySem.get(s) : null });
-  }
-  return rows;
-}
+// Inline editor for the student's current + entry semester, shown above the timeline
+// table so the admin can correct the current semester right where the year-per-semester
+// map is displayed. Keyed on the student's sems in the parent so it re-inits after a save.
+// Changing the current semester widens/narrows the eligibility window and the rows below.
+function SemesterEditor({ student, onSave, busy }) {
+  const semOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+  const [current, setCurrent] = useState(String(student.currentSemester));
+  const [entry, setEntry] = useState(String(student.entrySemester));
 
-function TermRow({ semester, academicYear, onSave, busy }) {
-  const isMissing = academicYear == null;
-  const original = isMissing ? "" : formatAcademicYear(academicYear);
-  const [year, setYear] = useState(original);
+  const changed =
+    Number(current) !== student.currentSemester || Number(entry) !== student.entrySemester;
+  const invalid = Number(entry) > Number(current);
+
   return (
-    <tr className="border-t border-[var(--stroke)]">
-      <td className="px-3 py-2">Semester {semester}</td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <input
+    <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-[0.08em]">Current semester</label>
+          <select
             className={`${inputClass} w-32`}
-            type="text"
-            placeholder="e.g. 2024-25"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            data-cy={`prog-term-year-${semester}`}
-          />
-          {isMissing && (
-            <span className="text-xs font-semibold text-amber-700" data-cy={`prog-term-missing-${semester}`}>
-              not set
-            </span>
-          )}
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            data-cy="prog-current-sem"
+          >
+            {semOptions.map((s) => (
+              <option key={s} value={s}>
+                Semester {s}
+              </option>
+            ))}
+          </select>
         </div>
-      </td>
-      <td className="px-3 py-2">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-[0.08em]">Entry semester</label>
+          <select
+            className={`${inputClass} w-32`}
+            value={entry}
+            onChange={(e) => setEntry(e.target.value)}
+            data-cy="prog-entry-sem"
+          >
+            {semOptions.map((s) => (
+              <option key={s} value={s}>
+                Semester {s}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           type="button"
-          onClick={() => onSave(semester, year)}
-          disabled={busy || !year.trim() || year === original}
-          data-cy={`prog-term-save-${semester}`}
-          className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-50"
+          onClick={() => onSave(Number(current), Number(entry))}
+          disabled={busy || !changed || invalid}
+          data-cy="prog-current-sem-save"
+          className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-2 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-50"
         >
-          Save
+          Save semester
         </button>
-      </td>
-    </tr>
+      </div>
+      {invalid && (
+        <p className="mt-2 text-xs text-red-600" data-cy="prog-sem-invalid">
+          Entry semester cannot be after the current semester.
+        </p>
+      )}
+      {changed && !invalid && (
+        <p className="mt-2 inline-flex items-start gap-1.5 text-xs text-amber-700">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" /> Changing the current semester changes
+          which backlogs this student is eligible to register.
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -191,6 +191,13 @@ public class StudentManagementController {
             } catch (IllegalArgumentException e) {
                 results.add(new ProgressionRowResult(roll, currentSem, "ERROR", e.getMessage()));
                 errors++;
+            } catch (RuntimeException e) {
+                // Any unexpected per-row failure (e.g. a DB constraint) must be reported
+                // as an ERROR row, never allowed to abort the whole batch / surface as a
+                // request-level 4xx/5xx (each createStudent is its own REQUIRES_NEW tx, so
+                // one row's rollback doesn't poison the rest).
+                results.add(new ProgressionRowResult(roll, currentSem, "ERROR", "Could not import this row."));
+                errors++;
             }
         }
         return new BatchResult(req.isDryRun(), created, skipped, errors, results);

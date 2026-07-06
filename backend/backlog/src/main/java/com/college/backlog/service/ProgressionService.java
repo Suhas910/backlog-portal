@@ -84,15 +84,19 @@ public class ProgressionService {
     }
 
     /**
-     * Linear-default backfill for one student: assume no detention and stamp every
-     * semester from their entry semester up to currentSemester with the year derived
-     * from the admission year. The entry semester is the one the student started in
-     * (their admission year), so sem k -> admissionYear + floor((k - entrySem)/2).
-     * For a regular student (entrySem 1) this is admissionYear + floor((k-1)/2); for
-     * a lateral entrant it anchors correctly at their entry year and never invents
-     * the semesters below entry that they never sat. Write-once, so any hand-corrected
-     * rows are preserved. (Assumes entry at the start of an academic year, i.e. an odd
-     * semester — the realistic lateral case; anything else is a hand-correct.)
+     * Linear-default seed for one student: assume no detention and stamp every
+     * semester from their entry semester through the final programme semester (8)
+     * with the year derived from the admission year, so sem k -> admissionYear +
+     * floor((k - entrySem)/2). For a regular student (entrySem 1) this is
+     * admissionYear + floor((k-1)/2) — e.g. a 2024 intake gets sems 1-2 -> 2024,
+     * 3-4 -> 2025, 5-6 -> 2026, 7-8 -> 2027. A lateral entrant anchors at their entry
+     * year and the semesters below entry are never invented (they never sat them).
+     * Seeds the whole plan up front (not just up to currentSemester) so the timeline
+     * is complete the moment a student is created; currentSemester is left untouched.
+     * Write-once, so any hand-corrected rows (e.g. after a year-back) are preserved.
+     * Sems 9-10 are intentionally left empty (reserved for future extensibility).
+     * (Assumes entry at the start of an academic year, i.e. an odd semester — the
+     * realistic lateral case; anything else is a hand-correct.)
      *
      * @return number of rows created
      */
@@ -108,7 +112,7 @@ public class ProgressionService {
         }
         int entry = Math.max(1, student.getEntrySemester());
         int created = 0;
-        for (int sem = entry; sem <= student.getCurrentSemester() && sem <= 8; sem++) {
+        for (int sem = entry; sem <= 8; sem++) {
             if (!termRepository.existsByRollNoAndSemester(rollNo, sem)) {
                 int ay = admissionYear + (sem - entry) / 2;
                 termRepository.save(new StudentSemesterTerm(rollNo, sem, ay));
@@ -124,8 +128,12 @@ public class ProgressionService {
      * reject (no WOULD_CREATE that then errors on apply).
      */
     public void validateSemesterAndYear(int semester, int academicYear) {
-        if (semester < 1 || semester > 8) {
-            throw new IllegalArgumentException("Semester must be between 1 and 8.");
+        // Term rows are permitted through semester 10: a student only *studies* to
+        // sem 8, but the schema keeps 9-10 available for future extensibility, so a
+        // recorded term for those is not rejected here. Eligibility/current-semester
+        // are separately capped at 8 (EligibilityService, validateSemesters).
+        if (semester < 1 || semester > 10) {
+            throw new IllegalArgumentException("Semester must be between 1 and 10.");
         }
         if (academicYear < MIN_ACADEMIC_YEAR || academicYear > Year.now().getValue() + 1) {
             throw new IllegalArgumentException("Academic year " + academicYear + " is out of range.");

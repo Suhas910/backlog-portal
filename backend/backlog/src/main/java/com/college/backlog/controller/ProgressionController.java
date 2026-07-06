@@ -12,6 +12,7 @@ import com.college.backlog.repository.StudentSemesterTermRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.EligibilityService;
 import com.college.backlog.service.ProgressionService;
+import com.college.backlog.service.StudentManagementService;
 import com.college.backlog.service.Usn;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -48,15 +49,17 @@ public class ProgressionController {
     @Autowired private DepartmentRepository departmentRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private EligibilityService eligibilityService;
+    @Autowired private StudentManagementService studentService;
 
     // ---- view ----
 
     @GetMapping("/{rollNo}")
     public StudentProgressionResponse view(@PathVariable String rollNo, Authentication auth) {
         User actor = requireActor(auth);
-        assertInScope(actor, rollNo);
-        Student student = studentRepository.findByRollNo(rollNo)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + rollNo));
+        String roll = studentService.normalizeUsn(rollNo); // uppercase, so a lowercase entry still resolves
+        assertInScope(actor, roll);
+        Student student = studentRepository.findByRollNo(roll)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + roll));
         return toProgressionResponse(student);
     }
 
@@ -184,6 +187,11 @@ public class ProgressionController {
             } catch (IllegalArgumentException e) {
                 results.add(new ProgressionRowResult(roll, row.getSemester(), "ERROR", e.getMessage()));
                 errors++;
+            } catch (RuntimeException e) {
+                // Defensive: an unexpected per-row failure is reported as an ERROR row, not
+                // allowed to abort the batch or surface as a request-level error.
+                results.add(new ProgressionRowResult(roll, row.getSemester(), "ERROR", "Could not import this row."));
+                errors++;
             }
         }
         return new BatchResult(req.isDryRun(), created, skipped, errors, results);
@@ -202,7 +210,7 @@ public class ProgressionController {
             String roll = s.getRollNo();
             try {
                 if (req.isDryRun()) {
-                    int missing = countMissingLinear(roll, s.getEntrySemester(), s.getCurrentSemester());
+                    int missing = countMissingLinear(roll, s.getEntrySemester());
                     results.add(new ProgressionRowResult(roll, null,
                             missing > 0 ? "WOULD_CREATE" : "WOULD_SKIP", missing + " row(s)"));
                     if (missing > 0) created += missing; else skipped++;
@@ -220,6 +228,32 @@ public class ProgressionController {
         return new BatchResult(req.isDryRun(), created, skipped, errors, results);
     }
 
+    // ---- current / entry semester correction ----
+
+    /**
+     * Update just the student's current (and entry) semester from the "View & correct"
+     * screen, returning the refreshed progression view. Changing the current semester
+     * shifts the eligibility window and extends the timeline shown below — hence it lives
+     * next to the per-semester year corrections. Delegates to StudentManagementService so
+     * the 1 ≤ entry ≤ current ≤ 8 validation stays in one place.
+     */
+    @PutMapping("/{rollNo}/current-semester")
+    public StudentProgressionResponse setCurrentSemester(@PathVariable String rollNo,
+                                                         @RequestBody SemesterUpdateRequest req,
+                                                         Authentication auth) {
+        User actor = requireActor(auth);
+        String roll = studentService.normalizeUsn(rollNo);
+        assertInScope(actor, roll);
+        Student student = studentRepository.findByRollNo(roll)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + roll));
+        try {
+            student = studentService.updateSemesters(student, req.getCurrentSemester(), req.getEntrySemester());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+        return toProgressionResponse(student);
+    }
+
     // ---- single-row correction ----
 
     @PutMapping("/{rollNo}/semester/{semester}")
@@ -228,14 +262,15 @@ public class ProgressionController {
                                                @RequestBody ProgressionOverrideRequest req,
                                                Authentication auth) {
         User actor = requireActor(auth);
-        assertInScope(actor, rollNo);
+        String roll = studentService.normalizeUsn(rollNo);
+        assertInScope(actor, roll);
         try {
-            progressionService.overrideProgression(rollNo, semester, req.getAcademicYear(), actor.getUsername());
+            progressionService.overrideProgression(roll, semester, req.getAcademicYear(), actor.getUsername());
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
-        Student student = studentRepository.findByRollNo(rollNo)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + rollNo));
+        Student student = studentRepository.findByRollNo(roll)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + roll));
         return toProgressionResponse(student);
     }
 
@@ -261,7 +296,16 @@ public class ProgressionController {
 
     private void assertInScope(User actor, String rollNo) {
         String code = callerDeptCode(actor);
-        if (code != null && !code.equalsIgnoreCase(studentDeptCode(rollNo))) {
+        if (code == null) return; // ADMIN / PRINCIPAL: unrestricted
+        String studentCode = studentDeptCode(rollNo);
+        // A malformed USN yields no branch code — that's a bad/unknown identifier, not a
+        // department-scope violation. Surface it as 404 (not found) rather than 403, so a
+        // typo in the lookup box can't be read by the client as an auth failure that
+        // clears the session and logs the user out.
+        if (studentCode == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + rollNo);
+        }
+        if (!code.equalsIgnoreCase(studentCode)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Outside your department's scope.");
         }
     }
@@ -291,11 +335,12 @@ public class ProgressionController {
     }
 
     // Count how many rows backfill would create — from the entry semester (not sem 1)
-    // so a lateral entrant's pre-entry semesters aren't counted as missing. Mirrors
-    // ProgressionService.backfillLinear's range so the preview matches the apply.
-    private int countMissingLinear(String rollNo, int entrySemester, int currentSemester) {
+    // through the final programme semester (8), so a lateral entrant's pre-entry
+    // semesters aren't counted as missing. Mirrors ProgressionService.backfillLinear's
+    // range so the preview matches the apply.
+    private int countMissingLinear(String rollNo, int entrySemester) {
         int missing = 0;
-        for (int sem = Math.max(1, entrySemester); sem <= currentSemester && sem <= 8; sem++) {
+        for (int sem = Math.max(1, entrySemester); sem <= 8; sem++) {
             if (!termRepository.existsByRollNoAndSemester(rollNo, sem)) missing++;
         }
         return missing;

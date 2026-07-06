@@ -81,17 +81,14 @@ public class StudentManagementService {
         log.info("STUDENT_CREATE rollNo={} currentSem={} entrySem={}",
                 rollNo, saved.getCurrentSemester(), saved.getEntrySemester());
 
-        // A regular (non-lateral) student always studies sems 1 and 2 in their
-        // admission year — the USN's YY. Seed those progression rows so the admin
-        // doesn't have to, and the "progression incomplete" gap shrinks. Only seed
-        // sems the student has actually reached, so recordProgression (write-once)
-        // never bumps currentSemester. Lateral entrants (entrySem > 1) skip this —
-        // they never sat sems 1–2.
-        if (saved.getEntrySemester() <= 1) {
-            for (int sem = 1; sem <= 2 && sem <= saved.getCurrentSemester(); sem++) {
-                progressionService.recordProgression(rollNo, sem, saved.getYearOfJoining());
-            }
-        }
+        // Seed the student's FULL academic-year timeline up front — every semester
+        // from their entry semester through sem 8, mapped linearly from the admission
+        // year (sems 1-2 -> join year, 3-4 -> +1, ...). This is write-once and does
+        // NOT touch currentSemester (which the admin sets on the form and advances on
+        // the Progression page), so a later year-back is handled by editing the
+        // affected future sems there. Lateral entrants get entry..8; pre-entry sems
+        // stay empty. Runs for the CSV import too (it funnels through here).
+        progressionService.backfillLinear(rollNo);
         return saved;
     }
 
@@ -110,6 +107,23 @@ public class StudentManagementService {
         existing.setEntrySemester(req.getEntrySemester());
         Student saved = studentRepository.save(existing);
         log.info("STUDENT_UPDATE rollNo={} currentSem={} entrySem={}",
+                saved.getRollNo(), saved.getCurrentSemester(), saved.getEntrySemester());
+        return saved;
+    }
+
+    /**
+     * Correct only a student's current + entry semester, leaving name/email/phone/DOB
+     * untouched. Used by the progression "View & correct" screen so the admin can adjust
+     * the current semester right where the academic-year timeline is shown, without having
+     * to round-trip the other fields (which the full update would overwrite).
+     */
+    @Transactional
+    public Student updateSemesters(Student existing, int currentSemester, int entrySemester) {
+        validateSemesters(currentSemester, entrySemester);
+        existing.setCurrentSemester(currentSemester);
+        existing.setEntrySemester(entrySemester);
+        Student saved = studentRepository.save(existing);
+        log.info("STUDENT_SEMESTER_UPDATE rollNo={} currentSem={} entrySem={}",
                 saved.getRollNo(), saved.getCurrentSemester(), saved.getEntrySemester());
         return saved;
     }

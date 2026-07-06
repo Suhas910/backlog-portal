@@ -86,10 +86,11 @@ class ProgressionServiceTest {
 
         int created = service.backfillLinear("1MS24CS191");
 
-        assertThat(created).isEqualTo(4);
+        // the full plan (sems 1..8) is seeded, not just up to currentSemester
+        assertThat(created).isEqualTo(8);
         ArgumentCaptor<StudentSemesterTerm> captor = ArgumentCaptor.forClass(StudentSemesterTerm.class);
-        verify(termRepository, times(4)).save(captor.capture());
-        // regular (entry sem 1): sem 1,2 -> 2024 ; sem 3,4 -> 2025
+        verify(termRepository, times(8)).save(captor.capture());
+        // regular (entry sem 1): 1,2 -> 2024 ; 3,4 -> 2025 ; 5,6 -> 2026 ; 7,8 -> 2027
         // (admissionYear + floor((k - entrySem)/2))
         assertThat(captor.getAllValues())
                 .extracting(StudentSemesterTerm::getSemester, StudentSemesterTerm::getAcademicYear)
@@ -97,7 +98,11 @@ class ProgressionServiceTest {
                         org.assertj.core.groups.Tuple.tuple(1, 2024),
                         org.assertj.core.groups.Tuple.tuple(2, 2024),
                         org.assertj.core.groups.Tuple.tuple(3, 2025),
-                        org.assertj.core.groups.Tuple.tuple(4, 2025));
+                        org.assertj.core.groups.Tuple.tuple(4, 2025),
+                        org.assertj.core.groups.Tuple.tuple(5, 2026),
+                        org.assertj.core.groups.Tuple.tuple(6, 2026),
+                        org.assertj.core.groups.Tuple.tuple(7, 2027),
+                        org.assertj.core.groups.Tuple.tuple(8, 2027));
     }
 
     @Test
@@ -109,18 +114,21 @@ class ProgressionServiceTest {
 
         int created = service.backfillLinear("1MS24CS191");
 
-        // no sem 1-2 (never sat them); entry sem 3 anchors to the admission year
-        assertThat(created).isEqualTo(4);
+        // no sem 1-2 (never sat them); entry sem 3 anchors to the admission year and
+        // the plan runs through sem 8
+        assertThat(created).isEqualTo(6);
         ArgumentCaptor<StudentSemesterTerm> captor = ArgumentCaptor.forClass(StudentSemesterTerm.class);
-        verify(termRepository, times(4)).save(captor.capture());
-        // sem 3,4 -> 2024 ; sem 5,6 -> 2025
+        verify(termRepository, times(6)).save(captor.capture());
+        // sem 3,4 -> 2024 ; 5,6 -> 2025 ; 7,8 -> 2026
         assertThat(captor.getAllValues())
                 .extracting(StudentSemesterTerm::getSemester, StudentSemesterTerm::getAcademicYear)
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple(3, 2024),
                         org.assertj.core.groups.Tuple.tuple(4, 2024),
                         org.assertj.core.groups.Tuple.tuple(5, 2025),
-                        org.assertj.core.groups.Tuple.tuple(6, 2025));
+                        org.assertj.core.groups.Tuple.tuple(6, 2025),
+                        org.assertj.core.groups.Tuple.tuple(7, 2026),
+                        org.assertj.core.groups.Tuple.tuple(8, 2026));
     }
 
     @Test

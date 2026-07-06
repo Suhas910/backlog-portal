@@ -71,6 +71,12 @@ export async function logoutStudent() {
 // are untouched. The student login endpoint itself is excluded.
 function isStudentScopedUrl(url = "") {
   if (url.includes("/student/auth/")) return false;
+  // Admin-side endpoints are never student-scoped. This guard is load-bearing: the
+  // admin student-management URLs are "/admin/students/**", which contain the
+  // substring "/student" — without excluding "/admin/" first, a 401/403 on e.g.
+  // the bulk import (/admin/students/import) would be misread as a student auth
+  // failure and bounce the admin to the STUDENT login page.
+  if (url.includes("/admin/")) return false;
   if (url.includes("/student")) return true;
   // POST /api/register (student submission), but not /register/verify (admin)
   if (url.includes("/register") && !url.includes("/register/verify")) return true;

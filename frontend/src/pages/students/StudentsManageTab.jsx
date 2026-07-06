@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   AlertTriangle,
+  CalendarClock,
   Check,
   KeyRound,
   LoaderCircle,
@@ -11,6 +12,8 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api, { getAdminHeaders } from "../../lib/api";
+import { parseAcademicYear } from "../../lib/academicYear";
+import { SemesterTimeline } from "./SemesterTimeline";
 
 const inputClass =
   "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
@@ -165,6 +168,7 @@ function StudentsManageTab({ departments, adminDepartment, deptLocked, pinnedDep
 // Module scope so identity is stable across parent renders (keeps input focus).
 function StudentRow({ student, onUpdated, onRemoved }) {
   const [mode, setMode] = useState("view"); // view | edit | dob
+  const [showSems, setShowSems] = useState(false); // toggle the sem-year timeline
   const [name, setName] = useState(student.name || "");
   const [email, setEmail] = useState(student.email || "");
   const [phone, setPhone] = useState(student.phone || "");
@@ -287,6 +291,19 @@ function StudentRow({ student, onUpdated, onRemoved }) {
           <div className="flex shrink-0 flex-wrap gap-2">
             <button
               type="button"
+              onClick={() => setShowSems((v) => !v)}
+              data-cy={`student-sems-${student.rollNo}`}
+              aria-expanded={showSems}
+              className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                showSems
+                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "border-[var(--stroke)] hover:border-[var(--color-primary)]"
+              }`}
+            >
+              <CalendarClock size={13} /> Semesters
+            </button>
+            <button
+              type="button"
               onClick={startEdit}
               data-cy={`student-edit-${student.rollNo}`}
               className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)]"
@@ -322,6 +339,7 @@ function StudentRow({ student, onUpdated, onRemoved }) {
             {error}
           </p>
         )}
+        {showSems && <StudentSemesters rollNo={student.rollNo} />}
       </div>
     );
   }
@@ -465,6 +483,80 @@ function StudentRow({ student, onUpdated, onRemoved }) {
           <X size={14} /> Cancel
         </button>
       </div>
+    </div>
+  );
+}
+
+// Per-student sem-year timeline, loaded on demand under a student's card. Same view
+// + edit as the Progression tab (shared SemesterTimeline), so an admin can correct a
+// student's academic-year mapping (e.g. after a year-back) right from Manage Students.
+// Current/entry semester stay editable in the row's Edit form and on the Progression
+// page; this panel is only the per-semester academic years.
+function StudentSemesters({ rollNo }) {
+  const [data, setData] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let ignore = false;
+    setBusy(true);
+    setError("");
+    api
+      .get(`/admin/progression/${rollNo}`, { headers: getAdminHeaders() })
+      .then((res) => {
+        if (!ignore) setData(res.data);
+      })
+      .catch((err) => {
+        if (!ignore) setError(err.response?.data?.message || "Could not load semesters.");
+      })
+      .finally(() => {
+        if (!ignore) setBusy(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [rollNo]);
+
+  const saveYear = async (semester, yearStr) => {
+    const parsed = parseAcademicYear(yearStr);
+    if (Number.isNaN(parsed)) {
+      setError("Enter the academic year as a range or start year, e.g. 2024-25.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api.put(
+        `/admin/progression/${rollNo}/semester/${semester}`,
+        { academicYear: parsed },
+        { headers: getAdminHeaders() },
+      );
+      setData(res.data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Could not save.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t border-[var(--stroke)] pt-3" data-cy={`student-sems-panel-${rollNo}`}>
+      <p className="mb-2 text-xs text-[var(--text-muted)]">
+        Academic year the student studied each semester (entry through 8). Blank rows aren't set yet;
+        semesters past the current one are muted but still editable.
+      </p>
+      {busy && !data ? (
+        <p className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)]">
+          <LoaderCircle size={15} className="animate-spin" /> Loading semesters…
+        </p>
+      ) : data ? (
+        <SemesterTimeline student={data} onSaveYear={saveYear} busy={busy} />
+      ) : null}
+      {error && (
+        <p className="mt-2 text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
