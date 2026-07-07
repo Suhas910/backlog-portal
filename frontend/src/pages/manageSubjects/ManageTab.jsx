@@ -2,6 +2,8 @@ import { useState, useCallback } from "react";
 import {
   BookOpen,
   Check,
+  ChevronLeft,
+  ChevronRight,
   LoaderCircle,
   Pencil,
   Search,
@@ -15,6 +17,8 @@ import CourseCodeField from "../../components/ui/CourseCodeField";
 const inputClass =
   "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
 
+const PAGE_SIZE = 25;
+
 // Browse / edit / delete the subject catalog. Presentational tab — the shell
 // supplies departments + the dept-lock context; this tab only filters and loads.
 function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
@@ -23,24 +27,40 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
   const [fSemester, setFSemester] = useState("");
 
   const [subjects, setSubjects] = useState(null); // null = not loaded yet
+  // server-side pagination: mirrors the Spring Page envelope (0-based `number`)
+  const [pageInfo, setPageInfo] = useState({ number: 0, totalPages: 0, totalElements: 0 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const effectiveDeptId = deptLocked ? pinnedDeptId : fDeptId;
 
-  const loadSubjects = useCallback(async () => {
+  // The endpoint is paginated: it returns a Page ({content, totalPages, ...}), never
+  // a bare array. Loading the whole catalog unfiltered previously timed the client
+  // out; now each call pulls one page (default first). Filters reset to page 0.
+  const loadSubjects = useCallback(async (targetPage = 0) => {
     setError("");
     setBusy(true);
     try {
-      const params = {};
+      const params = { page: targetPage, size: PAGE_SIZE };
       if (effectiveDeptId) params.deptId = Number(effectiveDeptId);
       const y = parseAcademicYear(fYear);
       if (fYear && !Number.isNaN(y)) params.academicYearOffered = y;
       if (fSemester) params.semester = Number(fSemester);
       const res = await api.get("/admin/subjects", { headers: getAdminHeaders(), params });
-      setSubjects(Array.isArray(res.data) ? res.data : []);
+      const data = res.data || {};
+      setSubjects(Array.isArray(data.content) ? data.content : []);
+      setPageInfo({
+        number: data.number ?? 0,
+        totalPages: data.totalPages ?? 0,
+        totalElements: data.totalElements ?? 0,
+      });
     } catch (err) {
-      setError(err.response?.data?.message || "Could not load subjects.");
+      setError(
+        err.response?.data?.message ||
+          (err.code === "ECONNABORTED"
+            ? "Loading timed out. Narrow the filters and try again."
+            : "Could not load subjects."),
+      );
     } finally {
       setBusy(false);
     }
@@ -122,7 +142,7 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
         <div className="mt-4">
           <button
             type="button"
-            onClick={loadSubjects}
+            onClick={() => loadSubjects(0)}
             disabled={busy}
             data-cy="subjects-load"
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
@@ -142,19 +162,60 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
               No subjects match these filters.
             </p>
           ) : (
-            subjects.map((subject) => (
-              <SubjectRow
-                key={subject.id}
-                subject={subject}
-                departments={departments}
-                onUpdated={onUpdated}
-                onRemoved={onRemoved}
-              />
-            ))
+            <>
+              {subjects.map((subject) => (
+                <SubjectRow
+                  key={subject.id}
+                  subject={subject}
+                  departments={departments}
+                  onUpdated={onUpdated}
+                  onRemoved={onRemoved}
+                />
+              ))}
+              {pageInfo.totalPages > 1 && (
+                <Pager pageInfo={pageInfo} busy={busy} onGo={loadSubjects} noun="subjects" />
+              )}
+            </>
           )}
         </section>
       )}
     </>
+  );
+}
+
+// Prev/next pager over a Spring Page envelope. `onGo(pageIndex)` re-fetches, keeping
+// the current filters (the loader reads them from state).
+function Pager({ pageInfo, busy, onGo, noun }) {
+  const { number, totalPages, totalElements } = pageInfo;
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+      data-cy={`${noun}-pager`}
+    >
+      <span className="text-[var(--text-muted)]">
+        Page {number + 1} of {totalPages} · {totalElements} {noun}
+      </span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onGo(number - 1)}
+          disabled={busy || number <= 0}
+          data-cy={`${noun}-prev`}
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+        >
+          <ChevronLeft size={13} /> Prev
+        </button>
+        <button
+          type="button"
+          onClick={() => onGo(number + 1)}
+          disabled={busy || number >= totalPages - 1}
+          data-cy={`${noun}-next`}
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+        >
+          Next <ChevronRight size={13} />
+        </button>
+      </div>
+    </div>
   );
 }
 

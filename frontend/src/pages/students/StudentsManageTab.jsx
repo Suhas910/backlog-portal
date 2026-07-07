@@ -3,6 +3,8 @@ import {
   AlertTriangle,
   CalendarClock,
   Check,
+  ChevronLeft,
+  ChevronRight,
   KeyRound,
   LoaderCircle,
   Pencil,
@@ -18,6 +20,8 @@ import { SemesterTimeline } from "./SemesterTimeline";
 const inputClass =
   "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
 
+const PAGE_SIZE = 25;
+
 // Browse / edit / delete / reset-DOB the student roster. Presentational tab — the
 // shell supplies departments + the dept-lock context.
 function StudentsManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
@@ -27,24 +31,40 @@ function StudentsManageTab({ departments, adminDepartment, deptLocked, pinnedDep
   const [fQuery, setFQuery] = useState("");
 
   const [students, setStudents] = useState(null); // null = not loaded yet
+  // server-side pagination: mirrors the Spring Page envelope (0-based `number`)
+  const [pageInfo, setPageInfo] = useState({ number: 0, totalPages: 0, totalElements: 0 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const effectiveDeptId = deptLocked ? pinnedDeptId : fDeptId;
 
-  const load = useCallback(async () => {
+  // The endpoint is paginated: it returns a Page ({content, totalPages, ...}), never
+  // a bare array. Loading the whole roster unfiltered previously timed the client
+  // out; now each call pulls one page (default first). Filters reset to page 0.
+  const load = useCallback(async (targetPage = 0) => {
     setError("");
     setBusy(true);
     try {
-      const params = {};
+      const params = { page: targetPage, size: PAGE_SIZE };
       if (effectiveDeptId) params.deptId = Number(effectiveDeptId);
       if (fYear && /^\d{4}$/.test(fYear.trim())) params.admissionYear = Number(fYear.trim());
       if (fSemester) params.semester = Number(fSemester);
       if (fQuery.trim()) params.query = fQuery.trim();
       const res = await api.get("/admin/students", { headers: getAdminHeaders(), params });
-      setStudents(Array.isArray(res.data) ? res.data : []);
+      const data = res.data || {};
+      setStudents(Array.isArray(data.content) ? data.content : []);
+      setPageInfo({
+        number: data.number ?? 0,
+        totalPages: data.totalPages ?? 0,
+        totalElements: data.totalElements ?? 0,
+      });
     } catch (err) {
-      setError(err.response?.data?.message || "Could not load students.");
+      setError(
+        err.response?.data?.message ||
+          (err.code === "ECONNABORTED"
+            ? "Loading timed out. Narrow the filters and try again."
+            : "Could not load students."),
+      );
     } finally {
       setBusy(false);
     }
@@ -130,7 +150,7 @@ function StudentsManageTab({ departments, adminDepartment, deptLocked, pinnedDep
         <div className="mt-4">
           <button
             type="button"
-            onClick={load}
+            onClick={() => load(0)}
             disabled={busy}
             data-cy="students-load"
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
@@ -150,18 +170,59 @@ function StudentsManageTab({ departments, adminDepartment, deptLocked, pinnedDep
               No students match these filters.
             </p>
           ) : (
-            students.map((student) => (
-              <StudentRow
-                key={student.rollNo}
-                student={student}
-                onUpdated={onUpdated}
-                onRemoved={onRemoved}
-              />
-            ))
+            <>
+              {students.map((student) => (
+                <StudentRow
+                  key={student.rollNo}
+                  student={student}
+                  onUpdated={onUpdated}
+                  onRemoved={onRemoved}
+                />
+              ))}
+              {pageInfo.totalPages > 1 && (
+                <Pager pageInfo={pageInfo} busy={busy} onGo={load} noun="students" />
+              )}
+            </>
           )}
         </section>
       )}
     </>
+  );
+}
+
+// Prev/next pager over a Spring Page envelope. `onGo(pageIndex)` re-fetches, keeping
+// the current filters (the loader reads them from state).
+function Pager({ pageInfo, busy, onGo, noun }) {
+  const { number, totalPages, totalElements } = pageInfo;
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+      data-cy={`${noun}-pager`}
+    >
+      <span className="text-[var(--text-muted)]">
+        Page {number + 1} of {totalPages} · {totalElements} {noun}
+      </span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onGo(number - 1)}
+          disabled={busy || number <= 0}
+          data-cy={`${noun}-prev`}
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+        >
+          <ChevronLeft size={13} /> Prev
+        </button>
+        <button
+          type="button"
+          onClick={() => onGo(number + 1)}
+          disabled={busy || number >= totalPages - 1}
+          data-cy={`${noun}-next`}
+          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+        >
+          Next <ChevronRight size={13} />
+        </button>
+      </div>
+    </div>
   );
 }
 

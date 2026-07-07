@@ -27,7 +27,11 @@ describe("Students page", () => {
 
   const visitManageAndLoad = () => {
     stubDepartments();
-    cy.intercept("GET", "/api/admin/students*", { statusCode: 200, body: [student] }).as("getStudents");
+    // the list endpoint returns a Spring Page envelope, not a bare array
+    cy.intercept("GET", "/api/admin/students*", {
+      statusCode: 200,
+      body: { content: [student], number: 0, totalPages: 1, totalElements: 1 },
+    }).as("getStudents");
     cy.visit("/admin/students", { onBeforeLoad: seed });
     cy.wait("@getDepartments");
     cy.get('[data-cy="students-load"]').click();

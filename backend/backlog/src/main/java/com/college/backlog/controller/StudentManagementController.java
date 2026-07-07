@@ -15,6 +15,9 @@ import com.college.backlog.service.StudentSpecification;
 import com.college.backlog.service.Usn;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,6 +43,11 @@ public class StudentManagementController {
 
     private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
+    // Page-size guards mirror AdminController: a cap so `size` can't be used to pull
+    // the whole (ever-growing) roster in one request, and a sane default page.
+    private static final int MAX_PAGE_SIZE = 200;
+    private static final int DEFAULT_PAGE_SIZE = 25;
+
     @Autowired private StudentRepository studentRepository;
     @Autowired private StudentSemesterTermRepository termRepository;
     @Autowired private DepartmentRepository departmentRepository;
@@ -49,12 +57,17 @@ public class StudentManagementController {
 
     // ---- list ----
 
+    // Returns a Spring Page envelope ({content, totalPages, totalElements, number, ...}).
+    // Previously an unbounded findAll, which timed out the client on an unfiltered
+    // "load everything" once the roster grew — hence pagination, matching /registrations.
     @GetMapping
-    public List<StudentSummaryResponse> list(
+    public Page<StudentSummaryResponse> list(
             @RequestParam Optional<Long> deptId,
             @RequestParam Optional<Integer> admissionYear,
             @RequestParam Optional<Integer> semester,
             @RequestParam Optional<String> query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
             Authentication auth) {
         User actor = requireActor(auth);
         String deptCode = effectiveDeptCode(actor, deptId.orElse(null));
@@ -62,15 +75,17 @@ public class StudentManagementController {
 
         StudentSpecification spec =
             new StudentSpecification(rollNoLike, semester.orElse(null), query.orElse(null));
-        List<Student> students = studentRepository.findAll(spec, Sort.by("rollNo"));
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int safePage = Math.max(page, 0);
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("rollNo"));
+        Page<Student> studentsPage = studentRepository.findAll(spec, pageable);
 
-        // batch the term lookup so progressionComplete is one query, not N
+        // batch the term lookup over just this page's roll numbers so progressionComplete
+        // is one query, not N
         Map<String, Set<Integer>> termsByRoll = termsByRoll(
-            students.stream().map(Student::getRollNo).collect(Collectors.toList()));
+            studentsPage.getContent().stream().map(Student::getRollNo).collect(Collectors.toList()));
 
-        return students.stream()
-            .map(s -> toSummary(s, termsByRoll.getOrDefault(s.getRollNo(), Set.of())))
-            .collect(Collectors.toList());
+        return studentsPage.map(s -> toSummary(s, termsByRoll.getOrDefault(s.getRollNo(), Set.of())));
     }
 
     // ---- create ----

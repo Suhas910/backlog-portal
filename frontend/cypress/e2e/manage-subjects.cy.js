@@ -25,7 +25,11 @@ describe("Manage Subjects page", () => {
       statusCode: 200,
       body: [{ id: 1, deptName: "Computer Science" }],
     }).as("getDepartments");
-    cy.intercept("GET", "/api/admin/subjects*", { statusCode: 200, body: [subject] }).as("getSubjects");
+    // the list endpoint returns a Spring Page envelope, not a bare array
+    cy.intercept("GET", "/api/admin/subjects*", {
+      statusCode: 200,
+      body: { content: [subject], number: 0, totalPages: 1, totalElements: 1 },
+    }).as("getSubjects");
     cy.visit("/admin/manage-subjects", { onBeforeLoad: seed });
     cy.wait("@getDepartments");
     cy.get('[data-cy="subjects-load"]').click();
