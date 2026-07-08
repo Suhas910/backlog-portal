@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,7 +89,7 @@ class RegistrationServiceTest {
                 .thenReturn(List.of(existing));
 
         ResponseStatusException ex = catchThrowableOfType(
-                () -> service.register(ROLL, List.of(100L)), ResponseStatusException.class);
+                ResponseStatusException.class, () -> service.register(ROLL, List.of(100L)));
 
         assertThat(ex).isNotNull();
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);

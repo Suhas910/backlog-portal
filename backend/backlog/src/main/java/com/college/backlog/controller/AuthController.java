@@ -1,10 +1,8 @@
 package com.college.backlog.controller;
 
 import com.college.backlog.controller.dto.ChangePasswordRequest;
-import com.college.backlog.model.Department;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
-import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.JwtService;
 import com.college.backlog.security.LoginThrottleService;
@@ -36,9 +34,6 @@ public class AuthController {
 
     @Autowired
     private LoginThrottleService throttle;
-
-    @Autowired
-    private DepartmentRepository departmentRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
