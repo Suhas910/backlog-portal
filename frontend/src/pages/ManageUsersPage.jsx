@@ -75,6 +75,10 @@ function ManageUsersPage() {
   }, []);
 
   useEffect(() => {
+    // NOTE: eslint react-hooks/set-state-in-effect flags this (loadUsers setStates
+    // internally). Intended and correct — a fetch-on-mount into an external system;
+    // state lands in the async .then/.finally. Left as a knowing lint error (not
+    // disabled).
     loadUsers();
     api
       .get("/departments")
@@ -83,6 +87,12 @@ function ManageUsersPage() {
   }, [loadUsers]);
 
   // Pin the department to the HOD's own once departments are loaded.
+  // NOTE: eslint react-hooks/set-state-in-effect flags the setNewDeptId below.
+  // Intended and correct — this seeds an *editable* create-form field once the
+  // async departments list arrives (the user can still change it when not
+  // dept-locked, and it's reset after each create). That makes it initialization
+  // of editable state, not pure derivation, so useMemo doesn't apply here. Left as
+  // a knowing lint error (not disabled).
   useEffect(() => {
     if (deptLocked && adminDepartment && departments.length > 0) {
       const myDept = departments.find((d) => d.deptName === adminDepartment);

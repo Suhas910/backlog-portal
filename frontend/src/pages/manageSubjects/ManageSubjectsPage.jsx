@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, BookOpen, Copy, PlusCircle } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../../components/layout/BrandIdentity";
@@ -35,7 +35,15 @@ function ManageSubjectsPage() {
   const deptLocked = DEPT_ROLES.has(adminRole);
 
   const [departments, setDepartments] = useState([]);
-  const [pinnedDeptId, setPinnedDeptId] = useState("");
+
+  // dept-scoped roles are pinned to their own department across every tab. Pure
+  // derivation from (departments, role, dept) — computed during render instead of
+  // stored via an effect, so it resolves on first paint with no cascading render.
+  const pinnedDeptId = useMemo(() => {
+    if (!(deptLocked && adminDepartment && departments.length > 0)) return "";
+    const mine = departments.find((d) => d.deptName === adminDepartment);
+    return mine ? String(mine.id) : "";
+  }, [departments, deptLocked, adminDepartment]);
 
   // whitelist the query param; default + fall back to "manage"
   const tabParam = searchParams.get("tab");
@@ -50,15 +58,6 @@ function ManageSubjectsPage() {
     api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
   }, [adminRole, navigate]);
 
-  // dept-scoped roles are pinned to their own department across every tab
-  useEffect(() => {
-    if (deptLocked && adminDepartment && departments.length > 0) {
-      const mine = departments.find((d) => d.deptName === adminDepartment);
-      if (mine) {
-        setPinnedDeptId(String(mine.id));
-      }
-    }
-  }, [departments, deptLocked, adminDepartment]);
 
   const shared = { departments, adminRole, adminDepartment, deptLocked, pinnedDeptId };
 

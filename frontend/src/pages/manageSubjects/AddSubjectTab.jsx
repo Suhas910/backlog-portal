@@ -27,7 +27,13 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // dept-scoped roles are pinned to their own department (resolved by the shell)
+  // dept-scoped roles are pinned to their own department (resolved by the shell).
+  // NOTE: eslint react-hooks/set-state-in-effect flags the setFormData below.
+  // Intended and correct — this seeds one field of the *editable* form once the
+  // shell resolves the async pin (the user still edits the rest of formData, and
+  // deptId is reset after each submit). That's initialization of editable state,
+  // not pure derivation, so useMemo doesn't apply. Left as a knowing lint error
+  // (not disabled).
   useEffect(() => {
     if (deptLocked && pinnedDeptId) {
       setFormData((prev) => ({ ...prev, deptId: pinnedDeptId }));

@@ -56,6 +56,10 @@ function StudentDashboardPage() {
     }
   }, []);
 
+  // NOTE: eslint react-hooks/set-state-in-effect flags this (load setStates
+  // internally). Intended and correct — a fetch-on-mount into an external system;
+  // state lands in the async body/finally. Left as a knowing lint error (not
+  // disabled).
   useEffect(() => {
     load();
   }, [load]);

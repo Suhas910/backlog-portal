@@ -558,6 +558,10 @@ function StudentSemesters({ rollNo }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  // NOTE: eslint react-hooks/set-state-in-effect flags the setBusy/setError below.
+  // Intended and correct — leading busy/error reset for an API fetch, exactly the
+  // "synchronize with an external system" case the rule carves out. Left as a
+  // knowing lint error (not disabled).
   useEffect(() => {
     let ignore = false;
     setBusy(true);

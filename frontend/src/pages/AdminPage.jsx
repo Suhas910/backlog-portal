@@ -102,6 +102,10 @@ function AdminPage() {
 
     // ignore guards against a stale response landing after a newer filter change
     let ignore = false;
+    // NOTE: eslint react-hooks/set-state-in-effect flags this setState. Intended
+    // and correct — a leading loading flag for an API fetch, exactly the
+    // "synchronize with an external system" case the rule carves out. Left as a
+    // knowing lint error (not disabled).
     setLoadingSubjects(true);
     const subjectParams = new URLSearchParams();
     if (typeFilter) subjectParams.append("subjectType", typeFilter);

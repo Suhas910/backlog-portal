@@ -16,7 +16,6 @@ import java.util.Optional;
 @Repository
 public interface RegistrationRepository extends JpaRepository<Registration, Long>, JpaSpecificationExecutor<Registration> {
     Optional<Registration> findByRegId(String regId);
-    List<Registration> findAllByOrderByRegisteredAtDesc();
 
     @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
     List<Registration> findByStudent_RollNo(String rollNo);

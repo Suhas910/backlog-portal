@@ -66,6 +66,11 @@ function RegistrationPage() {
 
   // Subjects are resolved by the server from the student's progression — the
   // academic year is no longer a client choice. We send only the semester.
+  // NOTE: eslint react-hooks/set-state-in-effect flags the resets below. Intended
+  // and correct — this effect fetches subjects for the chosen semester; when no
+  // semester is selected it clears the previous results before bailing. Both the
+  // clear and the fetch are synchronizing UI with an external system, the case the
+  // rule carves out. Left as a knowing lint error (not disabled).
   useEffect(() => {
     if (!searchSemester) {
       setSubjects([]);

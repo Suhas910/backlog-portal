@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ArrowLeft, CalendarClock, GraduationCap, UploadCloud, UserPlus, Users } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../../components/layout/BrandIdentity";
@@ -34,7 +34,15 @@ function StudentsPage() {
   const deptLocked = DEPT_ROLES.has(adminRole);
 
   const [departments, setDepartments] = useState([]);
-  const [pinnedDeptId, setPinnedDeptId] = useState("");
+
+  // Dept-scoped roles are pinned to their own department. This is pure derivation
+  // from (departments, role, dept) — computed during render, not stored via an
+  // effect, so it's resolved on first paint with no cascading re-render.
+  const pinnedDeptId = useMemo(() => {
+    if (!(deptLocked && adminDepartment && departments.length > 0)) return "";
+    const mine = departments.find((d) => d.deptName === adminDepartment);
+    return mine ? String(mine.id) : "";
+  }, [departments, deptLocked, adminDepartment]);
 
   const tabParam = searchParams.get("tab");
   const activeTab = TAB_KEYS.has(tabParam) ? tabParam : "manage";
@@ -47,15 +55,6 @@ function StudentsPage() {
     }
     api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
   }, [adminRole, navigate]);
-
-  useEffect(() => {
-    if (deptLocked && adminDepartment && departments.length > 0) {
-      const mine = departments.find((d) => d.deptName === adminDepartment);
-      if (mine) {
-        setPinnedDeptId(String(mine.id));
-      }
-    }
-  }, [departments, deptLocked, adminDepartment]);
 
   const shared = { departments, adminRole, adminDepartment, deptLocked, pinnedDeptId };
 

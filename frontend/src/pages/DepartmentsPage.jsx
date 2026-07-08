@@ -61,6 +61,10 @@ function DepartmentsPage() {
       navigate("/admin/login");
       return;
     }
+    // NOTE: eslint react-hooks/set-state-in-effect flags this (loadDepartments
+    // setStates internally). Intended and correct — a fetch-on-mount into an
+    // external system; state lands in the async .then/.finally. Left as a knowing
+    // lint error (not disabled).
     loadDepartments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
