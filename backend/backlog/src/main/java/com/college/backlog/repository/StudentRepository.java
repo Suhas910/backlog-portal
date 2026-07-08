@@ -18,4 +18,9 @@ public interface StudentRepository extends JpaRepository<Student, String>, JpaSp
     // 2024 CS batch, "1MS__CS%" for all CS years.
     List<Student> findByRollNoLikeOrderByRollNo(String pattern);
     List<Student> findByRollNoInOrderByRollNo(Collection<String> rollNos);
+
+    // Department-delete guard: students carry their branch as the 2-letter code
+    // (no FK), so a department can't be removed while students of that branch exist
+    // — they'd be left unable to register.
+    boolean existsByBranchIgnoreCase(String branch);
 }

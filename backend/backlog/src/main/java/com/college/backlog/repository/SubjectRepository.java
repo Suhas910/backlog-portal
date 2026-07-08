@@ -21,4 +21,10 @@ public interface SubjectRepository extends JpaRepository<Subject, Long>, JpaSpec
 
     // Skip-existing guard for cloning (backed by UNIQUE(course_code, academic_year_offered)).
     boolean existsByCourseCodeAndAcademicYearOffered(String courseCode, int academicYearOffered);
+
+    // Department-delete guards: block removing a department still referenced by any
+    // subject, either as the owning department (dept_id) or in the eligibility join
+    // table (subject_eligible_departments) — otherwise the FK would break.
+    boolean existsByDepartment_Id(Long departmentId);
+    boolean existsByEligibleDepartments_Id(Long departmentId);
 }

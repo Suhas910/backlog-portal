@@ -17,6 +17,8 @@ import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.ExamCycleRepository;
 import com.college.backlog.repository.RegistrationEventRepository;
 import com.college.backlog.repository.RegistrationRepository;
+import com.college.backlog.repository.StudentRepository;
+import com.college.backlog.repository.SubjectRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.RegistrationSpecification;
 import com.college.backlog.service.PdfService;
@@ -60,6 +62,12 @@ public class AdminController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SubjectRepository subjectRepository;
+
+    @Autowired
+    private StudentRepository studentRepository;
 
     @Autowired
     private PdfService pdfService;
@@ -258,6 +266,33 @@ public class AdminController {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "This department was just changed by someone else. Reload and try again.");
         }
+    }
+
+    // Delete a department, restricted to ADMIN/PRINCIPAL like create/edit. Blocked
+    // (409) if the department is still referenced anywhere — a subject (owning or
+    // eligible), a staff user, or a student of that branch — since removing it would
+    // break the FK and orphan those records. Discontinue an in-use department by not
+    // referencing it, not by deleting.
+    @DeleteMapping("/departments/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL')")
+    public void deleteDepartment(@PathVariable Long id) {
+        Department dept = departmentRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + id));
+
+        if (subjectRepository.existsByDepartment_Id(id) || subjectRepository.existsByEligibleDepartments_Id(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This department is referenced by existing subjects and cannot be deleted.");
+        }
+        if (userRepository.existsByDepartment_Id(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This department is assigned to one or more staff users and cannot be deleted.");
+        }
+        if (dept.getCode() != null && studentRepository.existsByBranchIgnoreCase(dept.getCode())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This department has students of its branch and cannot be deleted.");
+        }
+        departmentRepository.delete(dept);
     }
 
     @GetMapping("/subjects-for-filter")

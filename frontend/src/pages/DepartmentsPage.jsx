@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Building2, LoaderCircle, PlusCircle, Save } from "lucide-react";
+import { ArrowLeft, Building2, LoaderCircle, PlusCircle, Save, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
@@ -24,9 +24,14 @@ function DepartmentsPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // inline code edits keyed by department id
+  // inline code + email edits keyed by department id
   const [codeEdits, setCodeEdits] = useState({});
+  const [emailEdits, setEmailEdits] = useState({});
   const [savingId, setSavingId] = useState(null);
+
+  // two-step delete: first click arms the confirm, second click deletes
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   const inputClass =
     "rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]";
@@ -39,6 +44,9 @@ function DepartmentsPage() {
         setDepartments(res.data);
         setCodeEdits(
           res.data.reduce((acc, d) => ({ ...acc, [d.id]: d.code || "" }), {}),
+        );
+        setEmailEdits(
+          res.data.reduce((acc, d) => ({ ...acc, [d.id]: d.contactEmail || "" }), {}),
         );
       })
       .catch((err) => {
@@ -92,12 +100,19 @@ function DepartmentsPage() {
     }
   };
 
-  const handleSaveCode = async (dept) => {
+  const handleSaveRow = async (dept) => {
     const nextCode = (codeEdits[dept.id] || "").trim();
+    const nextEmail = (emailEdits[dept.id] || "").trim();
     setError("");
     setSuccess("");
     if (!/^[A-Za-z]{2}$/.test(nextCode)) {
       setError(`Code for ${dept.deptName} must be exactly 2 letters.`);
+      return;
+    }
+    // Email is optional; if provided, sanity-check it client-side (the server also
+    // enforces @Email). A blank field clears the address (sent as null).
+    if (nextEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      setError(`Contact email for ${dept.deptName} must be a valid address.`);
       return;
     }
     setSavingId(dept.id);
@@ -107,14 +122,14 @@ function DepartmentsPage() {
         {
           deptName: dept.deptName,
           code: nextCode.toUpperCase(),
-          contactEmail: dept.contactEmail || null,
+          contactEmail: nextEmail || null,
           // version the row was loaded at — lets the server reject a stale
           // overwrite if another admin saved this department in the meantime
           version: dept.version,
         },
         { headers: getAdminHeaders() },
       );
-      setSuccess(`Code for "${dept.deptName}" saved.`);
+      setSuccess(`Department "${dept.deptName}" saved.`);
       loadDepartments();
     } catch (err) {
       // 409 = someone edited this department underneath us. Resync the list so
@@ -126,10 +141,28 @@ function DepartmentsPage() {
         );
         loadDepartments();
       } else {
-        setError(err.response?.data?.message || "Failed to save code.");
+        setError(err.response?.data?.message || "Failed to save department.");
       }
     } finally {
       setSavingId(null);
+    }
+  };
+
+  const handleDelete = async (dept) => {
+    setError("");
+    setSuccess("");
+    setDeletingId(dept.id);
+    try {
+      await api.delete(`/admin/departments/${dept.id}`, { headers: getAdminHeaders() });
+      setSuccess(`Department "${dept.deptName}" deleted.`);
+      setConfirmDeleteId(null);
+      loadDepartments();
+    } catch (err) {
+      // 409 = still referenced (subjects / users / students). Surface the server's
+      // specific reason so the admin knows what to clear first.
+      setError(err.response?.data?.message || "Failed to delete department.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -244,16 +277,24 @@ function DepartmentsPage() {
                   key={d.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-semibold text-[var(--text-main)]">{d.deptName}</p>
-                    {d.contactEmail && (
-                      <p className="text-xs text-[var(--text-muted)]">{d.contactEmail}</p>
-                    )}
                     {!d.code && (
                       <p className="text-xs text-red-600">No code set — students of this branch cannot register.</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="email"
+                      data-cy={`dept-email-input-${d.id}`}
+                      value={emailEdits[d.id] ?? ""}
+                      onChange={(e) =>
+                        setEmailEdits((prev) => ({ ...prev, [d.id]: e.target.value }))
+                      }
+                      placeholder="cse@msrit.edu"
+                      aria-label={`Contact email for ${d.deptName}`}
+                      className={`w-48 ${inputClass}`}
+                    />
                     <input
                       type="text"
                       data-cy={`dept-code-input-${d.id}`}
@@ -266,13 +307,18 @@ function DepartmentsPage() {
                       }
                       placeholder="CS"
                       maxLength={2}
+                      aria-label={`Code for ${d.deptName}`}
                       className={`w-16 text-center uppercase ${inputClass}`}
                     />
                     <button
                       type="button"
                       data-cy={`dept-save-${d.id}`}
-                      onClick={() => handleSaveCode(d)}
-                      disabled={savingId === d.id || (codeEdits[d.id] || "") === (d.code || "")}
+                      onClick={() => handleSaveRow(d)}
+                      disabled={
+                        savingId === d.id ||
+                        ((codeEdits[d.id] || "") === (d.code || "") &&
+                          (emailEdits[d.id] || "") === (d.contactEmail || ""))
+                      }
                       className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-secondary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"
                     >
                       {savingId === d.id ? (
@@ -282,6 +328,48 @@ function DepartmentsPage() {
                       )}
                       Save
                     </button>
+                    {confirmDeleteId === d.id ? (
+                      <>
+                        <button
+                          type="button"
+                          data-cy={`dept-delete-confirm-${d.id}`}
+                          onClick={() => handleDelete(d)}
+                          disabled={deletingId === d.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {deletingId === d.id ? (
+                            <LoaderCircle size={14} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                          Confirm
+                        </button>
+                        <button
+                          type="button"
+                          data-cy={`dept-delete-cancel-${d.id}`}
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={deletingId === d.id}
+                          className="inline-flex items-center rounded-lg border border-[var(--stroke)] px-3 py-2 text-xs font-semibold text-[var(--text-main)] transition-colors hover:bg-[var(--surface-1)] disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        data-cy={`dept-delete-${d.id}`}
+                        onClick={() => {
+                          setError("");
+                          setSuccess("");
+                          setConfirmDeleteId(d.id);
+                        }}
+                        aria-label={`Delete ${d.deptName}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                      >
+                        <Trash2 size={14} />
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </motion.li>
               ))}

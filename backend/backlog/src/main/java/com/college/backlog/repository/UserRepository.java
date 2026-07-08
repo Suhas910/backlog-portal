@@ -6,4 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserRepository extends JpaRepository<User, String> {
     long countByRole(UserRole role);
+
+    // Department-delete guard: block removing a department still assigned to any
+    // staff user (dept_id FK on users).
+    boolean existsByDepartment_Id(Long departmentId);
 }
