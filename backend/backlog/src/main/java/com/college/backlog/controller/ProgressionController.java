@@ -43,6 +43,13 @@ public class ProgressionController {
 
     private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
+    // Bulk operations must name an explicit cohort — one department + one admission
+    // year (dept-scoped roles get the department implicitly) — or list specific
+    // USNs. Without this, an unfiltered request degenerates to the whole-roster
+    // pattern ("1MS____%") and walks every student. Applies to the dry-run too:
+    // the preview is the expensive pass, and preview/apply must agree (parity).
+    private static final int MAX_EXPLICIT_ROLLNOS = 500;
+
     @Autowired private ProgressionService progressionService;
     @Autowired private StudentRepository studentRepository;
     @Autowired private StudentSemesterTermRepository termRepository;
@@ -77,13 +84,11 @@ public class ProgressionController {
                                          @RequestParam(required = false) Integer admissionYear,
                                          Authentication auth) {
         User actor = requireActor(auth);
+        // at least a department, so the sweep (and its unbounded response) stays
+        // one department wide; the admission year remains an optional narrower
+        requireDeptScope(actor, deptId);
         List<Student> cohort = resolveCohort(actor, deptId, admissionYear, null);
-
-        Map<String, Set<Integer>> termsByRoll = cohort.isEmpty() ? Map.of()
-            : termRepository.findByRollNoIn(
-                    cohort.stream().map(Student::getRollNo).collect(Collectors.toList())).stream()
-                .collect(Collectors.groupingBy(StudentSemesterTerm::getRollNo,
-                    Collectors.mapping(StudentSemesterTerm::getSemester, Collectors.toSet())));
+        Map<String, Set<Integer>> termsByRoll = termsByRoll(cohort);
 
         List<StudentGapResponse> gaps = new ArrayList<>();
         for (Student s : cohort) {
@@ -109,8 +114,12 @@ public class ProgressionController {
         if (req.getTargetSemester() < 1 || req.getTargetSemester() > 8) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "targetSemester must be between 1 and 8.");
         }
+        requireBulkScope(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         Set<String> excluded = req.getExcludeRollNos() == null ? Set.of() : new java.util.HashSet<>(req.getExcludeRollNos());
         List<Student> cohort = resolveCohort(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
+        // dry-run: one batched term lookup for the whole cohort instead of an
+        // exists-probe per student (each probe is a round trip to the DB)
+        Map<String, Set<Integer>> recordedByRoll = req.isDryRun() ? termsByRoll(cohort) : Map.of();
 
         List<ProgressionRowResult> results = new ArrayList<>();
         int created = 0, skipped = 0, errors = 0;
@@ -133,7 +142,7 @@ public class ProgressionController {
                     // bad rows the apply (recordProgression) would reject — no
                     // WOULD_CREATE that then errors on apply (parity with the import path)
                     progressionService.validateSemesterAndYear(req.getTargetSemester(), req.getAcademicYear());
-                    boolean exists = termRepository.existsByRollNoAndSemester(roll, req.getTargetSemester());
+                    boolean exists = recordedByRoll.getOrDefault(roll, Set.of()).contains(req.getTargetSemester());
                     results.add(new ProgressionRowResult(roll, req.getTargetSemester(),
                             exists ? "WOULD_SKIP" : "WOULD_CREATE",
                             "promote to semester " + req.getTargetSemester()));
@@ -202,7 +211,11 @@ public class ProgressionController {
     @PostMapping("/backfill-linear")
     public BatchResult backfillLinear(@RequestBody BackfillRequest req, Authentication auth) {
         User actor = requireActor(auth);
+        requireBulkScope(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         List<Student> cohort = resolveCohort(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
+        // dry-run: one batched term lookup for the whole cohort instead of up to
+        // 8 exists-probes per student
+        Map<String, Set<Integer>> recordedByRoll = req.isDryRun() ? termsByRoll(cohort) : Map.of();
 
         List<ProgressionRowResult> results = new ArrayList<>();
         int created = 0, skipped = 0, errors = 0;
@@ -210,7 +223,8 @@ public class ProgressionController {
             String roll = s.getRollNo();
             try {
                 if (req.isDryRun()) {
-                    int missing = countMissingLinear(roll, s.getEntrySemester());
+                    int missing = countMissingLinear(
+                            recordedByRoll.getOrDefault(roll, Set.of()), s.getEntrySemester());
                     results.add(new ProgressionRowResult(roll, null,
                             missing > 0 ? "WOULD_CREATE" : "WOULD_SKIP", missing + " row(s)"));
                     if (missing > 0) created += missing; else skipped++;
@@ -282,6 +296,46 @@ public class ProgressionController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
     }
 
+    /**
+     * Bulk promote/backfill must target one explicit cohort: a department (implicit
+     * for dept-scoped roles) AND an admission year — or a bounded list of USNs.
+     */
+    private void requireBulkScope(User actor, Long deptId, Integer admissionYear, List<String> rollNos) {
+        if (rollNos != null && !rollNos.isEmpty()) {
+            if (rollNos.size() > MAX_EXPLICIT_ROLLNOS) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "At most " + MAX_EXPLICIT_ROLLNOS + " USNs per batch.");
+            }
+            return; // an explicitly-listed cohort is bounded by the request
+        }
+        boolean missingDept = callerDeptCode(actor) == null && deptId == null;
+        boolean missingYear = admissionYear == null;
+        if (missingDept || missingYear) {
+            String needed = missingDept && missingYear ? "a department and an admission year"
+                    : missingDept ? "a department" : "an admission year";
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Bulk operations need an explicit cohort: select " + needed
+                    + " (or list specific USNs).");
+        }
+    }
+
+    /** Gaps sweep needs at least a department (implicit for dept-scoped roles). */
+    private void requireDeptScope(User actor, Long deptId) {
+        if (callerDeptCode(actor) == null && deptId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Select a department to check for gaps.");
+        }
+    }
+
+    /** Batched (rollNo -> recorded semesters) lookup for a cohort — one query, not N. */
+    private Map<String, Set<Integer>> termsByRoll(List<Student> cohort) {
+        if (cohort.isEmpty()) return Map.of();
+        return termRepository.findByRollNoIn(
+                cohort.stream().map(Student::getRollNo).collect(Collectors.toList())).stream()
+            .collect(Collectors.groupingBy(StudentSemesterTerm::getRollNo,
+                Collectors.mapping(StudentSemesterTerm::getSemester, Collectors.toSet())));
+    }
+
     /** The dept code a caller is restricted to, or null if unrestricted (ADMIN/PRINCIPAL). */
     private String callerDeptCode(User actor) {
         if (actor == null || !DEPT_ROLES.contains(actor.getRole()) || actor.getDepartment() == null) {
@@ -336,12 +390,13 @@ public class ProgressionController {
 
     // Count how many rows backfill would create — from the entry semester (not sem 1)
     // through the final programme semester (8), so a lateral entrant's pre-entry
-    // semesters aren't counted as missing. Mirrors ProgressionService.backfillLinear's
-    // range so the preview matches the apply.
-    private int countMissingLinear(String rollNo, int entrySemester) {
+    // semesters aren't counted as missing. Reads the batched per-cohort term lookup
+    // (no per-semester queries). Mirrors ProgressionService.backfillLinear's range
+    // so the preview matches the apply.
+    private int countMissingLinear(Set<Integer> recordedSemesters, int entrySemester) {
         int missing = 0;
         for (int sem = Math.max(1, entrySemester); sem <= 8; sem++) {
-            if (!termRepository.existsByRollNoAndSemester(rollNo, sem)) missing++;
+            if (!recordedSemesters.contains(sem)) missing++;
         }
         return missing;
     }

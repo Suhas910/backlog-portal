@@ -4,19 +4,15 @@ import com.college.backlog.controller.dto.StudentRegistrationRequest;
 import com.college.backlog.controller.dto.VerificationResponse;
 import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.ActorRole;
-import com.college.backlog.model.EventAction;
 import com.college.backlog.model.Registration;
-import com.college.backlog.model.RegistrationEvent;
 import com.college.backlog.model.RegistrationStatus;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
-import com.college.backlog.repository.RegistrationEventRepository;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.RegistrationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -36,9 +32,6 @@ public class RegistrationController {
 
     @Autowired
     private RegistrationRepository registrationRepository;
-
-    @Autowired
-    private RegistrationEventRepository registrationEventRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -88,12 +81,6 @@ public class RegistrationController {
 
         checkDeptAccess(authentication, reg);
 
-        // state machine: only a pending registration can be actioned
-        if (reg.getStatus() != RegistrationStatus.SUBMITTED) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "This registration has already been actioned.");
-        }
-
         // require an explicit, known action — never default a typo to VERIFIED
         String requested = body != null ? body.get("action") : null;
         RegistrationStatus action;
@@ -105,28 +92,17 @@ public class RegistrationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "action must be 'VERIFIED' or 'REJECTED'.");
         }
-        reg.setStatus(action);
 
         String actor = authentication != null ? authentication.getName() : null;
-        if (actor != null) {
-            reg.setVerifiedBy(actor);
-        }
-
-        try {
-            // @Version on Registration makes a concurrent action fail here instead of silently overwriting
-            registrationRepository.saveAndFlush(reg);
-        } catch (OptimisticLockingFailureException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "This registration was just actioned by someone else.");
-        }
-
         // UserRole is a subset of ActorRole by name, so the mapping is always valid.
         ActorRole actorRole = (actor != null)
             ? userRepository.findById(actor)
                 .map(u -> ActorRole.valueOf(u.getRole().name())).orElse(ActorRole.ADMIN)
             : ActorRole.ADMIN;
-        registrationEventRepository.save(new RegistrationEvent(
-            reg.getRegId(), EventAction.valueOf(action.name()), actor, actorRole, null));
+
+        // status flip + audit event committed atomically; the pending-state check
+        // and the @Version optimistic-lock backstop both run inside that transaction
+        reg = registrationService.applyVerification(regId, action, actor, actorRole);
 
         return new VerificationResponse(
             reg.getRegId(),

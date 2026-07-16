@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -129,6 +131,72 @@ class RegistrationServiceTest {
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
                         .isEqualTo(HttpStatus.CONFLICT));
 
+        verify(registrationEventRepository, never()).save(any());
+    }
+
+    // ---- applyVerification (verify/reject + audit event in one transaction) ----
+
+    private Registration pendingRegistration(String regId) {
+        Registration reg = new Registration();
+        reg.setRegId(regId);
+        reg.setStatus(RegistrationStatus.SUBMITTED);
+        when(registrationRepository.findByRegId(regId)).thenReturn(Optional.of(reg));
+        return reg;
+    }
+
+    @Test
+    void applyVerificationFlipsStatusAndWritesTheAuditEvent() {
+        Registration reg = pendingRegistration("reg-1");
+        when(registrationRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Registration result = service.applyVerification(
+                "reg-1", RegistrationStatus.VERIFIED, "hodcs", ActorRole.HOD);
+
+        assertThat(result.getStatus()).isEqualTo(RegistrationStatus.VERIFIED);
+        assertThat(result.getVerifiedBy()).isEqualTo("hodcs");
+        ArgumentCaptor<RegistrationEvent> event = ArgumentCaptor.forClass(RegistrationEvent.class);
+        verify(registrationEventRepository).save(event.capture());
+        assertThat(event.getValue().getRegId()).isEqualTo("reg-1");
+        assertThat(event.getValue().getAction()).isEqualTo(EventAction.VERIFIED);
+        assertThat(event.getValue().getActor()).isEqualTo("hodcs");
+        assertThat(event.getValue().getActorRole()).isEqualTo(ActorRole.HOD);
+        assertThat(reg).isSameAs(result);
+    }
+
+    @Test
+    void applyVerificationRejectsAnAlreadyActionedRegistrationWith409() {
+        Registration reg = pendingRegistration("reg-2");
+        reg.setStatus(RegistrationStatus.VERIFIED);
+
+        ResponseStatusException ex = catchThrowableOfType(ResponseStatusException.class,
+                () -> service.applyVerification("reg-2", RegistrationStatus.REJECTED, "admin", ActorRole.ADMIN));
+
+        assertThat(ex).isNotNull();
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        verify(registrationRepository, never()).saveAndFlush(any());
+        verify(registrationEventRepository, never()).save(any());
+    }
+
+    @Test
+    void applyVerificationMapsAConcurrentActionTo409AndWritesNoEvent() {
+        pendingRegistration("reg-3");
+        when(registrationRepository.saveAndFlush(any()))
+                .thenThrow(new OptimisticLockingFailureException("row version changed"));
+
+        ResponseStatusException ex = catchThrowableOfType(ResponseStatusException.class,
+                () -> service.applyVerification("reg-3", RegistrationStatus.VERIFIED, "admin", ActorRole.ADMIN));
+
+        assertThat(ex).isNotNull();
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        verify(registrationEventRepository, never()).save(any());
+    }
+
+    @Test
+    void applyVerificationRefusesANonTerminalAction() {
+        assertThatThrownBy(() -> service.applyVerification(
+                "reg-4", RegistrationStatus.SUBMITTED, "admin", ActorRole.ADMIN))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(registrationRepository, never()).saveAndFlush(any());
         verify(registrationEventRepository, never()).save(any());
     }
 }

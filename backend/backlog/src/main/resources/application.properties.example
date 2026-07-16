@@ -37,9 +37,9 @@ app.cookie.secure=${APP_COOKIE_SECURE:true}
 
 # Initial admin-account seed passwords. No fallback default: a blank value means
 # that account is NOT created on a fresh DB (no guessable default). Set via env.
+# Only ADMIN and PRINCIPAL are seedable — HOD/DEPT_OFFICE accounts need a
+# department, so create them through Manage Users after signing in.
 admin.password.principal=${ADMIN_PASSWORD_PRINCIPAL:}
-admin.password.hod=${ADMIN_PASSWORD_HOD:}
-admin.password.office=${ADMIN_PASSWORD_OFFICE:}
 admin.password.admin=${ADMIN_PASSWORD_ADMIN:}
 
 spring.application.name=backlog

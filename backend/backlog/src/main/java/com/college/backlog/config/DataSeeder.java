@@ -26,14 +26,14 @@ public class DataSeeder implements CommandLineRunner {
     // blank seed password skips the account rather than installing a guessable
     // default (old issue #1). Set these in the environment to provision the
     // initial accounts on a fresh database.
+    //
+    // Only the department-less roles (ADMIN, PRINCIPAL) are seedable. HOD /
+    // DEPT_OFFICE accounts need a department, which a seeder on a fresh database
+    // cannot assign — and login rejects a dept role without one, so a seeded
+    // hod/office account could never sign in. Create those through Manage Users
+    // (which requires picking a department) once an admin is in.
     @Value("${admin.password.principal:}")
     private String principalPassword;
-
-    @Value("${admin.password.hod:}")
-    private String hodPassword;
-
-    @Value("${admin.password.office:}")
-    private String officePassword;
 
     @Value("${admin.password.admin:}")
     private String adminPassword;
@@ -43,8 +43,6 @@ public class DataSeeder implements CommandLineRunner {
         // Default accounts: created only when an explicit seed password is
         // supplied via env. Existing rows are never overwritten here.
         seedUser("principal", principalPassword, UserRole.PRINCIPAL);
-        seedUser("hod", hodPassword, UserRole.HOD);
-        seedUser("office", officePassword, UserRole.DEPT_OFFICE);
         seedUser("admin", adminPassword, UserRole.ADMIN);
 
         // One-time safety net: bcrypt any legacy plaintext password so login can

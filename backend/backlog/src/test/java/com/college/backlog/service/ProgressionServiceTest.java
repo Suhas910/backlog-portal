@@ -11,13 +11,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -82,7 +81,7 @@ class ProgressionServiceTest {
     void backfillLinearSeedsMissingSemestersWithDerivedYears() {
         Student s = student("1MS24CS191", 4); // admission 2024 from USN
         when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
-        when(termRepository.existsByRollNoAndSemester(eq("1MS24CS191"), anyInt())).thenReturn(false);
+        when(termRepository.findByRollNo("1MS24CS191")).thenReturn(List.of()); // no rows yet
 
         int created = service.backfillLinear("1MS24CS191");
 
@@ -110,7 +109,7 @@ class ProgressionServiceTest {
         Student s = student("1MS24CS191", 6); // admission 2024 from USN
         s.setEntrySemester(3);                // lateral entrant: started at sem 3
         when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
-        when(termRepository.existsByRollNoAndSemester(eq("1MS24CS191"), anyInt())).thenReturn(false);
+        when(termRepository.findByRollNo("1MS24CS191")).thenReturn(List.of()); // no rows yet
 
         int created = service.backfillLinear("1MS24CS191");
 
@@ -129,6 +128,26 @@ class ProgressionServiceTest {
                         org.assertj.core.groups.Tuple.tuple(6, 2025),
                         org.assertj.core.groups.Tuple.tuple(7, 2026),
                         org.assertj.core.groups.Tuple.tuple(8, 2026));
+    }
+
+    @Test
+    void backfillLinearPreservesExistingRowsWriteOnce() {
+        Student s = student("1MS24CS191", 4); // admission 2024, entry sem 1
+        when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
+        // sems 1 and 3 already recorded (e.g. hand-corrected after a year-back)
+        when(termRepository.findByRollNo("1MS24CS191")).thenReturn(List.of(
+                new StudentSemesterTerm("1MS24CS191", 1, 2024),
+                new StudentSemesterTerm("1MS24CS191", 3, 2026)));
+
+        int created = service.backfillLinear("1MS24CS191");
+
+        // only the six missing rows are written; the existing two are never touched
+        assertThat(created).isEqualTo(6);
+        ArgumentCaptor<StudentSemesterTerm> captor = ArgumentCaptor.forClass(StudentSemesterTerm.class);
+        verify(termRepository, times(6)).save(captor.capture());
+        assertThat(captor.getAllValues())
+                .extracting(StudentSemesterTerm::getSemester)
+                .containsExactly(2, 4, 5, 6, 7, 8);
     }
 
     @Test

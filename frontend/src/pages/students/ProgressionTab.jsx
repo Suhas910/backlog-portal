@@ -121,6 +121,17 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
         setPError("Enter the academic year as a range or start year, e.g. 2025-26.");
         return;
       }
+      // bulk operations target one explicit cohort (dept + admission year) —
+      // mirrors the server-side guard, which rejects an unscoped batch with 400
+      const deptId = deptLocked ? pinnedDeptId : pDeptId;
+      if (!deptId) {
+        setPError("Select a department — a batch targets one department at a time.");
+        return;
+      }
+      if (!pAdmissionYear) {
+        setPError("Admission year is required — a batch targets one intake at a time.");
+        return;
+      }
       setPBusy(true);
       try {
         const payload = {
@@ -128,10 +139,9 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
           academicYear,
           dryRun,
           excludeRollNos: parseExclude(pExclude),
+          deptId: Number(deptId),
+          admissionYear: Number(pAdmissionYear),
         };
-        const deptId = deptLocked ? pinnedDeptId : pDeptId;
-        if (deptId) payload.deptId = Number(deptId);
-        if (pAdmissionYear) payload.admissionYear = Number(pAdmissionYear);
         const res = await api.post("/admin/progression/promote", payload, {
           headers: getAdminHeaders(),
         });
@@ -180,12 +190,23 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
   const runBackfill = useCallback(
     async (dryRun) => {
       setBError("");
+      // same explicit-cohort rule as promote; mirrors the server-side 400 guard
+      const deptId = deptLocked ? pinnedDeptId : bDeptId;
+      if (!deptId) {
+        setBError("Select a department — a batch targets one department at a time.");
+        return;
+      }
+      if (!bAdmissionYear) {
+        setBError("Admission year is required — a batch targets one intake at a time.");
+        return;
+      }
       setBBusy(true);
       try {
-        const payload = { dryRun };
-        const deptId = deptLocked ? pinnedDeptId : bDeptId;
-        if (deptId) payload.deptId = Number(deptId);
-        if (bAdmissionYear) payload.admissionYear = Number(bAdmissionYear);
+        const payload = {
+          dryRun,
+          deptId: Number(deptId),
+          admissionYear: Number(bAdmissionYear),
+        };
         const res = await api.post("/admin/progression/backfill-linear", payload, {
           headers: getAdminHeaders(),
         });
@@ -229,11 +250,15 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
 
   const runGaps = useCallback(async () => {
     setGError("");
+    // the gaps sweep needs at least a department (year stays an optional narrower)
+    const deptId = deptLocked ? pinnedDeptId : gDeptId;
+    if (!deptId) {
+      setGError("Select a department to check for gaps.");
+      return;
+    }
     setGBusy(true);
     try {
-      const params = {};
-      const deptId = deptLocked ? pinnedDeptId : gDeptId;
-      if (deptId) params.deptId = Number(deptId);
+      const params = { deptId: Number(deptId) };
       if (gAdmissionYear) params.admissionYear = Number(gAdmissionYear);
       const res = await api.get("/admin/progression/gaps", {
         headers: getAdminHeaders(),
@@ -333,11 +358,12 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                     departments={departments}
                     value={pDeptId}
                     onChange={setPDeptId}
+                    dataCy="prog-promote-dept"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold uppercase tracking-[0.08em]">
-                    Admission year (optional)
+                    Admission year
                   </label>
                   <input
                     className={inputClass}
@@ -345,6 +371,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                     placeholder="e.g. 2024"
                     value={pAdmissionYear}
                     onChange={(e) => setPAdmissionYear(e.target.value)}
+                    data-cy="prog-promote-admyear"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -434,8 +461,9 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
             {/* Backfill */}
             <Card icon={<Wand2 size={18} />} title="Backfill history (linear default)">
               <p className="mb-3 text-xs text-[var(--text-muted)]">
-                Seeds every semester up to each student's current semester assuming no detention
-                (sem k → admission year + ⌊(k−1)/2⌋). Write-once, so hand-corrected rows are kept.
+                Seeds every semester from each student's entry semester through semester 8,
+                assuming no detention (sem k → admission year + ⌊(k−entry)/2⌋). Write-once, so
+                hand-corrected rows are kept.
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
@@ -446,11 +474,12 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                     departments={departments}
                     value={bDeptId}
                     onChange={setBDeptId}
+                    dataCy="prog-backfill-dept"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold uppercase tracking-[0.08em]">
-                    Admission year (optional)
+                    Admission year
                   </label>
                   <input
                     className={inputClass}
@@ -458,6 +487,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                     placeholder="e.g. 2024"
                     value={bAdmissionYear}
                     onChange={(e) => setBAdmissionYear(e.target.value)}
+                    data-cy="prog-backfill-admyear"
                   />
                 </div>
               </div>
@@ -497,6 +527,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                     departments={departments}
                     value={gDeptId}
                     onChange={setGDeptId}
+                    dataCy="prog-gaps-dept"
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -633,15 +664,18 @@ function Card({ icon, title, children }) {
   );
 }
 
-function DeptSelect({ deptLocked, pinnedDeptId, departments, value, onChange }) {
+function DeptSelect({ deptLocked, pinnedDeptId, departments, value, onChange, dataCy }) {
   return (
     <select
       className={inputClass}
       value={deptLocked ? pinnedDeptId : value}
       onChange={(e) => onChange(e.target.value)}
       disabled={deptLocked}
+      data-cy={dataCy}
     >
-      <option value="">All departments</option>
+      {/* a department is required everywhere this select appears (bulk cohort +
+          gaps sweep), so there is deliberately no "all departments" option */}
+      <option value="">Select department…</option>
       {departments.map((d) => (
         <option key={d.id} value={d.id}>
           {d.deptName}

@@ -111,9 +111,14 @@ public class ProgressionService {
             throw new IllegalArgumentException("Cannot derive admission year from USN: " + rollNo);
         }
         int entry = Math.max(1, student.getEntrySemester());
+        // one query for the student's existing rows instead of an exists-probe per
+        // semester (each probe is a DB round trip; bulk backfill multiplies them)
+        java.util.Set<Integer> recorded = termRepository.findByRollNo(rollNo).stream()
+                .map(StudentSemesterTerm::getSemester)
+                .collect(java.util.stream.Collectors.toSet());
         int created = 0;
         for (int sem = entry; sem <= 8; sem++) {
-            if (!termRepository.existsByRollNoAndSemester(rollNo, sem)) {
+            if (!recorded.contains(sem)) {
                 int ay = admissionYear + (sem - entry) / 2;
                 termRepository.save(new StudentSemesterTerm(rollNo, sem, ay));
                 created++;

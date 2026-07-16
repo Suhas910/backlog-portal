@@ -85,6 +85,25 @@ public class AdminController {
         return user.getDepartment().getId();
     }
 
+    /**
+     * A dept-scoped caller (HOD / DEPT_OFFICE) may only touch a registration that
+     * involves their department — one of its subjects is owned by or eligible for
+     * that department. Mirrors checkDeptAccess in RegistrationController (verify).
+     */
+    private void assertRegistrationInScope(Authentication auth, Registration reg) {
+        Long callerDeptId = resolveCallerDeptId(auth);
+        if (callerDeptId == null) return; // ADMIN / PRINCIPAL: unrestricted
+        boolean hasAccess = reg.getSubjects().stream().anyMatch(s -> {
+            if (s.getDepartment() != null && callerDeptId.equals(s.getDepartment().getId())) return true;
+            return s.getEligibleDepartments() != null &&
+                   s.getEligibleDepartments().stream().anyMatch(d -> callerDeptId.equals(d.getId()));
+        });
+        if (!hasAccess) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "This registration does not belong to your department");
+        }
+    }
+
     // Max page size a client can request — a guard so `size` can't be used to pull
     // the whole (append-only, ever-growing) table in one shot.
     private static final int MAX_PAGE_SIZE = 200;
@@ -183,7 +202,13 @@ public class AdminController {
 
     @GetMapping("/registrations/{regId}/events")
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
-    public List<RegistrationEventResponse> getRegistrationEvents(@PathVariable String regId) {
+    public List<RegistrationEventResponse> getRegistrationEvents(@PathVariable String regId,
+                                                                 Authentication authentication) {
+        // dept-scoped roles may only read the event trail of registrations their
+        // department can act on — same rule as verify (RegistrationController)
+        Registration reg = registrationRepository.findByRegId(regId)
+            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
+        assertRegistrationInScope(authentication, reg);
         return registrationEventRepository.findByRegIdOrderByTimestampAsc(regId).stream()
             .map(e -> new RegistrationEventResponse(
                 e.getAction() != null ? e.getAction().name() : null,

@@ -34,9 +34,12 @@ describe("Manage Students — Progression tab", () => {
       },
     }).as("promote");
 
-    visitAs("ADMIN");
+    visitAs("ADMIN", null, [{ id: 1, deptName: "Computer Science" }]);
     cy.get('[data-cy="prog-tab-bulk"]').click();
 
+    // a batch must name its cohort: department + admission year
+    cy.get('[data-cy="prog-promote-dept"]').select("Computer Science");
+    cy.get('[data-cy="prog-promote-admyear"]').type("2024");
     cy.get('[data-cy="prog-promote-sem"]').select("5");
     // entered in span format; the client parses it back to the start-year int
     cy.get('[data-cy="prog-promote-ay"]').type("2025-26");
@@ -49,6 +52,8 @@ describe("Manage Students — Progression tab", () => {
         academicYear: 2025,
         dryRun: true,
         excludeRollNos: [],
+        deptId: 1,
+        admissionYear: 2024,
       });
 
     cy.contains("Preview — 1 created, 0 skipped, 0 error(s)").should("be.visible");
@@ -57,7 +62,7 @@ describe("Manage Students — Progression tab", () => {
   });
 
   it("validates the promote form before calling the server", () => {
-    visitAs("ADMIN");
+    visitAs("ADMIN", null, [{ id: 1, deptName: "Computer Science" }]);
     cy.get('[data-cy="prog-tab-bulk"]').click();
 
     // preview with no target semester -> client-side error, no request
@@ -71,6 +76,21 @@ describe("Manage Students — Progression tab", () => {
       "contain",
       "Academic year is required to apply",
     );
+
+    // a batch needs an explicit cohort: department first, then admission year
+    cy.get('[data-cy="prog-promote-preview"]').click();
+    cy.get('[data-cy="prog-promote-error"]').should("contain", "Select a department");
+
+    cy.get('[data-cy="prog-promote-dept"]').select("Computer Science");
+    cy.get('[data-cy="prog-promote-preview"]').click();
+    cy.get('[data-cy="prog-promote-error"]').should("contain", "Admission year is required");
+  });
+
+  it("requires a department before finding gaps", () => {
+    visitAs("ADMIN", null, [{ id: 1, deptName: "Computer Science" }]);
+
+    cy.get('[data-cy="prog-gaps-find"]').click();
+    cy.get('[data-cy="prog-gaps-error"]').should("contain", "Select a department");
   });
 
   it("previews a CSV import", () => {

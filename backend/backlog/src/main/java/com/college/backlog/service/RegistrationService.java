@@ -1,11 +1,14 @@
 package com.college.backlog.service;
 
+import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.*;
 import com.college.backlog.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +47,11 @@ public class RegistrationService {
     @Autowired
     private StudentSemesterTermRepository studentSemesterTermRepository;
 
+    // One transaction for the registration insert AND its SUBMITTED audit event —
+    // an event-write failure rolls the registration back too, so history can never
+    // gain a row without its audit trail. The unique-index race backstop below
+    // still works: the catch rethrows immediately, and the transaction rolls back.
+    @Transactional
     public Registration register(String rollNo, List<Long> subjectIds) {
 
         // an exam cycle must be open for registrations to be accepted
@@ -194,5 +202,45 @@ public class RegistrationService {
             saved.getRegId(), EventAction.SUBMITTED, rollNo, ActorRole.STUDENT, null));
 
         return saved;
+    }
+
+    /**
+     * Action a pending registration: flip SUBMITTED -> VERIFIED/REJECTED and record
+     * the audit event in ONE transaction, so the status change can never commit
+     * without its event row. The registration is re-loaded and its state re-checked
+     * inside the transaction; a concurrent action is caught either by that check or
+     * by the {@code @Version} optimistic lock on the flush. Authorization (dept
+     * scoping, role checks) stays with the caller.
+     */
+    @Transactional
+    public Registration applyVerification(String regId, RegistrationStatus action,
+                                          String actor, ActorRole actorRole) {
+        if (action != RegistrationStatus.VERIFIED && action != RegistrationStatus.REJECTED) {
+            throw new IllegalArgumentException("action must be VERIFIED or REJECTED");
+        }
+        Registration reg = registrationRepository.findByRegId(regId)
+            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
+
+        // state machine: only a pending registration can be actioned
+        if (reg.getStatus() != RegistrationStatus.SUBMITTED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This registration has already been actioned.");
+        }
+
+        reg.setStatus(action);
+        if (actor != null) {
+            reg.setVerifiedBy(actor);
+        }
+        try {
+            // @Version on Registration makes a concurrent action fail here instead of silently overwriting
+            registrationRepository.saveAndFlush(reg);
+        } catch (OptimisticLockingFailureException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This registration was just actioned by someone else.");
+        }
+
+        registrationEventRepository.save(new RegistrationEvent(
+            reg.getRegId(), EventAction.valueOf(action.name()), actor, actorRole, null));
+        return reg;
     }
 }
