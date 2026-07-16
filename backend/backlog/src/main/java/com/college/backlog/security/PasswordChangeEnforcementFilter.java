@@ -29,7 +29,7 @@ public class PasswordChangeEnforcementFilter extends OncePerRequestFilter {
 
     private static final String CHANGE_PASSWORD_PATH = "/api/auth/change-password";
     private static final Set<String> ADMIN_AUTHORITIES =
-            Set.of("ROLE_ADMIN", "ROLE_PRINCIPAL", "ROLE_HOD", "ROLE_DEPT_OFFICE");
+            Set.of("ROLE_ADMIN", "ROLE_PRINCIPAL", "ROLE_HOD", "ROLE_DEPT_OFFICE", "ROLE_PROCTOR");
 
     private final UserRepository userRepository;
 

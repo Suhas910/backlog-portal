@@ -17,7 +17,10 @@ public enum UserRole {
     ADMIN,
     PRINCIPAL,
     HOD,
-    DEPT_OFFICE;
+    DEPT_OFFICE,
+    // Dept-pinned like HOD/DEPT_OFFICE, but additionally scoped to an explicit
+    // set of assigned students (proctor_students). See ProctorScopeService.
+    PROCTOR;
 
     /**
      * Parses a request string into a UserRole, or returns {@code null} for

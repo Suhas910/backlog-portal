@@ -13,5 +13,6 @@ public enum ActorRole {
     ADMIN,
     PRINCIPAL,
     HOD,
-    DEPT_OFFICE
+    DEPT_OFFICE,
+    PROCTOR
 }

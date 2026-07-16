@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { ArrowLeft, CalendarClock, GraduationCap, UploadCloud, UserPlus, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, CalendarClock, GraduationCap, UploadCloud, UserCheck, UserPlus, Users } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../../components/layout/BrandIdentity";
 import api from "../../lib/api";
@@ -8,17 +8,32 @@ import StudentsManageTab from "./StudentsManageTab";
 import AddStudentTab from "./AddStudentTab";
 import ImportStudentsTab from "./ImportStudentsTab";
 import ProgressionTab from "./ProgressionTab";
+import ClaimStudentsTab from "./ClaimStudentsTab";
 
-const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
-const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
+const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
+const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"];
 
-const TABS = [
+// Tab set varies by role: a PROCTOR gets only their supervised roster plus the
+// claim picker (no create/import/bulk-progression — the server refuses those
+// anyway); HOD and above additionally manage proctor assignments; DEPT_OFFICE
+// keeps the original four (no proctor management).
+const STAFF_TABS = [
   { key: "manage", label: "Manage", icon: Users },
   { key: "add", label: "Add", icon: UserPlus },
   { key: "import", label: "Import", icon: UploadCloud },
   { key: "progression", label: "Progression", icon: CalendarClock },
 ];
-const TAB_KEYS = new Set(TABS.map((t) => t.key));
+const PROCTORS_TAB = { key: "proctors", label: "Proctors", icon: UserCheck };
+const PROCTOR_TABS = [
+  { key: "manage", label: "My Students", icon: Users },
+  { key: "claim", label: "Claim Students", icon: UserCheck },
+];
+
+function tabsForRole(role) {
+  if (role === "PROCTOR") return PROCTOR_TABS;
+  if (["ADMIN", "PRINCIPAL", "HOD"].includes(role)) return [...STAFF_TABS, PROCTORS_TAB];
+  return STAFF_TABS;
+}
 
 // Admin student management behind one route as four tabs (Manage / Add / Import /
 // Progression). The shell owns what the tabs share — the role guard, the single
@@ -35,17 +50,23 @@ function StudentsPage() {
 
   const [departments, setDepartments] = useState([]);
 
+  const tabs = tabsForRole(adminRole);
+  const tabKeys = new Set(tabs.map((t) => t.key));
+
   // Dept-scoped roles are pinned to their own department. This is pure derivation
   // from (departments, role, dept) — computed during render, not stored via an
-  // effect, so it's resolved on first paint with no cascading re-render.
-  const pinnedDeptId = useMemo(() => {
-    if (!(deptLocked && adminDepartment && departments.length > 0)) return "";
-    const mine = departments.find((d) => d.deptName === adminDepartment);
-    return mine ? String(mine.id) : "";
-  }, [departments, deptLocked, adminDepartment]);
+  // effect, so it's resolved on first paint with no cascading re-render. A plain
+  // expression (no manual useMemo): the React Compiler couldn't preserve the
+  // manual memo once the role-dependent tab derivation joined this render, and
+  // the find() is cheap enough to run per render anyway.
+  const pinnedDept =
+    deptLocked && adminDepartment && departments.length > 0
+      ? departments.find((d) => d.deptName === adminDepartment)
+      : null;
+  const pinnedDeptId = pinnedDept ? String(pinnedDept.id) : "";
 
   const tabParam = searchParams.get("tab");
-  const activeTab = TAB_KEYS.has(tabParam) ? tabParam : "manage";
+  const activeTab = tabKeys.has(tabParam) ? tabParam : "manage";
   const setActiveTab = (key) => setSearchParams({ tab: key }, { replace: true });
 
   useEffect(() => {
@@ -73,17 +94,18 @@ function StudentsPage() {
 
         <div className="mb-3">
           <h1 className="inline-flex items-center gap-2 text-2xl font-semibold text-[var(--color-secondary)] sm:text-3xl">
-            <GraduationCap size={26} /> Manage Students
+            <GraduationCap size={26} /> {adminRole === "PROCTOR" ? "My Students" : "Manage Students"}
           </h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
-            Create and manage student accounts, then set their academic-year progression in the
-            Progression tab so their backlogs resolve to the right year.
+            {adminRole === "PROCTOR"
+              ? "Manage the students under your supervision — details, semester timeline, and DOB resets — and claim new ones from your department."
+              : "Create and manage student accounts, then set their academic-year progression in the Progression tab so their backlogs resolve to the right year."}
             {deptLocked && adminDepartment ? ` Scoped to ${adminDepartment}.` : ""}
           </p>
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Student management">
-          {TABS.map((t) => {
+          {tabs.map((t) => {
             const Icon = t.icon;
             const on = activeTab === t.key;
             return (
@@ -110,6 +132,7 @@ function StudentsPage() {
         {activeTab === "add" && <AddStudentTab {...shared} />}
         {activeTab === "import" && <ImportStudentsTab {...shared} />}
         {activeTab === "progression" && <ProgressionTab {...shared} />}
+        {(activeTab === "claim" || activeTab === "proctors") && <ClaimStudentsTab {...shared} />}
       </div>
 
       <MobileActionBar />

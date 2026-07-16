@@ -11,6 +11,7 @@ import com.college.backlog.repository.StudentRepository;
 import com.college.backlog.repository.StudentSemesterTermRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.EligibilityService;
+import com.college.backlog.service.ProctorScopeService;
 import com.college.backlog.service.ProgressionService;
 import com.college.backlog.service.StudentManagementService;
 import com.college.backlog.service.Usn;
@@ -33,15 +34,22 @@ import java.util.stream.Collectors;
  * and single-row corrections live here; all write through {@link ProgressionService}.
  *
  * Scope: ADMIN / PRINCIPAL act on any department; HOD / DEPT_OFFICE are restricted
- * to students of their own department (matched by the USN branch code). Enforced
+ * to students of their own department (matched by the USN branch code). PROCTOR
+ * may use only the per-student endpoints (view, per-semester override, current-
+ * semester correction) and only on students assigned to them; the bulk flows
+ * (gaps sweep, promote, CSV import, backfill) are refused for proctors. Enforced
  * here on the server — the UI only mirrors it.
  */
 @RestController
 @RequestMapping("/api/admin/progression")
-@PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+@PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
 public class ProgressionController {
 
-    private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
+    private static final Set<UserRole> DEPT_ROLES =
+        Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
+
+    private static final String BULK_REFUSED_FOR_PROCTORS =
+        "Bulk progression tools are not available to proctors.";
 
     // Bulk operations must name an explicit cohort — one department + one admission
     // year (dept-scoped roles get the department implicitly) — or list specific
@@ -57,6 +65,7 @@ public class ProgressionController {
     @Autowired private UserRepository userRepository;
     @Autowired private EligibilityService eligibilityService;
     @Autowired private StudentManagementService studentService;
+    @Autowired private ProctorScopeService proctorScope;
 
     // ---- view ----
 
@@ -65,6 +74,7 @@ public class ProgressionController {
         User actor = requireActor(auth);
         String roll = studentService.normalizeUsn(rollNo); // uppercase, so a lowercase entry still resolves
         assertInScope(actor, roll);
+        proctorScope.assertSupervises(actor, roll);
         Student student = studentRepository.findByRollNo(roll)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + roll));
         return toProgressionResponse(student);
@@ -84,6 +94,7 @@ public class ProgressionController {
                                          @RequestParam(required = false) Integer admissionYear,
                                          Authentication auth) {
         User actor = requireActor(auth);
+        proctorScope.rejectProctor(actor, BULK_REFUSED_FOR_PROCTORS);
         // at least a department, so the sweep (and its unbounded response) stays
         // one department wide; the admission year remains an optional narrower
         requireDeptScope(actor, deptId);
@@ -111,6 +122,7 @@ public class ProgressionController {
     @PostMapping("/promote")
     public BatchResult promote(@RequestBody PromoteBatchRequest req, Authentication auth) {
         User actor = requireActor(auth);
+        proctorScope.rejectProctor(actor, BULK_REFUSED_FOR_PROCTORS);
         if (req.getTargetSemester() < 1 || req.getTargetSemester() > 8) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "targetSemester must be between 1 and 8.");
         }
@@ -166,6 +178,7 @@ public class ProgressionController {
     @PostMapping("/import")
     public BatchResult importRows(@RequestBody ProgressionImportRequest req, Authentication auth) {
         User actor = requireActor(auth);
+        proctorScope.rejectProctor(actor, BULK_REFUSED_FOR_PROCTORS);
         String callerDeptCode = callerDeptCode(actor);
         List<ProgressionRowResult> results = new ArrayList<>();
         int created = 0, skipped = 0, errors = 0;
@@ -211,6 +224,7 @@ public class ProgressionController {
     @PostMapping("/backfill-linear")
     public BatchResult backfillLinear(@RequestBody BackfillRequest req, Authentication auth) {
         User actor = requireActor(auth);
+        proctorScope.rejectProctor(actor, BULK_REFUSED_FOR_PROCTORS);
         requireBulkScope(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         List<Student> cohort = resolveCohort(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         // dry-run: one batched term lookup for the whole cohort instead of up to
@@ -258,6 +272,7 @@ public class ProgressionController {
         User actor = requireActor(auth);
         String roll = studentService.normalizeUsn(rollNo);
         assertInScope(actor, roll);
+        proctorScope.assertSupervises(actor, roll);
         Student student = studentRepository.findByRollNo(roll)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + roll));
         try {
@@ -278,6 +293,7 @@ public class ProgressionController {
         User actor = requireActor(auth);
         String roll = studentService.normalizeUsn(rollNo);
         assertInScope(actor, roll);
+        proctorScope.assertSupervises(actor, roll);
         try {
             progressionService.overrideProgression(roll, semester, req.getAcademicYear(), actor.getUsername());
         } catch (IllegalArgumentException e) {

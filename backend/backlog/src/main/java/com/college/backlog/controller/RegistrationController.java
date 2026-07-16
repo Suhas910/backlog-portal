@@ -10,6 +10,7 @@ import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.RegistrationRepository;
 import com.college.backlog.repository.UserRepository;
+import com.college.backlog.service.ProctorScopeService;
 import com.college.backlog.service.RegistrationService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,9 +37,17 @@ public class RegistrationController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ProctorScopeService proctorScope;
+
     private void checkDeptAccess(Authentication auth, Registration reg) {
         if (auth == null) return;
         User user = userRepository.findById(auth.getName()).orElse(null);
+        // a proctor's scope is the assigned STUDENT, not the subject's department
+        if (user != null && user.getRole() == UserRole.PROCTOR) {
+            proctorScope.assertSupervises(user, reg.getStudent().getRollNo());
+            return;
+        }
         if (user == null || !DEPT_ROLES.contains(user.getRole())) return;
         if (user.getDepartment() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No department assigned to your account");
@@ -71,7 +80,7 @@ public class RegistrationController {
     }
 
     @PutMapping("/verify/{regId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'HOD', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public VerificationResponse verifyRegistration(
             @PathVariable String regId,
             @RequestBody(required = false) Map<String, String> body,

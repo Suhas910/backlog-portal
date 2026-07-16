@@ -19,16 +19,17 @@ import MobileActionBar from "../components/layout/MobileActionBar";
 // Roles each actor is allowed to create. The server enforces the same rules;
 // this only shapes the UI.
 const CREATABLE_ROLES = {
-  ADMIN: ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"],
-  PRINCIPAL: ["HOD", "DEPT_OFFICE"],
-  HOD: ["DEPT_OFFICE"],
+  ADMIN: ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"],
+  PRINCIPAL: ["HOD", "DEPT_OFFICE", "PROCTOR"],
+  HOD: ["DEPT_OFFICE", "PROCTOR"],
 };
-const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
+const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
 const ROLE_LABELS = {
   ADMIN: "Administrator",
   PRINCIPAL: "Principal / Registrar / COE",
   HOD: "Head of Department",
   DEPT_OFFICE: "Department Office",
+  PROCTOR: "Proctor",
 };
 
 function ManageUsersPage() {

@@ -30,14 +30,14 @@ function AdminPage() {
   const adminRole = sessionStorage.getItem("adminRole") || "";
   const adminDepartment = sessionStorage.getItem("adminDepartment") || "";
   const navigate = useNavigate();
-  const isAdmin = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(
+  const isAdmin = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"].includes(
     adminRole,
   );
   const adminToken = sessionStorage.getItem("adminToken");
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(
-    ["HOD", "DEPT_OFFICE"].includes(adminRole) ? "SUBMITTED" : "ALL",
+    ["HOD", "DEPT_OFFICE", "PROCTOR"].includes(adminRole) ? "SUBMITTED" : "ALL",
   );
   // server-side pagination: `page` is 0-based; pageInfo mirrors the Spring Page envelope
   const [page, setPage] = useState(0);
@@ -450,12 +450,14 @@ function AdminPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Link
-              to="/admin/exam-cycles"
-              className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
-            >
-              <CalendarRange size={14} /> Exam Cycles
-            </Link>
+            {adminRole !== "PROCTOR" && (
+              <Link
+                to="/admin/exam-cycles"
+                className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+              >
+                <CalendarRange size={14} /> Exam Cycles
+              </Link>
+            )}
             {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole) && (
               <Link
                 to="/admin/manage-subjects"
@@ -480,12 +482,12 @@ function AdminPage() {
                 <Users size={14} /> Manage Users
               </Link>
             )}
-            {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole) && (
+            {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"].includes(adminRole) && (
               <Link
                 to="/admin/students"
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >
-                <IdCard size={14} /> Manage Students
+                <IdCard size={14} /> {adminRole === "PROCTOR" ? "My Students" : "Manage Students"}
               </Link>
             )}
             <Link

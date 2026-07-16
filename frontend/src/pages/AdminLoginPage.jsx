@@ -8,6 +8,7 @@ import {
   Briefcase,
   Building2,
   ShieldCheck,
+  UserCheck,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
@@ -16,7 +17,7 @@ import api, { logoutAdmin } from "../lib/api";
 import { rememberExpiry } from "../lib/session";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
-const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
+const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
 
 function AdminLoginPage() {
   const navigate = useNavigate();
@@ -64,7 +65,7 @@ function AdminLoginPage() {
 
       const res = await api.post("/auth/login", payload);
 
-      const validRoles = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
+      const validRoles = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"];
       if (validRoles.includes(res.data.role)) {
         // the JWT is now in an httpOnly cookie set by the server; store only a
         // presence marker + UI state + the refresh schedule (expiresIn)
@@ -210,6 +211,24 @@ function AdminLoginPage() {
                 </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-main)]">
                   Manage physical form submissions
+                </p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleRoleSelect("Proctor", "PROCTOR")}
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              data-cy="role-proctor"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+                <UserCheck size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[var(--color-secondary)]">
+                  Proctor
+                </h3>
+                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                  Supervise and manage your assigned students
                 </p>
               </div>
             </button>

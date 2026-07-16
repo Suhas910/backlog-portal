@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class RegistrationSpecification implements Specification<Registration> {
@@ -22,12 +23,19 @@ public class RegistrationSpecification implements Specification<Registration> {
     private final LocalDate endDate;
     private final Long examCycleId;
     private final RegistrationStatus status;
+    // proctor scope: only registrations of these students (null = no restriction;
+    // callers must handle the empty set — an empty IN list is not valid SQL)
+    private final Collection<String> studentRollNos;
 
     public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate, Long examCycleId) {
         this(subjectId, departmentId, subjectType, searchQuery, startDate, endDate, examCycleId, (RegistrationStatus) null);
     }
 
     public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate, Long examCycleId, RegistrationStatus status) {
+        this(subjectId, departmentId, subjectType, searchQuery, startDate, endDate, examCycleId, status, null);
+    }
+
+    public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate, Long examCycleId, RegistrationStatus status, Collection<String> studentRollNos) {
         this.subjectId = subjectId;
         this.departmentId = departmentId;
         this.subjectType = subjectType;
@@ -36,6 +44,7 @@ public class RegistrationSpecification implements Specification<Registration> {
         this.endDate = endDate;
         this.examCycleId = examCycleId;
         this.status = status;
+        this.studentRollNos = studentRollNos;
     }
 
     @Override
@@ -77,6 +86,10 @@ public class RegistrationSpecification implements Specification<Registration> {
 
         if (status != null) {
             predicates.add(cb.equal(root.get("status"), status));
+        }
+
+        if (studentRollNos != null && !studentRollNos.isEmpty()) {
+            predicates.add(root.get("student").get("rollNo").in(studentRollNos));
         }
 
         return cb.and(predicates.toArray(new Predicate[0]));

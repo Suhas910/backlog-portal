@@ -49,7 +49,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin")
 public class AdminController {
 
-    private static final java.util.Set<UserRole> DEPT_ROLES = java.util.Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
+    // PROCTOR is dept-pinned like HOD/DEPT_OFFICE and additionally restricted to
+    // their assigned students (see proctorRollNos below).
+    private static final java.util.Set<UserRole> DEPT_ROLES =
+        java.util.Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
 
     @Autowired
     private RegistrationRepository registrationRepository;
@@ -78,6 +81,9 @@ public class AdminController {
     @Autowired
     private ExamCycleRepository examCycleRepository;
 
+    @Autowired
+    private com.college.backlog.service.ProctorScopeService proctorScope;
+
     private Long resolveCallerDeptId(Authentication auth) {
         if (auth == null) return null;
         User user = userRepository.findById(auth.getName()).orElse(null);
@@ -86,11 +92,30 @@ public class AdminController {
     }
 
     /**
+     * The assigned-student scope for a PROCTOR caller, or null for every other
+     * role (no student-level restriction). May be empty — a proctor with no
+     * assignments sees no registrations; callers must special-case that (an
+     * empty IN list is not valid SQL).
+     */
+    private java.util.Set<String> proctorRollNos(Authentication auth) {
+        if (auth == null) return null;
+        return proctorScope.assignedRollNos(userRepository.findById(auth.getName()).orElse(null));
+    }
+
+    /**
      * A dept-scoped caller (HOD / DEPT_OFFICE) may only touch a registration that
      * involves their department — one of its subjects is owned by or eligible for
      * that department. Mirrors checkDeptAccess in RegistrationController (verify).
+     * A PROCTOR's scope is the assigned student instead of the subject department.
      */
     private void assertRegistrationInScope(Authentication auth, Registration reg) {
+        if (auth != null) {
+            User user = userRepository.findById(auth.getName()).orElse(null);
+            if (proctorScope.isProctor(user)) {
+                proctorScope.assertSupervises(user, reg.getStudent().getRollNo());
+                return;
+            }
+        }
         Long callerDeptId = resolveCallerDeptId(auth);
         if (callerDeptId == null) return; // ADMIN / PRINCIPAL: unrestricted
         boolean hasAccess = reg.getSubjects().stream().anyMatch(s -> {
@@ -110,7 +135,7 @@ public class AdminController {
     private static final int DEFAULT_PAGE_SIZE = 25;
 
     @GetMapping("/registrations")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public Page<RegistrationSummaryResponse> getFilteredRegistrations(
             @RequestParam Optional<Long> subjectId,
             @RequestParam Optional<String> subjectType,
@@ -124,6 +149,15 @@ public class AdminController {
             Authentication authentication
     ) {
         Long callerDeptId = resolveCallerDeptId(authentication);
+        java.util.Set<String> proctorRolls = proctorRollNos(authentication);
+
+        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        int safePage = Math.max(page, 0);
+        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "registeredAt"));
+        if (proctorRolls != null && proctorRolls.isEmpty()) {
+            return Page.empty(pageable); // proctor with no assignments sees nothing
+        }
+
         Specification<Registration> spec = new RegistrationSpecification(
                 subjectId.orElse(null),
                 callerDeptId,
@@ -132,11 +166,8 @@ public class AdminController {
                 startDate.orElse(null),
                 endDate.orElse(null),
                 examCycleId.orElse(null),
-                parseStatus(status.orElse(null)));
-
-        int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        int safePage = Math.max(page, 0);
-        Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "registeredAt"));
+                parseStatus(status.orElse(null)),
+                proctorRolls);
         return registrationRepository.findAll(spec, pageable).map(this::toSummary);
     }
 
@@ -145,7 +176,7 @@ public class AdminController {
     // filtered set regardless of which status tab is open. Cheap count queries; no
     // rows hydrated.
     @GetMapping("/registrations/summary-counts")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public Map<String, Long> getRegistrationSummaryCounts(
             @RequestParam Optional<Long> subjectId,
             @RequestParam Optional<String> subjectType,
@@ -156,9 +187,13 @@ public class AdminController {
             Authentication authentication
     ) {
         Long callerDeptId = resolveCallerDeptId(authentication);
-        long submitted = countByStatus(subjectId, callerDeptId, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.SUBMITTED);
-        long verified = countByStatus(subjectId, callerDeptId, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.VERIFIED);
-        long rejected = countByStatus(subjectId, callerDeptId, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.REJECTED);
+        java.util.Set<String> proctorRolls = proctorRollNos(authentication);
+        if (proctorRolls != null && proctorRolls.isEmpty()) {
+            return Map.of("total", 0L, "submitted", 0L, "verified", 0L, "rejected", 0L);
+        }
+        long submitted = countByStatus(subjectId, callerDeptId, proctorRolls, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.SUBMITTED);
+        long verified = countByStatus(subjectId, callerDeptId, proctorRolls, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.VERIFIED);
+        long rejected = countByStatus(subjectId, callerDeptId, proctorRolls, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.REJECTED);
         return Map.of(
             "total", submitted + verified + rejected,
             "submitted", submitted,
@@ -166,12 +201,13 @@ public class AdminController {
             "rejected", rejected);
     }
 
-    private long countByStatus(Optional<Long> subjectId, Long callerDeptId, Optional<String> subjectType,
+    private long countByStatus(Optional<Long> subjectId, Long callerDeptId, java.util.Set<String> proctorRolls,
+                               Optional<String> subjectType,
                                Optional<String> searchQuery, Optional<LocalDate> startDate, Optional<LocalDate> endDate,
                                Optional<Long> examCycleId, RegistrationStatus status) {
         return registrationRepository.count(new RegistrationSpecification(
                 subjectId.orElse(null), callerDeptId, subjectType.orElse(null), searchQuery.orElse(null),
-                startDate.orElse(null), endDate.orElse(null), examCycleId.orElse(null), status));
+                startDate.orElse(null), endDate.orElse(null), examCycleId.orElse(null), status, proctorRolls));
     }
 
     /** Parse the optional status filter; blank/absent means "all statuses". 400 on an unknown value. */
@@ -201,7 +237,7 @@ public class AdminController {
     }
 
     @GetMapping("/registrations/{regId}/events")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public List<RegistrationEventResponse> getRegistrationEvents(@PathVariable String regId,
                                                                  Authentication authentication) {
         // dept-scoped roles may only read the event trail of registrations their
@@ -236,7 +272,7 @@ public class AdminController {
     // Read is open to all admin-type roles (matches the other read endpoints here);
     // creating/editing departments below stays restricted to ADMIN/PRINCIPAL.
     @GetMapping("/departments")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public List<Department> getDepartments() {
         return departmentRepository.findAll(Sort.by("deptName"));
     }
@@ -321,7 +357,7 @@ public class AdminController {
     }
 
     @GetMapping("/subjects-for-filter")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public List<Subject> getSubjectsForFilter(
             @RequestParam Optional<String> subjectType,
             @RequestParam Optional<String> searchQuery,
@@ -339,7 +375,7 @@ public class AdminController {
     }
 
     @GetMapping("/export-pdf")
-    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public void exportRegistrationsPdf(
             @RequestParam Optional<Long> subjectId,
             @RequestParam Optional<String> subjectType,
@@ -351,6 +387,7 @@ public class AdminController {
             HttpServletResponse response
     ) throws Exception {
         Long callerDeptId = resolveCallerDeptId(authentication);
+        java.util.Set<String> proctorRolls = proctorRollNos(authentication);
 
         // Scope to a single exam cycle: the one explicitly selected, else the active
         // cycle. Without this the report would span every cycle. If nothing is
@@ -359,7 +396,7 @@ public class AdminController {
                 examCycleRepository.findByActiveTrue().map(ExamCycle::getId).orElse(null));
 
         List<Registration> registrations;
-        if (effectiveCycleId == null) {
+        if (effectiveCycleId == null || (proctorRolls != null && proctorRolls.isEmpty())) {
             registrations = List.of();
         } else {
             // the summary report covers only verified registrations — push the status
@@ -373,7 +410,8 @@ public class AdminController {
                     startDate.orElse(null),
                     endDate.orElse(null),
                     effectiveCycleId,
-                    RegistrationStatus.VERIFIED);
+                    RegistrationStatus.VERIFIED,
+                    proctorRolls);
 
             registrations = registrationRepository
                     .findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));

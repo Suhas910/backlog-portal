@@ -10,6 +10,7 @@ import com.college.backlog.repository.StudentRepository;
 import com.college.backlog.repository.StudentSemesterTermRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.EligibilityService;
+import com.college.backlog.service.ProctorScopeService;
 import com.college.backlog.service.StudentManagementService;
 import com.college.backlog.service.StudentSpecification;
 import com.college.backlog.service.Usn;
@@ -31,17 +32,22 @@ import java.util.stream.Collectors;
 /**
  * Admin student-account management. Authorization mirrors ProgressionController:
  * ADMIN / PRINCIPAL act on any department; HOD / DEPT_OFFICE are pinned to students
- * of their own department (matched by the USN branch code). Enforced here on the
- * server — the UI only mirrors it. DOB is never returned (write-only credential).
+ * of their own department (matched by the USN branch code). PROCTOR is dept-pinned
+ * the same way and additionally hard-scoped to their assigned students: the list
+ * shows only those, edit/reset-DOB require supervision, and create/import/delete
+ * are refused outright (a proctor "removes a student" by unassigning them —
+ * ProctorAssignmentController — never by deleting the account). Enforced here on
+ * the server — the UI only mirrors it. DOB is never returned (write-only credential).
  *
  * See docs/adr/backlog-progression.md.
  */
 @RestController
 @RequestMapping("/api/admin/students")
-@PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+@PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
 public class StudentManagementController {
 
-    private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
+    private static final Set<UserRole> DEPT_ROLES =
+        Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
 
     // Page-size guards mirror AdminController: a cap so `size` can't be used to pull
     // the whole (ever-growing) roster in one request, and a sane default page.
@@ -54,6 +60,7 @@ public class StudentManagementController {
     @Autowired private UserRepository userRepository;
     @Autowired private StudentManagementService studentService;
     @Autowired private EligibilityService eligibilityService;
+    @Autowired private ProctorScopeService proctorScope;
 
     // ---- list ----
 
@@ -73,11 +80,19 @@ public class StudentManagementController {
         String deptCode = effectiveDeptCode(actor, deptId.orElse(null));
         String rollNoLike = usnPattern(deptCode, admissionYear.orElse(null));
 
-        StudentSpecification spec =
-            new StudentSpecification(rollNoLike, semester.orElse(null), query.orElse(null));
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         int safePage = Math.max(page, 0);
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("rollNo"));
+
+        // proctor: restrict the roster to their assigned students. An empty IN
+        // list is not valid SQL, so a proctor with no assignments short-circuits
+        // to an empty page instead of an unfiltered query.
+        Set<String> assigned = proctorScope.assignedRollNos(actor);
+        if (assigned != null && assigned.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        StudentSpecification spec = new StudentSpecification(
+            rollNoLike, semester.orElse(null), query.orElse(null), assigned);
         Page<Student> studentsPage = studentRepository.findAll(spec, pageable);
 
         // batch the term lookup over just this page's roll numbers so progressionComplete
@@ -94,6 +109,8 @@ public class StudentManagementController {
     @ResponseStatus(HttpStatus.CREATED)
     public StudentSummaryResponse create(@Valid @RequestBody StudentCreateRequest req, Authentication auth) {
         User actor = requireActor(auth);
+        proctorScope.rejectProctor(actor,
+            "Proctors cannot create student accounts — claim existing students instead.");
         String rollNo = studentService.normalizeUsn(req.getRollNo());
         req.setRollNo(rollNo);
         assertInScope(actor, rollNo);
@@ -151,6 +168,8 @@ public class StudentManagementController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String rollNo, Authentication auth) {
         User actor = requireActor(auth);
+        proctorScope.rejectProctor(actor,
+            "Proctors cannot delete student accounts — remove the student from your supervision instead.");
         Student student = loadInScope(actor, rollNo);
         try {
             studentService.deleteStudent(student);
@@ -164,6 +183,8 @@ public class StudentManagementController {
     @PostMapping("/import")
     public BatchResult importRows(@RequestBody StudentImportRequest req, Authentication auth) {
         User actor = requireActor(auth);
+        proctorScope.rejectProctor(actor,
+            "Proctors cannot import student accounts — claim existing students instead.");
         String callerDeptCode = callerDeptCode(actor);
         List<ProgressionRowResult> results = new ArrayList<>();
         int created = 0, skipped = 0, errors = 0;
@@ -268,6 +289,7 @@ public class StudentManagementController {
     private Student loadInScope(User actor, String rollNo) {
         String roll = studentService.normalizeUsn(rollNo);
         assertInScope(actor, roll);
+        proctorScope.assertSupervises(actor, roll); // proctor: assignment scope on top of dept scope
         return studentRepository.findByRollNo(roll)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + roll));
     }

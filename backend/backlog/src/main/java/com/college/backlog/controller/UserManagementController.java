@@ -29,9 +29,10 @@ import java.util.stream.Collectors;
  *
  * Who may manage whom:
  *   ADMIN      -> any user, any role
- *   PRINCIPAL  -> HOD and DEPT_OFFICE (any department)
- *   HOD        -> DEPT_OFFICE in the HOD's own department only
+ *   PRINCIPAL  -> HOD, DEPT_OFFICE and PROCTOR (any department)
+ *   HOD        -> DEPT_OFFICE and PROCTOR in the HOD's own department only
  *   DEPT_OFFICE-> no access
+ *   PROCTOR    -> no access
  *
  * Passwords are never returned. Create/reset issue a one-time temp password
  * (shown once) and force a change on next login. Self password changes go
@@ -41,7 +42,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin/users")
 public class UserManagementController {
 
-    private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
+    // Roles that must carry a department. Doubles as PRINCIPAL's manageable set.
+    private static final Set<UserRole> DEPT_ROLES =
+        Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
 
     @Autowired
     private UserRepository userRepository;
@@ -188,7 +191,7 @@ public class UserManagementController {
             case PRINCIPAL:
                 return DEPT_ROLES.contains(targetRole);
             case HOD:
-                return targetRole == UserRole.DEPT_OFFICE;
+                return targetRole == UserRole.DEPT_OFFICE || targetRole == UserRole.PROCTOR;
             default:
                 return false;
         }

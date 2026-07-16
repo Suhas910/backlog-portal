@@ -27,7 +27,8 @@ public class AuthController {
 
     private static final String SCOPE = "ADMIN";
 
-    private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
+    private static final Set<UserRole> DEPT_ROLES =
+        Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
 
     @Autowired
     private UserRepository userRepository;

@@ -21,7 +21,11 @@ public class ExamCycleController {
     @Autowired
     private ExamCycleRepository examCycleRepository;
 
+    // Read is also open to PROCTOR (the registrations page's cycle filter needs
+    // the list); the method-level annotation overrides the class-level one.
+    // Activate/deactivate below stay closed to proctors.
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public List<ExamCycle> list() {
         return examCycleRepository.findAllByOrderByCreatedAtDesc();
     }

@@ -10,6 +10,7 @@ import {
   Pencil,
   Search,
   Trash2,
+  UserMinus,
   X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -23,8 +24,11 @@ const inputClass =
 const PAGE_SIZE = 25;
 
 // Browse / edit / delete / reset-DOB the student roster. Presentational tab — the
-// shell supplies departments + the dept-lock context.
-function StudentsManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
+// shell supplies departments + the dept-lock context. For a PROCTOR the server
+// already limits the list to their assigned students, and "delete" becomes
+// "remove from my supervision" (unassign — never an account delete).
+function StudentsManageTab({ departments, adminRole, adminDepartment, deptLocked, pinnedDeptId }) {
+  const proctorMode = adminRole === "PROCTOR";
   const [fDeptId, setFDeptId] = useState("");
   const [fYear, setFYear] = useState("");
   const [fSemester, setFSemester] = useState("");
@@ -175,6 +179,7 @@ function StudentsManageTab({ departments, adminDepartment, deptLocked, pinnedDep
                 <StudentRow
                   key={student.rollNo}
                   student={student}
+                  proctorMode={proctorMode}
                   onUpdated={onUpdated}
                   onRemoved={onRemoved}
                 />
@@ -227,7 +232,7 @@ function Pager({ pageInfo, busy, onGo, noun }) {
 }
 
 // Module scope so identity is stable across parent renders (keeps input focus).
-function StudentRow({ student, onUpdated, onRemoved }) {
+function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
   const [mode, setMode] = useState("view"); // view | edit | dob
   const [showSems, setShowSems] = useState(false); // toggle the sem-year timeline
   const [name, setName] = useState(student.name || "");
@@ -307,15 +312,26 @@ function StudentRow({ student, onUpdated, onRemoved }) {
     }
   };
 
+  // For a proctor this only ends their supervision (the account stays); for the
+  // other roles it deletes the student account (blocked server-side if referenced).
   const remove = async () => {
-    if (!window.confirm(`Delete ${student.name} (${student.rollNo})?`)) return;
+    const prompt = proctorMode
+      ? `Remove ${student.name} (${student.rollNo}) from your supervision? Their account is not deleted.`
+      : `Delete ${student.name} (${student.rollNo})?`;
+    if (!window.confirm(prompt)) return;
     setBusy(true);
     setError("");
     try {
-      await api.delete(`/admin/students/${student.rollNo}`, { headers: getAdminHeaders() });
+      if (proctorMode) {
+        await api.delete(`/admin/proctor/assignments/${student.rollNo}`, {
+          headers: getAdminHeaders(),
+        });
+      } else {
+        await api.delete(`/admin/students/${student.rollNo}`, { headers: getAdminHeaders() });
+      }
       onRemoved(student.rollNo);
     } catch (err) {
-      setError(err.response?.data?.message || "Could not delete.");
+      setError(err.response?.data?.message || (proctorMode ? "Could not remove." : "Could not delete."));
       setBusy(false);
     }
   };
@@ -338,15 +354,25 @@ function StudentRow({ student, onUpdated, onRemoved }) {
               {student.email ? ` · ${student.email}` : ""}
               {student.phone ? ` · ${student.phone}` : ""}
             </p>
-            {!student.progressionComplete && (
-              <Link
-                to="/admin/students?tab=progression"
-                data-cy={`student-gap-${student.rollNo}`}
-                className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"
-              >
-                <AlertTriangle size={12} /> Progression incomplete
-              </Link>
-            )}
+            {!student.progressionComplete &&
+              (proctorMode ? (
+                // proctors have no Progression tab — the badge is informational;
+                // they fix years via the Semesters panel below
+                <span
+                  data-cy={`student-gap-${student.rollNo}`}
+                  className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800"
+                >
+                  <AlertTriangle size={12} /> Progression incomplete — set years under Semesters
+                </span>
+              ) : (
+                <Link
+                  to="/admin/students?tab=progression"
+                  data-cy={`student-gap-${student.rollNo}`}
+                  className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"
+                >
+                  <AlertTriangle size={12} /> Progression incomplete
+                </Link>
+              ))}
             {notice && <p className="mt-1.5 text-xs font-semibold text-[var(--color-primary)]">{notice}</p>}
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
@@ -391,7 +417,14 @@ function StudentRow({ student, onUpdated, onRemoved }) {
               data-cy={`student-delete-${student.rollNo}`}
               className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
             >
-              {busy ? <LoaderCircle size={13} className="animate-spin" /> : <Trash2 size={13} />} Delete
+              {busy ? (
+                <LoaderCircle size={13} className="animate-spin" />
+              ) : proctorMode ? (
+                <UserMinus size={13} />
+              ) : (
+                <Trash2 size={13} />
+              )}{" "}
+              {proctorMode ? "Remove" : "Delete"}
             </button>
           </div>
         </div>

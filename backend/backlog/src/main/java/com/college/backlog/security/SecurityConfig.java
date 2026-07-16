@@ -68,13 +68,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/student/auth/logout").permitAll()
                         // sliding-session refresh: needs a valid token, admin-scoped
                         // (the student variant falls under /api/student/** below)
-                        .requestMatchers(HttpMethod.POST, "/api/auth/refresh").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE")
+                        .requestMatchers(HttpMethod.POST, "/api/auth/refresh").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR")
                         .requestMatchers(HttpMethod.GET, "/api/departments").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/registration-status").permitAll()
-                        .requestMatchers("/api/register/verify/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE")
+                        .requestMatchers("/api/register/verify/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR")
                         .requestMatchers(HttpMethod.POST, "/api/register").hasRole("STUDENT")
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
-                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE")
+                        // PROCTOR passes the coarse gate; each /api/admin controller's own
+                        // @PreAuthorize decides whether proctors may use it (default: no)
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR")
                         .anyRequest().authenticated());
         return http.build();
     }
