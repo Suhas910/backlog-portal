@@ -69,13 +69,13 @@ This project is built with a modern, robust, and scalable technology stack.
 
 ### Backend (Spring Boot)
 
-The backend targets **Java 17** (see `pom.xml`). Maven itself is provided via the Maven Wrapper, so you do **not** need a system-wide Maven install — just a JDK 17 and `./mvnw`.
+The backend targets **Java 21** (see `pom.xml`). Maven itself is provided via the Maven Wrapper, so you do **not** need a system-wide Maven install — just a JDK 21 and `./mvnw`.
 
-**macOS (Apple Silicon / Intel)** — pin JDK 17 to this folder without disturbing any newer JDK you use globally:
+**macOS (Apple Silicon / Intel)** — pin JDK 21 to this folder without disturbing any newer JDK you use globally:
 
 ```bash
-# 1. Install JDK 17 and direnv (once)
-brew install --cask temurin@17
+# 1. Install JDK 21 and direnv (once)
+brew install --cask temurin@21
 brew install direnv
 
 # 2. Hook direnv into your shell (zsh), then reload
@@ -87,13 +87,13 @@ cd backend/backlog
 direnv allow
 ```
 
-The committed `.envrc` sets `JAVA_HOME` to JDK 17 automatically whenever you enter `backend/backlog/`, and reverts when you leave — so a different global JDK is fine. Verify with:
+The committed `.envrc` sets `JAVA_HOME` to JDK 21 automatically whenever you enter `backend/backlog/`, and reverts when you leave — so a different global JDK is fine. Verify with:
 
 ```bash
-./mvnw -version   # should report "Java version: 17.x"
+./mvnw -version   # should report "Java version: 21.x"
 ```
 
-> Not on macOS / don't want direnv? Just ensure a JDK 17 is active (`java -version` shows 17) before running `./mvnw` — direnv is only a convenience for per-folder switching.
+> Not on macOS / don't want direnv? Just ensure a JDK 21 is active (`java -version` shows 21) before running `./mvnw` — direnv is only a convenience for per-folder switching.
 
 **Configure before the first run.** Two config files are gitignored, so a fresh clone must create them from the provided templates:
 
