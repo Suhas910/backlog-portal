@@ -13,6 +13,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
+import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getStudentHeaders, logoutStudent } from "../lib/api";
 import { savePdfBlob } from "../lib/downloadPdf";
 
@@ -126,13 +127,16 @@ function StudentDashboardPage() {
       <div className="mx-auto w-full max-w-4xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-          >
-            <LogOut size={15} /> Log out
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              <LogOut size={15} /> Log out
+            </button>
+          </div>
         </header>
 
         {loading ? (

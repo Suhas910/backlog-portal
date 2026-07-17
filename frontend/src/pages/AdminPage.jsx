@@ -21,6 +21,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
+import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getAdminHeaders, clearAdminSession, logoutAdmin } from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
@@ -438,16 +439,13 @@ function AdminPage() {
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-4 text-white shadow-soft sm:px-6">
           <div>
             <BrandIdentity compact />
-            <div className="mt-2 flex flex-wrap gap-2">
-              <p className="inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
-                Admin Control Panel
-              </p>
-              {adminDepartment && (
+            {adminDepartment && (
+              <div className="mt-2 flex flex-wrap gap-2">
                 <p className="inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
                   {adminDepartment}
                 </p>
-              )}
-            </div>
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             {adminRole !== "PROCTOR" && (
@@ -490,6 +488,7 @@ function AdminPage() {
                 <IdCard size={14} /> {adminRole === "PROCTOR" ? "My Students" : "Manage Students"}
               </Link>
             )}
+            <ThemeToggle />
             <Link
               to="/"
               className="inline-flex items-center gap-1 rounded-full border border-white/35 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
