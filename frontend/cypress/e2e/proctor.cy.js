@@ -42,8 +42,10 @@ describe("Proctor role", () => {
     cy.visit("/admin", { onBeforeLoad: seedProctor });
     cy.contains("My Students").should("be.visible");
     cy.contains("Exam Cycles").should("not.exist");
-    cy.contains("Manage Subjects").should("not.exist");
-    cy.contains("Manage Users").should("not.exist");
+    // anchor-scoped: the registrations dashboard legitimately contains the word
+    // "Subjects" elsewhere (e.g. the "All Subjects" filter)
+    cy.contains("a", "Subjects").should("not.exist");
+    cy.contains("a", "Users").should("not.exist");
     cy.contains("Departments").should("not.exist");
 
     cy.contains("My Students").click();

@@ -461,7 +461,7 @@ function AdminPage() {
                 to="/admin/manage-subjects"
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >
-                <BookOpen size={14} /> Manage Subjects
+                <BookOpen size={14} /> Subjects
               </Link>
             )}
             {(adminRole === "ADMIN" || adminRole === "PRINCIPAL") && (
@@ -477,7 +477,7 @@ function AdminPage() {
                 to="/admin/users"
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >
-                <Users size={14} /> Manage Users
+                <Users size={14} /> Users
               </Link>
             )}
             {["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"].includes(adminRole) && (
@@ -485,7 +485,7 @@ function AdminPage() {
                 to="/admin/students"
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >
-                <IdCard size={14} /> {adminRole === "PROCTOR" ? "My Students" : "Manage Students"}
+                <IdCard size={14} /> {adminRole === "PROCTOR" ? "My Students" : "Students"}
               </Link>
             )}
             <ThemeToggle />

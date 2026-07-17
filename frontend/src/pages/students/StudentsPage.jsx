@@ -94,7 +94,7 @@ function StudentsPage() {
 
         <div className="mb-3">
           <h1 className="inline-flex items-center gap-2 text-2xl font-semibold text-[var(--color-secondary)] sm:text-3xl">
-            <GraduationCap size={26} /> {adminRole === "PROCTOR" ? "My Students" : "Manage Students"}
+            <GraduationCap size={26} /> {adminRole === "PROCTOR" ? "My Students" : "Students"}
           </h1>
           <p className="mt-1 text-sm text-[var(--text-muted)]">
             {adminRole === "PROCTOR"

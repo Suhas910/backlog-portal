@@ -78,10 +78,10 @@ describe("Admin dashboard — role & department scoped access", () => {
     // Students), and the curriculum for their own department (add / clone / edit
     // subjects now live as tabs under the single Manage Subjects entry), but not
     // departments
-    cy.contains("a", "Manage Users").should("exist");
-    cy.contains("a", "Manage Students").should("exist");
+    cy.contains("a", "Users").should("exist");
+    cy.contains("a", "Students").should("exist");
     cy.contains("a", "Progression").should("not.exist");
-    cy.contains("a", "Manage Subjects").should("exist");
+    cy.contains("a", "Subjects").should("exist");
     cy.contains("a", "Add Subject").should("not.exist");
     cy.contains("a", "Clone Subjects").should("not.exist");
     cy.contains("a", "Departments").should("not.exist");

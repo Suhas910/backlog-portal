@@ -216,7 +216,7 @@ function ManageUsersPage() {
         >
           <div>
             <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-[var(--color-secondary)] sm:text-3xl">
-              <Users size={26} /> Manage Users
+              <Users size={26} /> Users
             </h1>
             <p className="text-sm text-[var(--text-main)]">
               Create, reset, and remove staff accounts you're authorised to

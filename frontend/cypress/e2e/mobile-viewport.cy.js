@@ -102,7 +102,7 @@ describe("Mobile viewport (375x812)", () => {
     cy.wait("@getRegistrations");
 
     // all nav buttons must be visible (the row wraps instead of clipping)
-    ["Exam Cycles", "Manage Subjects", "Departments", "Manage Users", "Manage Students", "Logout"].forEach(
+    ["Exam Cycles", "Subjects", "Departments", "Users", "Students", "Logout"].forEach(
       (label) => cy.contains(label).should("be.visible"),
     );
     expectNoHorizontalScroll();
