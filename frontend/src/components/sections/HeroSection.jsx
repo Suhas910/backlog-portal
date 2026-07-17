@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
-import heroImage from "../../assets/front-page.jpeg";
+import api from "../../lib/api";
 import { useTheme } from "../../context/ThemeContext";
 import MagneticCta from "../ui/MagneticCta";
 
@@ -12,6 +13,17 @@ const heroItem = {
 
 export default function HeroSection() {
   const { isDark } = useTheme();
+  // null = still checking; otherwise { open, cycleName?, examMonthYear? }
+  const [regStatus, setRegStatus] = useState(null);
+
+  useEffect(() => {
+    api
+      .get("/registration-status")
+      // fail closed, same as the registration page: never claim a cycle is
+      // open unless the backend confirms it
+      .then((res) => setRegStatus(res.data))
+      .catch(() => setRegStatus({ open: false }));
+  }, []);
 
   return (
     <section
@@ -65,13 +77,8 @@ export default function HeroSection() {
           zIndex: 1,
           margin: "0 auto",
           maxWidth: "80rem",
-          display: "grid",
-          gap: "2rem",
-          alignItems: "center",
         }}
-        className="lg:grid-cols-2"
       >
-        {/* Left — text */}
         <motion.div
           initial="hidden"
           whileInView="show"
@@ -84,28 +91,48 @@ export default function HeroSection() {
             textAlign: "center",
           }}
         >
-          <motion.span
-            variants={heroItem}
-            style={{
-              display: "inline-flex",
-              alignSelf: "center",
-              borderRadius: "9999px",
-              padding: "6px 16px",
-              fontSize: "11px",
-              fontWeight: 600,
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              background: isDark
-                ? "rgba(237,20,91,0.15)"
-                : "rgba(145,25,28,0.08)",
-              border: isDark
-                ? "1px solid rgba(237,20,91,0.4)"
-                : "1px solid rgba(145,25,28,0.3)",
-              color: isDark ? "#f472a0" : "#91191C",
-            }}
-          >
-            2026 Backlog Cycle Open
-          </motion.span>
+          {regStatus !== null && (
+            <motion.span
+              variants={heroItem}
+              initial="hidden"
+              animate="show"
+              style={{
+                display: "inline-flex",
+                alignSelf: "center",
+                borderRadius: "9999px",
+                padding: "6px 16px",
+                fontSize: "11px",
+                fontWeight: 600,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                background: regStatus.open
+                  ? isDark
+                    ? "rgba(237,20,91,0.15)"
+                    : "rgba(145,25,28,0.08)"
+                  : isDark
+                    ? "rgba(255,255,255,0.08)"
+                    : "rgba(36,42,82,0.06)",
+                border: regStatus.open
+                  ? isDark
+                    ? "1px solid rgba(237,20,91,0.4)"
+                    : "1px solid rgba(145,25,28,0.3)"
+                  : isDark
+                    ? "1px solid rgba(255,255,255,0.25)"
+                    : "1px solid rgba(36,42,82,0.25)",
+                color: regStatus.open
+                  ? isDark
+                    ? "#f472a0"
+                    : "#91191C"
+                  : isDark
+                    ? "rgba(255,255,255,0.75)"
+                    : "#242A52",
+              }}
+            >
+              {regStatus.open
+                ? `${regStatus.cycleName ? `${regStatus.cycleName} — ` : ""}Registrations Open`
+                : "Registrations Currently Closed"}
+            </motion.span>
+          )}
 
           <motion.h1
             variants={heroItem}
@@ -169,64 +196,6 @@ export default function HeroSection() {
               <ShieldCheck size={16} /> Admin Access
             </Link>
           </motion.div>
-        </motion.div>
-
-        {/* Right — image */}
-        <motion.div
-          initial={{ opacity: 0, x: 24 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.75 }}
-        >
-          <div
-            style={{
-              borderRadius: "2rem",
-              padding: isDark ? "3px" : "0",
-              background: isDark
-                ? "linear-gradient(135deg, rgba(15,27,58,0.95), rgba(28,41,76,0.92), rgba(45,25,70,0.84))"
-                : "transparent",
-              boxShadow: isDark
-                ? "0 0 60px rgba(20,37,79,0.22), 0 24px 60px rgba(0,0,0,0.35)"
-                : "0 16px 48px rgba(36,42,82,0.13)",
-            }}
-          >
-            <div
-              style={{
-                borderRadius: isDark ? "calc(2rem - 3px)" : "2rem",
-                overflow: "hidden",
-                position: "relative",
-                background: isDark ? "#121b34" : "#f0f0f5",
-              }}
-            >
-              <img
-                src={heroImage}
-                alt="Backlog registration illustration"
-                style={{
-                  height: "420px",
-                  width: "100%",
-                  objectFit: "cover",
-                  objectPosition: "center top",
-                  display: "block",
-                  opacity: isDark ? 0.98 : 1,
-                  filter: isDark
-                    ? "brightness(0.95) saturate(1.2) contrast(1.02)"
-                    : "none",
-                }}
-              />
-              {isDark && (
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "linear-gradient(180deg, rgba(14,28,57,0.24) 0%, rgba(26,40,74,0.32) 45%, rgba(37,27,68,0.45) 100%)",
-                    mixBlendMode: "screen",
-                    pointerEvents: "none",
-                  }}
-                />
-              )}
-            </div>
-          </div>
         </motion.div>
       </div>
     </section>

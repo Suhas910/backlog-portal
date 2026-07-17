@@ -14,10 +14,13 @@ describe("Mobile viewport (375x812)", () => {
   });
 
   it("home page fits the viewport with the header intact", () => {
+    // declare the cycle state explicitly rather than relying on the fetch
+    // failing (no backend in e2e) to land in the closed branch
+    cy.intercept("GET", "/api/registration-status", { open: false }).as("regStatus");
     cy.visit("/");
     cy.contains("Register for your backlog exam").should("be.visible");
-    // the brand logo and the Brochure CTA share the sticky header row
-    cy.contains("Brochure").should("be.visible");
+    // the brand logo and the theme toggle share the sticky header row
+    cy.get('button[aria-label="Toggle theme"]').should("be.visible");
     expectNoHorizontalScroll();
   });
 

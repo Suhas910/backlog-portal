@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { useMagnetic } from "../../hooks/useMagnetic";
 
 function baseClasses(extra = "") {
   return [
@@ -18,15 +17,12 @@ export default function MagneticCta({
   type = "button",
   ...props
 }) {
-  const magnetic = useMagnetic();
-
   if (Component === "button") {
     return (
       <motion.button
         whileTap={{ scale: 0.98 }}
         className={baseClasses(className)}
         type={type}
-        {...magnetic}
         {...props}
       >
         {children}
@@ -35,7 +31,7 @@ export default function MagneticCta({
   }
 
   return (
-    <motion.div whileTap={{ scale: 0.98 }} {...magnetic}>
+    <motion.div whileTap={{ scale: 0.98 }}>
       <Component className={baseClasses(className)} {...props}>
         {children}
       </Component>

@@ -1,10 +1,7 @@
-import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import StickyNav from "../components/layout/StickyNav";
 import HeroSection from "../components/sections/HeroSection";
-import QuickFactsSection from "../components/sections/QuickFactsSection";
-import AdmissionsSection from "../components/sections/AdmissionsSection";
-import MobileActionBar from "../components/layout/MobileActionBar";
+import ProcessSection from "../components/sections/ProcessSection";
 
 function HomePage() {
   return (
@@ -17,10 +14,9 @@ function HomePage() {
       </a>
       <StickyNav />
 
-      <main id="main-content" className="pb-20 md:pb-0">
+      <main id="main-content">
         <HeroSection />
-        <QuickFactsSection />
-        <AdmissionsSection />
+        <ProcessSection />
       </main>
 
       <motion.footer
@@ -31,18 +27,8 @@ function HomePage() {
       >
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-sm text-[var(--text-main)]">
           <p>Ramaiah Institute of Technology</p>
-          <div className="flex items-center gap-4">
-            <Link to="/register" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)]">
-              Student Registration
-            </Link>
-            <Link to="/admin/login" className="text-[var(--color-secondary)] hover:text-[var(--color-primary)]">
-              Admin Login
-            </Link>
-          </div>
         </div>
       </motion.footer>
-
-      <MobileActionBar />
     </div>
   );
 }
