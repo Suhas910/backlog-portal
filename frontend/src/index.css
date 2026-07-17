@@ -35,7 +35,84 @@
   --stroke: rgba(255, 255, 255, 0.16);
   --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.35);
 
+  /* Readable text tints for the brand colors, which are too dark to sit as
+     text on the dark surfaces. Only the *text* utilities are remapped below;
+     the brand colors stay intact when used as backgrounds/borders. */
+  --text-on-dark-secondary: #c8cff2;
+  --text-on-dark-primary: #f0888b;
+
   color-scheme: dark;
+}
+
+/* The brand navy (--color-secondary) and maroon (--color-primary) are used
+   both as fills and as text. As fills they need to stay branded, but as text
+   on the dark surfaces they're nearly invisible / very low contrast. Remap
+   only the Tailwind text-color utilities (not bg/border) to legible tints.
+   These unlayered rules override the layered Tailwind utilities. */
+[data-theme="dark"] .text-\[var\(--color-secondary\)\] {
+  color: var(--text-on-dark-secondary);
+}
+
+[data-theme="dark"] .text-\[var\(--color-primary\)\] {
+  color: var(--text-on-dark-primary);
+}
+
+/* Status / callout boxes (red = error, amber = warning, green/emerald = success)
+   are authored as light tints with dark text for the light theme. On the dark
+   surfaces those bright patches with dark text read wrong, so remap them to
+   translucent tints with lighter text. Solid badge/button fills
+   (bg-red-600/700, which carry white text) are intentionally left untouched. */
+[data-theme="dark"] .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.12);
+}
+[data-theme="dark"] .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.2);
+}
+[data-theme="dark"] .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.12);
+}
+[data-theme="dark"] .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.2);
+}
+[data-theme="dark"] .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.12);
+}
+[data-theme="dark"] .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.12);
+}
+
+[data-theme="dark"] .border-red-200 {
+  border-color: rgba(248, 113, 113, 0.35);
+}
+[data-theme="dark"] .border-amber-200 {
+  border-color: rgba(251, 191, 36, 0.3);
+}
+[data-theme="dark"] .border-amber-300 {
+  border-color: rgba(251, 191, 36, 0.38);
+}
+[data-theme="dark"] .border-green-200 {
+  border-color: rgba(74, 222, 128, 0.3);
+}
+[data-theme="dark"] .border-emerald-300 {
+  border-color: rgba(52, 211, 153, 0.38);
+}
+
+[data-theme="dark"] .text-red-600,
+[data-theme="dark"] .text-red-700 {
+  color: #f87171;
+}
+[data-theme="dark"] .text-amber-600,
+[data-theme="dark"] .text-amber-700,
+[data-theme="dark"] .text-amber-800,
+[data-theme="dark"] .text-amber-900 {
+  color: #fbbf24;
+}
+[data-theme="dark"] .text-green-800 {
+  color: #4ade80;
+}
+[data-theme="dark"] .text-emerald-700,
+[data-theme="dark"] .text-emerald-900 {
+  color: #34d399;
 }
 
 * {
