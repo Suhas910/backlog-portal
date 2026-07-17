@@ -27,12 +27,11 @@ public class Subject {
     private int credits;
 
     // Academic year this offering was taught (e.g. 2023 = AY 2023-24). The
-    // authoritative key for backlog year-binding. @ColumnDefault("0") was needed
-    // to add this column to the already-populated table without a default-value
-    // violation. NOT NULL is enforced at the DB level (see
-    // db/migrations/2026-06-16-subjects-academic-year-not-null.sql), not via
-    // nullable=false here — that would make ddl-auto=update auto-ALTER on boot.
-    // See docs/adr/backlog-progression.md.
+    // authoritative key for backlog year-binding. @ColumnDefault("0") mirrors the
+    // column's `default 0` in the Flyway V1 baseline so the mapping matches under
+    // ddl-auto=validate. NOT NULL is enforced at the DB level (folded into the V1
+    // baseline), not via nullable=false here — schema constraints belong in a V__
+    // migration, never in the entity. See docs/adr/backlog-progression.md.
     @Column(name = "academic_year_offered")
     @ColumnDefault("0")
     private int academicYearOffered;

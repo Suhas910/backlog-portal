@@ -22,9 +22,10 @@ public class Department {
     private String contactEmail;
 
     // Optimistic-lock version for concurrent-edit conflict detection on the
-    // manage-departments page. @ColumnDefault("0") makes ddl-auto=update emit the
-    // column with `default 0`, so the ADD COLUMN backfills existing department
-    // rows (Postgres backfills on ADD COLUMN ... DEFAULT) — no manual Neon DDL.
+    // manage-departments page. The column lives in the Flyway V1 baseline as
+    // `version bigint DEFAULT 0`; @ColumnDefault("0") mirrors that default so the
+    // mapping matches under ddl-auto=validate. Hibernate manages the value —
+    // never set it in code.
     @Version
     @ColumnDefault("0")
     private Long version;

@@ -48,8 +48,9 @@ public class Registration {
     @Column(name = "verified_by")
     private String verifiedBy;
 
-    // NOT NULL is enforced at the DB level (db/migrations/2026-06-13-add-db-constraints.sql),
-    // not here — adding nullable=false would make ddl-auto=update auto-ALTER on boot.
+    // NOT NULL is enforced at the DB level (folded into the Flyway V1 baseline),
+    // not here — under ddl-auto=validate the mapping must match the schema, so
+    // schema constraints belong in a V__ migration, never in nullable=false.
     @ManyToOne
     @JoinColumn(name = "exam_cycle_id")
     private ExamCycle examCycle;
