@@ -1,6 +1,6 @@
 import logo from "../../assets/MSRIT.png";
 
-export default function BrandIdentity({ compact = false }) {
+export default function BrandIdentity({ compact = false, wordmarkClassName = "" }) {
   return (
     <div className="flex items-center gap-3">
       <img
@@ -8,7 +8,7 @@ export default function BrandIdentity({ compact = false }) {
         alt="Ramaiah Institute of Technology"
         className={compact ? "h-10 w-auto" : "h-12 w-auto"}
       />
-      <div className="leading-none">
+      <div className={`leading-none ${wordmarkClassName}`}>
         <p
           className={`${
             compact ? "text-base" : "text-lg sm:text-xl"

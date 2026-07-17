@@ -13,6 +13,7 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentHeaders } from "../lib/api";
 import { formatAcademicYear } from "../lib/academicYear";
+import { savePdfBlob } from "../lib/downloadPdf";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 function RegistrationPage() {
@@ -157,14 +158,7 @@ function RegistrationPage() {
         headers: getStudentHeaders(),
         responseType: "blob",
       });
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `backlog-registration-${profile?.rollNo || regId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      savePdfBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`);
     } catch {
       alert("Could not download the form. Please try again from your dashboard.");
     } finally {
@@ -407,7 +401,7 @@ function RegistrationPage() {
                         />
                         <label
                           htmlFor={`subject-${subject.id}`}
-                          className="flex flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-[var(--text-main)] sm:text-base"
+                          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-[var(--text-main)] sm:text-base"
                         >
                           <span className="flex min-w-0 flex-col">
                             <span className="truncate">{subject.subjectName}</span>

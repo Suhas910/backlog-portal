@@ -6,6 +6,10 @@ export function useMagnetic(strength = 0.25) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
   function onMouseMove(event) {
+    // Touch taps fire a synthetic mousemove right before click; translating the
+    // button then can move it out from under the tap so the click never lands.
+    // The magnetic effect is hover-only, so skip it on touch devices.
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left - rect.width / 2;
     const y = event.clientY - rect.top - rect.height / 2;

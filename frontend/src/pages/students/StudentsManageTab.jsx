@@ -375,7 +375,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
               ))}
             {notice && <p className="mt-1.5 text-xs font-semibold text-[var(--color-primary)]">{notice}</p>}
           </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setShowSems((v) => !v)}

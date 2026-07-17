@@ -41,7 +41,9 @@ export default function StickyNav() {
     >
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link to="/" aria-label="Go to homepage">
-          <BrandIdentity compact={scrolled} />
+          {/* The wordmark collides with the theme toggle + Brochure CTA on phones,
+              so it is hidden below sm (the logo image already carries the branding). */}
+          <BrandIdentity compact={scrolled} wordmarkClassName="hidden sm:block" />
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex" aria-label="Section links">

@@ -14,6 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentHeaders, logoutStudent } from "../lib/api";
+import { savePdfBlob } from "../lib/downloadPdf";
 
 function statusBadgeClass(status) {
   if (status === "VERIFIED")
@@ -104,16 +105,7 @@ function StudentDashboardPage() {
         headers: getStudentHeaders(),
         responseType: "blob",
       });
-      const url = window.URL.createObjectURL(
-        new Blob([res.data], { type: "application/pdf" }),
-      );
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `backlog-registration-${profile?.rollNo || regId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      savePdfBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`);
     } catch (err) {
       if (![401, 403].includes(err.response?.status)) {
         alert("Could not download the form. Please try again.");

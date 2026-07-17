@@ -33,7 +33,7 @@ function buildTimelineRows(student) {
 // Save is clicked; the parent parses + persists and feeds back a refreshed student.
 export function SemesterTimeline({ student, onSaveYear, busy }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-[var(--stroke)]">
+    <div className="overflow-x-auto rounded-xl border border-[var(--stroke)]">
       <table className="w-full text-left text-sm">
         <thead className="bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
           <tr>
