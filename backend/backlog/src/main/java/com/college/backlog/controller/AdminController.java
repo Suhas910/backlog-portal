@@ -229,7 +229,9 @@ public class AdminController {
             reg.getSnapName() != null ? reg.getSnapName() : reg.getStudent().getName(),
             reg.getSnapSemester() != null ? reg.getSnapSemester() : reg.getStudent().getCurrentSemester(),
             reg.getSnapYearOfJoining() != null ? reg.getSnapYearOfJoining() : reg.getStudent().getYearOfJoining(),
-            reg.getSubjects().stream().map(Subject::getSubjectName).collect(Collectors.toList()),
+            reg.getSubjects().stream()
+                .map(s -> s.getSubjectName() + " (" + s.getCourseCode() + ")")
+                .collect(Collectors.toList()),
             reg.getStatus().name(),
             reg.getRegisteredAt().toString(),
             reg.getVerifiedBy(),

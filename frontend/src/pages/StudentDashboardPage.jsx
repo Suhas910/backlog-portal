@@ -272,9 +272,9 @@ function StudentDashboardPage() {
                   {registrations.map((reg) => (
                     <li
                       key={reg.regId}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4"
+                      className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 sm:flex-row sm:items-start"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="mb-1 flex items-center gap-2">
                           <span
                             className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusBadgeClass(
@@ -287,7 +287,7 @@ function StudentDashboardPage() {
                             <span className="text-xs text-[var(--text-muted)]">{reg.examCycle}</span>
                           ) : null}
                         </div>
-                        <p className="truncate text-sm text-[var(--text-main)]">
+                        <p className="text-sm break-words text-[var(--text-main)]">
                           {(reg.subjects || []).join(", ") || "No subjects"}
                         </p>
                         <p className="text-xs text-[var(--text-muted)]">
@@ -298,7 +298,7 @@ function StudentDashboardPage() {
                         type="button"
                         onClick={() => downloadPdf(reg.regId)}
                         disabled={downloadingId === reg.regId}
-                        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-4 py-2 text-sm font-semibold text-[var(--color-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-60"
+                        className="inline-flex shrink-0 items-center gap-2 self-stretch justify-center rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-4 py-2 text-sm font-semibold text-[var(--color-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-60 sm:self-start sm:justify-start"
                         data-cy="download-pdf"
                       >
                         {downloadingId === reg.regId ? (
