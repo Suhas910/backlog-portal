@@ -73,8 +73,10 @@ public class StudentManagementService {
         s.setDateOfBirth(req.getDateOfBirth());
         s.setCurrentSemester(req.getCurrentSemester());
         s.setEntrySemester(req.getEntrySemester());
-        // keep the stored branch/year consistent with what the USN derives elsewhere
-        s.setBranch(dept.getDeptName());
+        // Store the stable 2-letter branch CODE, not the (now editable) department
+        // name — this is what the delete guard matches on
+        // (existsByBranchIgnoreCase(dept.getCode())) and it survives a dept rename.
+        s.setBranch(dept.getCode());
         s.setYearOfJoining(Usn.admissionYear(rollNo));
 
         Student saved = studentRepository.save(s);

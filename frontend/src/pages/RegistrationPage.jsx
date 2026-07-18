@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
   CalendarX,
@@ -247,9 +246,7 @@ function RegistrationPage() {
           </Link>
         </header>
 
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-8"
         >
           {/* locked identity summary */}
@@ -452,7 +449,7 @@ function RegistrationPage() {
               </>
             )}
           </MagneticCta>
-        </motion.div>
+        </div>
       </div>
 
       <MobileActionBar />
@@ -486,9 +483,7 @@ function CenteredCard({ icon, eyebrow, title, children }) {
           </Link>
         </header>
       </div>
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
+      <div
         className="mx-auto w-full max-w-2xl rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft sm:p-8"
       >
         {eyebrow ? (
@@ -503,7 +498,7 @@ function CenteredCard({ icon, eyebrow, title, children }) {
         ) : null}
         <h2 className="mb-3 text-3xl font-semibold text-[var(--color-secondary)]">{title}</h2>
         {children}
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { LoaderCircle, PlusCircle } from "lucide-react";
 import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
@@ -140,9 +139,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
   ).sort((a, b) => b - a);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-8"
     >
       <h1 className="mb-2 text-2xl font-semibold text-[var(--color-secondary)] sm:text-3xl">
@@ -390,7 +387,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
           </MagneticCta>
         </div>
       </form>
-    </motion.div>
+    </div>
   );
 }
 

@@ -1,5 +1,4 @@
 import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
 import { AlertTriangle, BadgeCheck, LoaderCircle, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import MagneticCta from "../../components/ui/MagneticCta";
@@ -96,9 +95,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-8"
     >
       <h2 className="mb-2 text-xl font-semibold text-[var(--color-secondary)]">Add a student</h2>
@@ -298,7 +295,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
           </MagneticCta>
         </div>
       </form>
-    </motion.div>
+    </div>
   );
 }
 

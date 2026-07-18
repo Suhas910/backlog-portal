@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { ArrowLeft, Building2, LoaderCircle, PlusCircle, Save, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
@@ -24,7 +23,8 @@ function DepartmentsPage() {
   const [contactEmail, setContactEmail] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // inline code + email edits keyed by department id
+  // inline name + code + email edits keyed by department id
+  const [nameEdits, setNameEdits] = useState({});
   const [codeEdits, setCodeEdits] = useState({});
   const [emailEdits, setEmailEdits] = useState({});
   const [savingId, setSavingId] = useState(null);
@@ -42,6 +42,9 @@ function DepartmentsPage() {
       .get("/admin/departments", { headers: getAdminHeaders() })
       .then((res) => {
         setDepartments(res.data);
+        setNameEdits(
+          res.data.reduce((acc, d) => ({ ...acc, [d.id]: d.deptName || "" }), {}),
+        );
         setCodeEdits(
           res.data.reduce((acc, d) => ({ ...acc, [d.id]: d.code || "" }), {}),
         );
@@ -105,10 +108,15 @@ function DepartmentsPage() {
   };
 
   const handleSaveRow = async (dept) => {
+    const nextName = (nameEdits[dept.id] || "").trim();
     const nextCode = (codeEdits[dept.id] || "").trim();
     const nextEmail = (emailEdits[dept.id] || "").trim();
     setError("");
     setSuccess("");
+    if (!nextName) {
+      setError(`Department name for ${dept.deptName} cannot be blank.`);
+      return;
+    }
     if (!/^[A-Za-z]{2}$/.test(nextCode)) {
       setError(`Code for ${dept.deptName} must be exactly 2 letters.`);
       return;
@@ -124,7 +132,7 @@ function DepartmentsPage() {
       await api.put(
         `/admin/departments/${dept.id}`,
         {
-          deptName: dept.deptName,
+          deptName: nextName,
           code: nextCode.toUpperCase(),
           contactEmail: nextEmail || null,
           // version the row was loaded at — lets the server reject a stale
@@ -275,16 +283,24 @@ function DepartmentsPage() {
           ) : (
             <ul className="space-y-3">
               {departments.map((d) => (
-                <motion.li
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
+                <li
                   key={d.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <p className="font-semibold text-[var(--text-main)]">{d.deptName}</p>
+                    <input
+                      type="text"
+                      data-cy={`dept-name-input-${d.id}`}
+                      value={nameEdits[d.id] ?? ""}
+                      onChange={(e) =>
+                        setNameEdits((prev) => ({ ...prev, [d.id]: e.target.value }))
+                      }
+                      placeholder="Computer Science & Engineering"
+                      aria-label={`Name for ${d.deptName}`}
+                      className={`w-64 font-semibold ${inputClass}`}
+                    />
                     {!d.code && (
-                      <p className="text-xs text-red-600">No code set — students of this branch cannot register.</p>
+                      <p className="mt-1 text-xs text-red-600">No code set — students of this branch cannot register.</p>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -320,7 +336,8 @@ function DepartmentsPage() {
                       onClick={() => handleSaveRow(d)}
                       disabled={
                         savingId === d.id ||
-                        ((codeEdits[d.id] || "") === (d.code || "") &&
+                        ((nameEdits[d.id] || "") === (d.deptName || "") &&
+                          (codeEdits[d.id] || "") === (d.code || "") &&
                           (emailEdits[d.id] || "") === (d.contactEmail || ""))
                       }
                       className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-secondary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"
@@ -375,7 +392,7 @@ function DepartmentsPage() {
                       </button>
                     )}
                   </div>
-                </motion.li>
+                </li>
               ))}
             </ul>
           )}

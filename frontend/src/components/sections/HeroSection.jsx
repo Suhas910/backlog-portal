@@ -1,15 +1,9 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../../lib/api";
 import { useTheme } from "../../context/ThemeContext";
 import MagneticCta from "../ui/MagneticCta";
-
-const heroItem = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
 
 export default function HeroSection() {
   const { isDark } = useTheme();
@@ -43,11 +37,7 @@ export default function HeroSection() {
           maxWidth: "80rem",
         }}
       >
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.6, staggerChildren: 0.15 }}
+        <div
           style={{
             display: "flex",
             flexDirection: "column",
@@ -56,10 +46,7 @@ export default function HeroSection() {
           }}
         >
           {regStatus !== null && (
-            <motion.span
-              variants={heroItem}
-              initial="hidden"
-              animate="show"
+            <span
               style={{
                 display: "inline-flex",
                 alignSelf: "center",
@@ -95,11 +82,10 @@ export default function HeroSection() {
               {regStatus.open
                 ? `${regStatus.cycleName ? `${regStatus.cycleName} — ` : ""}Registrations Open`
                 : "Registrations Currently Closed"}
-            </motion.span>
+            </span>
           )}
 
-          <motion.h1
-            variants={heroItem}
+          <h1
             style={{
               fontFamily: '"Playfair Display", Georgia, serif',
               fontSize: "clamp(2.5rem, 5vw, 3.75rem)",
@@ -109,10 +95,9 @@ export default function HeroSection() {
             }}
           >
             Register for your backlog exam
-          </motion.h1>
+          </h1>
 
-          <motion.p
-            variants={heroItem}
+          <p
             style={{
               maxWidth: "36rem",
               fontSize: "1.05rem",
@@ -123,10 +108,9 @@ export default function HeroSection() {
           >
             Follow the simple steps below to submit your backlog registration.
             Download your form, get it signed, and submit for verification.
-          </motion.p>
+          </p>
 
-          <motion.div
-            variants={heroItem}
+          <div
             style={{
               display: "flex",
               flexWrap: "wrap",
@@ -159,8 +143,8 @@ export default function HeroSection() {
             >
               <ShieldCheck size={16} /> Admin Access
             </Link>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   );

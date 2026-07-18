@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { CheckCircle2, FileSignature, ListChecks, LogIn } from "lucide-react";
 
 const steps = [
@@ -24,25 +23,11 @@ const steps = [
   },
 ];
 
-const list = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.14 } },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
-
 export default function ProcessSection() {
   return (
     <section id="how-it-works" className="px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-        >
+        <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-primary)]">
             How It Works
           </p>
@@ -52,21 +37,15 @@ export default function ProcessSection() {
           <p className="mt-3 max-w-xl text-[var(--text-muted)]">
             Four steps take your backlog registration from start to verified.
           </p>
-        </motion.div>
+        </div>
 
-        <motion.ol
-          className="mt-10"
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, amount: 0.2 }}
-          variants={list}
-        >
+        <ol className="mt-10">
           {steps.map((step, index) => {
             const Icon = step.icon;
             const last = index === steps.length - 1;
 
             return (
-              <motion.li key={step.title} variants={item} className="relative flex gap-5 pb-10 last:pb-0">
+              <li key={step.title} className="relative flex gap-5 pb-10 last:pb-0">
                 {/* connector line between the numbered dots */}
                 {!last && (
                   <span
@@ -86,10 +65,10 @@ export default function ProcessSection() {
                   </h3>
                   <p className="mt-1 max-w-xl text-sm leading-relaxed text-[var(--text-muted)]">{step.text}</p>
                 </div>
-              </motion.li>
+              </li>
             );
           })}
-        </motion.ol>
+        </ol>
       </div>
     </section>
   );

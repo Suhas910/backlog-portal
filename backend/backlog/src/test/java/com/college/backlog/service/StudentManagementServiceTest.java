@@ -58,7 +58,8 @@ class StudentManagementServiceTest {
         Student s = service.createStudent(req("1ms22cs001", 3, 1));
 
         assertThat(s.getRollNo()).isEqualTo("1MS22CS001");
-        assertThat(s.getBranch()).isEqualTo("Computer Science");
+        // stored branch is the stable 2-letter code, not the (editable) dept name
+        assertThat(s.getBranch()).isEqualTo("CS");
         assertThat(s.getYearOfJoining()).isEqualTo(2022);
         assertThat(s.getEntrySemester()).isEqualTo(1);
     }

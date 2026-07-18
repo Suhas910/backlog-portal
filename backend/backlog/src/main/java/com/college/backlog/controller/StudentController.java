@@ -96,27 +96,30 @@ public class StudentController {
                     + ". Please contact the department office."));
 
         int academicYear = term.getAcademicYear();
-        String branch = deriveBranch(student.getRollNo());
+        String branchCode = Usn.branchCode(student.getRollNo());
         List<Subject> subjects = subjectRepository
             .findByAcademicYearOfferedAndSemester(academicYear, semester).stream()
-            .filter(s -> branchMatches(s, branch))
+            .filter(s -> branchMatches(s, branchCode))
             .collect(Collectors.toList());
 
         return new StudentSubjectsResponse(semester, academicYear, subjects);
     }
 
     // A regular subject belongs to the student's own department; an elective is
-    // available if the student's department is in its eligible list.
-    private boolean branchMatches(Subject subject, String branch) {
-        if (branch == null) {
+    // available if the student's department is in its eligible list. Matching is
+    // on the immutable 2-letter branch code (from the USN / dept_code), never the
+    // human-readable department name — so a department can be renamed without
+    // breaking eligibility.
+    private boolean branchMatches(Subject subject, String branchCode) {
+        if (branchCode == null) {
             return false;
         }
         if (subject.getSubjectType() == SubjectType.ELECTIVE) {
             return subject.getEligibleDepartments().stream()
-                .anyMatch(d -> branch.equals(d.getDeptName()));
+                .anyMatch(d -> branchCode.equalsIgnoreCase(d.getCode()));
         }
         return subject.getDepartment() != null
-            && branch.equals(subject.getDepartment().getDeptName());
+            && branchCode.equalsIgnoreCase(subject.getDepartment().getCode());
     }
 
     @PutMapping("/me/phone")

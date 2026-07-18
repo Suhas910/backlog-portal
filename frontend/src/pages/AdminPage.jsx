@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -771,9 +770,7 @@ function AdminPage() {
                 </thead>
                 <tbody>
                   {filtered.map((reg) => (
-                    <motion.tr
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
+                    <tr
                       key={reg.regId}
                       className="border-t border-[var(--stroke)] align-top"
                     >
@@ -884,7 +881,7 @@ function AdminPage() {
                           <History size={14} /> View
                         </button>
                       </td>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>

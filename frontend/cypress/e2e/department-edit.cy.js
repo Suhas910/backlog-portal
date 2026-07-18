@@ -81,6 +81,33 @@ describe("Department code edit — concurrent-edit conflict detection", () => {
     cy.get('[data-cy="dept-error"]').should("not.exist");
   });
 
+  it("saves an edited department name through the inline row", () => {
+    cy.intercept("GET", "/api/admin/departments*", {
+      statusCode: 200,
+      body: [{ id: 1, deptName: "Computer Science", code: "CS", contactEmail: null, version: 0 }],
+    }).as("getDepartments");
+
+    cy.intercept("PUT", "/api/admin/departments/1", (req) => {
+      // the renamed department reaches the server; the code (identity) is untouched
+      expect(req.body).to.include({ deptName: "Computer Science & Engineering", code: "CS" });
+      req.reply({
+        statusCode: 200,
+        body: { id: 1, deptName: "Computer Science & Engineering", code: "CS", contactEmail: null, version: 1 },
+      });
+    }).as("updateDept");
+
+    authedVisit("/admin/departments");
+    cy.wait("@getDepartments");
+
+    // Save is disabled until something changes; editing the name enables it
+    cy.get('[data-cy="dept-save-1"]').should("be.disabled");
+    cy.get('[data-cy="dept-name-input-1"]').clear().type("Computer Science & Engineering");
+    cy.get('[data-cy="dept-save-1"]').should("not.be.disabled").click();
+
+    cy.wait("@updateDept");
+    cy.get('[data-cy="dept-error"]').should("not.exist");
+  });
+
   it("deletes an unreferenced department after a two-step confirm", () => {
     let deleted = false;
     cy.intercept("GET", "/api/admin/departments*", (req) => {

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
@@ -160,9 +159,7 @@ function StudentDashboardPage() {
         ) : (
           <>
             {/* Profile */}
-            <motion.section
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
+            <section
               className="mb-6 rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6"
             >
               <h1 className="mb-1 text-2xl font-semibold text-[var(--color-secondary)]">
@@ -257,12 +254,10 @@ function StudentDashboardPage() {
                   Register for backlog subjects <ArrowRight size={16} />
                 </MagneticCta>
               </div>
-            </motion.section>
+            </section>
 
             {/* Submissions */}
-            <motion.section
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
+            <section
               className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6"
             >
               <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">
@@ -317,7 +312,7 @@ function StudentDashboardPage() {
                   ))}
                 </ul>
               )}
-            </motion.section>
+            </section>
           </>
         )}
       </div>

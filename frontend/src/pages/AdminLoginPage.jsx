@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Lock,
@@ -125,10 +124,8 @@ function AdminLoginPage() {
         Skip to admin login
       </a>
 
-      <motion.div
+      <div
         id="admin-login-main"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
         className="mx-auto w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
       >
         <div className="mb-6 text-left">
@@ -352,7 +349,7 @@ function AdminLoginPage() {
             <ArrowLeft size={14} /> Back to home
           </Link>
         </div>
-      </motion.div>
+      </div>
 
       <MobileActionBar />
     </div>

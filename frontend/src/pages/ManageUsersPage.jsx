@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Copy,
@@ -209,9 +208,7 @@ function ManageUsersPage() {
           </div>
         </header>
 
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="space-y-6"
         >
           <div>
@@ -415,15 +412,13 @@ function ManageUsersPage() {
               </div>
             )}
           </section>
-        </motion.div>
+        </div>
       </div>
 
       {/* One-time temp password modal */}
       {tempCredential && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
+          <div
             className="w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft"
           >
             <div className="mb-3 flex items-center justify-between">
@@ -464,7 +459,7 @@ function ManageUsersPage() {
             >
               Done
             </MagneticCta>
-          </motion.div>
+          </div>
         </div>
       )}
 

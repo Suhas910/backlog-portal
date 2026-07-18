@@ -127,15 +127,16 @@ public class RegistrationService {
                         + subject.getSemester() + " offering (" + term.getAcademicYear() + ").");
             }
             if (subject.getSubjectType() == SubjectType.ELECTIVE) {
+                // match on the immutable 2-letter branch code, not the human name
                 boolean eligible = subject.getEligibleDepartments().stream()
-                    .anyMatch(d -> d.getDeptName().equals(branch));
+                    .anyMatch(d -> branchCode.equalsIgnoreCase(d.getCode()));
                 if (!eligible) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Not eligible for elective: " + subject.getSubjectName());
                 }
             } else {
                 if (subject.getDepartment() == null ||
-                    !subject.getDepartment().getDeptName().equals(branch)) {
+                    !branchCode.equalsIgnoreCase(subject.getDepartment().getCode())) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Subject '" + subject.getSubjectName() + "' does not belong to branch: " + branch);
                 }

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { ArrowLeft, CalendarRange, CheckCircle2, CircleSlash, LoaderCircle, PlusCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
@@ -178,9 +177,7 @@ function ExamCyclePage() {
           ) : (
             <ul className="space-y-3">
               {cycles.map((c) => (
-                <motion.li
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
+                <li
                   key={c.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3"
                 >
@@ -231,7 +228,7 @@ function ExamCyclePage() {
                       Activate
                     </button>
                   )}
-                </motion.li>
+                </li>
               ))}
             </ul>
           )}

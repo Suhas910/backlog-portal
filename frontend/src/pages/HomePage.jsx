@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import StickyNav from "../components/layout/StickyNav";
 import HeroSection from "../components/sections/HeroSection";
 import ProcessSection from "../components/sections/ProcessSection";
@@ -73,16 +72,11 @@ function HomePage() {
         <ProcessSection />
       </main>
 
-      <motion.footer
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        className="relative z-10 border-t border-[var(--stroke)] px-4 py-8 sm:px-6 lg:px-8"
-      >
+      <footer className="relative z-10 border-t border-[var(--stroke)] px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-sm text-[var(--text-main)]">
           <p>Ramaiah Institute of Technology</p>
         </div>
-      </motion.footer>
+      </footer>
     </div>
   );
 }
