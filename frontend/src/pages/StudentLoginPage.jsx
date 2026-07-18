@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, LogIn, LoaderCircle } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
-import api from "../lib/api";
+import api, { getStudentToken } from "../lib/api";
 import { rememberExpiry } from "../lib/session";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
@@ -18,6 +18,16 @@ function StudentLoginPage() {
   const [dob, setDob] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Already signed in — skip the form and go to the dashboard. Same shape as
+  // the admin login: the marker is a presence hint, and an expired cookie comes
+  // back here as ?expired=1 with the marker already cleared by the 401
+  // interceptor.
+  useEffect(() => {
+    if (!sessionExpired && getStudentToken()) {
+      navigate("/student", { replace: true });
+    }
+  }, [sessionExpired, navigate]);
 
   const handleLogin = async () => {
     if (!usn || !dob) {
@@ -43,8 +53,11 @@ function StudentLoginPage() {
         sessionStorage.setItem("studentRollNo", res.data.rollNo || usn);
         sessionStorage.setItem("studentName", res.data.name || "");
         rememberExpiry("student", res.data.expiresIn);
-        const redirect = searchParams.get("redirect");
-        navigate(redirect ? decodeURIComponent(redirect) : "/student");
+        // Always land on the dashboard first — even when the guard bounced the
+        // student here from a deep link like /register. The dashboard is the
+        // home base (profile, status, past registrations); registration is one
+        // click away via its CTA.
+        navigate("/student");
       } else {
         setError("Login failed. Please try again.");
       }
@@ -63,7 +76,7 @@ function StudentLoginPage() {
         className="mx-auto w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
       >
         <div className="mb-6 text-left">
-          <BrandIdentity compact />
+          <BrandIdentity compact onSurface />
           <p className="mb-2 mt-4 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
             Student Login
           </p>

@@ -26,50 +26,14 @@ export default function HeroSection() {
   }, []);
 
   return (
+    // Transparent — the page-wide fixed backdrop in HomePage provides the
+    // gradient (dark) / blobs (light); the text scrolls over it.
     <section
       style={{
         position: "relative",
-        overflow: "hidden",
         padding: "3rem 1rem 5rem",
-        background: isDark
-          ? "linear-gradient(135deg, #1a2040 0%, #242A52 55%, #2d1a3a 100%)"
-          : "var(--surface-1)",
       }}
     >
-      {/* Light mode only — top-left maroon blob + bottom cta blob */}
-      {!isDark && (
-        <>
-          <div
-            style={{
-              position: "absolute",
-              top: "-6rem",
-              left: "-5rem",
-              width: "18rem",
-              height: "18rem",
-              borderRadius: "50%",
-              background: "#91191C",
-              opacity: 0.07,
-              zIndex: 0,
-              pointerEvents: "none",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: "50%",
-              width: "14rem",
-              height: "14rem",
-              borderRadius: "50%",
-              background: "#ED145B",
-              opacity: 0.06,
-              zIndex: 0,
-              pointerEvents: "none",
-            }}
-          />
-        </>
-      )}
-
       {/* Content */}
       <div
         style={{

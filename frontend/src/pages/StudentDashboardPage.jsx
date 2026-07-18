@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
+  ArrowLeft,
   ArrowRight,
   Download,
   LoaderCircle,
@@ -129,6 +130,12 @@ function StudentDashboardPage() {
           <BrandIdentity compact />
           <div className="flex items-center gap-2">
             <ThemeToggle />
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1 rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              <ArrowLeft size={15} /> Home
+            </Link>
             <button
               type="button"
               onClick={handleLogout}

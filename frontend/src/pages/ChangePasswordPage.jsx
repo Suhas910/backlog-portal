@@ -65,7 +65,7 @@ function ChangePasswordPage() {
         className="mx-auto w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
       >
         <div className="mb-6 text-left">
-          <BrandIdentity compact />
+          <BrandIdentity compact onSurface />
           <p className="mb-2 mt-4 inline-flex items-center gap-1.5 rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
             <KeyRound size={12} /> Change Password
           </p>

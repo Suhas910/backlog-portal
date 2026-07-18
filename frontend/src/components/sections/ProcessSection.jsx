@@ -36,10 +36,7 @@ const item = {
 
 export default function ProcessSection() {
   return (
-    <section
-      id="how-it-works"
-      className="bg-[linear-gradient(180deg,var(--surface-1)_0%,var(--surface-tint)_50%,var(--surface-1)_100%)] px-4 py-16 sm:px-6 lg:px-8"
-    >
+    <section id="how-it-works" className="px-4 py-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl">
         <motion.div
           initial={{ opacity: 0, y: 16 }}

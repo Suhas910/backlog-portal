@@ -13,7 +13,7 @@ import {
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
-import api, { logoutAdmin } from "../lib/api";
+import api, { getAdminToken, logoutAdmin } from "../lib/api";
 import { rememberExpiry } from "../lib/session";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
@@ -32,6 +32,17 @@ function AdminLoginPage() {
   const [departments, setDepartments] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Already signed in (e.g. wandered to the homepage and came back via "Admin
+  // Access") — skip the credential form and return to the dashboard. The marker
+  // is just a presence hint: if the cookie has actually expired, the dashboard's
+  // 401 interceptor bounces back here with ?expired=1, which clears the marker
+  // and suppresses this redirect.
+  useEffect(() => {
+    if (!sessionExpired && getAdminToken()) {
+      navigate("/admin", { replace: true });
+    }
+  }, [sessionExpired, navigate]);
 
   useEffect(() => {
     api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
@@ -121,7 +132,7 @@ function AdminLoginPage() {
         className="mx-auto w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
       >
         <div className="mb-6 text-left">
-          <BrandIdentity compact />
+          <BrandIdentity compact onSurface />
           <p className="mb-2 mt-4 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
             Restricted Access
           </p>

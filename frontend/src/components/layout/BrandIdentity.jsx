@@ -1,6 +1,9 @@
 import logo from "../../assets/MSRIT.png";
 
-export default function BrandIdentity({ compact = false, wordmarkClassName = "" }) {
+// `onSurface`: set when the brand sits on the page/card background (login and
+// change-password cards) instead of a navy header bar — the wordmark then uses
+// the theme text color so it stays legible in light mode.
+export default function BrandIdentity({ compact = false, wordmarkClassName = "", onSurface = false }) {
   return (
     <div className="flex items-center gap-3">
       <img
@@ -10,9 +13,11 @@ export default function BrandIdentity({ compact = false, wordmarkClassName = "" 
       />
       <div className={`leading-none ${wordmarkClassName}`}>
         <p
-          className={`${
-            compact ? "text-base" : "text-lg sm:text-xl"
-          } font-extrabold tracking-[0.06em] text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.35)]`}
+          className={`${compact ? "text-base" : "text-lg sm:text-xl"} font-extrabold tracking-[0.06em] ${
+            onSurface
+              ? "text-[var(--color-secondary)]"
+              : "text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.35)]"
+          }`}
           style={{ fontFamily: '"Sora", "Inter", sans-serif' }}
         >
           Backlog Registration
