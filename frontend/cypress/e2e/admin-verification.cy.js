@@ -134,6 +134,62 @@ describe("Admin verification flow", () => {
     cy.get('[data-cy="admin-reject"]').should("not.exist");
   });
 
+  it("rejects an already-VERIFIED registration via the two-step arm→confirm control", () => {
+    cy.intercept("POST", "/api/auth/login", {
+      statusCode: 200,
+      body: { message: "Login success", role: "ADMIN", token: "admin-jwt-token" },
+    }).as("adminLogin");
+
+    // row starts VERIFIED; the post-reject refetch flips it to REJECTED
+    let rejected = false;
+    cy.intercept("GET", "/api/admin/registrations*", (req) => {
+      req.reply({
+        statusCode: 200,
+        body: pageOf([
+          row({
+            status: rejected ? "REJECTED" : "VERIFIED",
+            verifiedBy: "admin",
+          }),
+        ]),
+      });
+    }).as("getRegistrations");
+    stubCounts();
+    stubSideCalls();
+
+    cy.intercept("PUT", "/api/register/verify/REG-2026-1001", (req) => {
+      rejected = true;
+      req.reply({
+        statusCode: 200,
+        body: {
+          regId: "REG-2026-1001",
+          studentName: "Student One",
+          rollNo: "1MS22CS001",
+          status: "REJECTED",
+        },
+      });
+    }).as("rejectRegistration");
+
+    cy.visit("/admin/login");
+    cy.contains("Administrator").click();
+    cy.get('[data-cy="admin-username"]').type("admin");
+    cy.get('[data-cy="admin-password"]').type("password123");
+    cy.get('[data-cy="admin-login-submit"]').click();
+    cy.wait("@adminLogin");
+    cy.wait("@getRegistrations");
+
+    // arm: first click reveals Confirm/Cancel and does NOT fire the request yet
+    cy.get('[data-cy="admin-reject-verified"]').first().click();
+    cy.get('[data-cy="admin-reject-verified-confirm"]').should("exist");
+
+    // confirm: the PUT carries action REJECTED and the refetched row flips
+    cy.get('[data-cy="admin-reject-verified-confirm"]').click();
+    cy.wait("@rejectRegistration")
+      .its("request.body")
+      .should("deep.equal", { action: "REJECTED" });
+    cy.contains("td", "Rejected").should("exist");
+    cy.get('[data-cy="admin-reject-verified"]').should("not.exist");
+  });
+
   it("shows an inline per-row error when verify fails (no rollback needed)", () => {
     cy.intercept("POST", "/api/auth/login", {
       statusCode: 200,

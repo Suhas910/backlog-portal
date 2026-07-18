@@ -222,8 +222,15 @@ public class RegistrationService {
         Registration reg = registrationRepository.findByRegId(regId)
             .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
-        // state machine: only a pending registration can be actioned
-        if (reg.getStatus() != RegistrationStatus.SUBMITTED) {
+        // state machine (one-way tightening — REJECTED is terminal):
+        //   SUBMITTED -> VERIFIED | REJECTED
+        //   VERIFIED  -> REJECTED           (override a completed verification)
+        //   REJECTED  -> (nothing)          no un-reject, no re-verify
+        RegistrationStatus current = reg.getStatus();
+        boolean allowed = (action == RegistrationStatus.VERIFIED && current == RegistrationStatus.SUBMITTED)
+            || (action == RegistrationStatus.REJECTED
+                && (current == RegistrationStatus.SUBMITTED || current == RegistrationStatus.VERIFIED));
+        if (!allowed) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "This registration has already been actioned.");
         }

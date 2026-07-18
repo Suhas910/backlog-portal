@@ -47,6 +47,8 @@ function AdminPage() {
   const [counts, setCounts] = useState({ total: 0, submitted: 0, verified: 0, rejected: 0 });
   const [verifyingRegId, setVerifyingRegId] = useState("");
   const [rejectingRegId, setRejectingRegId] = useState("");
+  // two-step arm→confirm for rejecting an already-VERIFIED registration
+  const [confirmRejectVerifiedId, setConfirmRejectVerifiedId] = useState("");
   const [rowErrors, setRowErrors] = useState({});
   const [isExporting, setIsExporting] = useState(false);
 
@@ -327,6 +329,7 @@ function AdminPage() {
       await handleActionError(regId, err, "Failed to reject. Please refresh and try again.");
     } finally {
       setRejectingRegId("");
+      setConfirmRejectVerifiedId("");
     }
   };
 
@@ -758,12 +761,12 @@ function AdminPage() {
                   <tr className="bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-main)]">
                     <th className="px-4 py-3">USN</th>
                     <th className="px-4 py-3">Name</th>
-                    <th className="px-4 py-3">Semester</th>
+                    <th className="px-4 py-3">Sem</th>
                     <th className="px-4 py-3">Cycle</th>
                     <th className="px-4 py-3">Subjects</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3">Verified By</th>
+                    <th className="px-4 py-3">Acted By</th>
                     <th className="px-4 py-3">Action</th>
                     <th className="px-4 py-3">History</th>
                   </tr>
@@ -820,37 +823,39 @@ function AdminPage() {
                         {reg.status === "SUBMITTED" && adminRole !== "PRINCIPAL" ? (
                           <div className="flex flex-col gap-1.5">
                             <div className="flex gap-1.5">
-                              <MagneticCta
+                              <button
+                                type="button"
                                 onClick={() => handleVerify(reg.regId)}
-                                className="rounded-lg px-3 py-1.5 text-xs"
                                 disabled={verifyingRegId === reg.regId || rejectingRegId === reg.regId}
                                 data-cy="admin-verify"
+                                className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-2 py-1 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
                               >
                                 {verifyingRegId === reg.regId ? (
-                                  <LoaderCircle size={14} className="animate-spin" />
+                                  <LoaderCircle size={13} className="animate-spin" />
                                 ) : (
-                                  <BadgeCheck size={14} />
+                                  <BadgeCheck size={13} />
                                 )}
                                 Verify
-                              </MagneticCta>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleReject(reg.regId)}
                                 disabled={rejectingRegId === reg.regId || verifyingRegId === reg.regId}
                                 data-cy="admin-reject"
-                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                                aria-label="Reject"
+                                title="Reject"
+                                className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
                               >
                                 {rejectingRegId === reg.regId ? (
                                   <LoaderCircle size={14} className="animate-spin" />
                                 ) : (
                                   <XCircle size={14} />
                                 )}
-                                Reject
                               </button>
                             </div>
                             {rowErrors[reg.regId] && (
                               <p
-                                className="text-xs font-medium text-red-600"
+                                className="text-sm font-medium text-red-600"
                                 role="alert"
                                 data-cy="admin-action-error"
                               >
@@ -859,15 +864,74 @@ function AdminPage() {
                             )}
                           </div>
                         ) : reg.status === "VERIFIED" ? (
-                          <span className="text-xs font-semibold text-[var(--color-primary)]">
-                            Verified
-                          </span>
+                          <div className="flex flex-col gap-1.5">
+                            {confirmRejectVerifiedId === reg.regId ? (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="text-sm text-[var(--text-muted)]">
+                                  Reject this verified registration?
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReject(reg.regId)}
+                                  disabled={rejectingRegId === reg.regId}
+                                  data-cy="admin-reject-verified-confirm"
+                                  className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                                >
+                                  {rejectingRegId === reg.regId ? (
+                                    <LoaderCircle size={14} className="animate-spin" />
+                                  ) : (
+                                    <XCircle size={14} />
+                                  )}
+                                  Confirm
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmRejectVerifiedId("")}
+                                  disabled={rejectingRegId === reg.regId}
+                                  data-cy="admin-reject-verified-cancel"
+                                  className="inline-flex items-center rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-sm font-semibold text-[var(--text-main)] transition-colors hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-[var(--color-primary)]">
+                                  Verified
+                                </span>
+                                {adminRole !== "PRINCIPAL" ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      clearRowError(reg.regId);
+                                      setConfirmRejectVerifiedId(reg.regId);
+                                    }}
+                                    data-cy="admin-reject-verified"
+                                    aria-label="Reject"
+                                    title="Reject"
+                                    className="inline-flex items-center rounded-lg border border-red-200 px-2 py-1.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+                                  >
+                                    <XCircle size={18} />
+                                  </button>
+                                ) : null}
+                              </div>
+                            )}
+                            {rowErrors[reg.regId] && (
+                              <p
+                                className="text-sm font-medium text-red-600"
+                                role="alert"
+                                data-cy="admin-action-error"
+                              >
+                                {rowErrors[reg.regId]}
+                              </p>
+                            )}
+                          </div>
                         ) : reg.status === "REJECTED" ? (
-                          <span className="text-xs font-semibold text-red-600">
+                          <span className="text-sm font-semibold text-red-600">
                             Rejected
                           </span>
                         ) : (
-                          <span className="text-xs font-semibold text-[var(--text-muted)]">
+                          <span className="text-sm font-semibold text-[var(--text-muted)]">
                             Pending Verification
                           </span>
                         )}

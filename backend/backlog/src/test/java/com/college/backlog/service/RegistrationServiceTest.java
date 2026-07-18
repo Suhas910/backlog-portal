@@ -164,12 +164,44 @@ class RegistrationServiceTest {
     }
 
     @Test
-    void applyVerificationRejectsAnAlreadyActionedRegistrationWith409() {
+    void applyVerificationCannotReVerifyOrUnRejectARejectedRegistrationWith409() {
+        // REJECTED is terminal: no un-reject back to VERIFIED
         Registration reg = pendingRegistration("reg-2");
-        reg.setStatus(RegistrationStatus.VERIFIED);
+        reg.setStatus(RegistrationStatus.REJECTED);
 
         ResponseStatusException ex = catchThrowableOfType(ResponseStatusException.class,
-                () -> service.applyVerification("reg-2", RegistrationStatus.REJECTED, "admin", ActorRole.ADMIN));
+                () -> service.applyVerification("reg-2", RegistrationStatus.VERIFIED, "admin", ActorRole.ADMIN));
+
+        assertThat(ex).isNotNull();
+        assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        verify(registrationRepository, never()).saveAndFlush(any());
+        verify(registrationEventRepository, never()).save(any());
+    }
+
+    @Test
+    void applyVerificationCanRejectAnAlreadyVerifiedRegistrationAndWritesTheAuditEvent() {
+        // one-way tightening: a completed verification can still be overridden to REJECTED
+        Registration reg = pendingRegistration("reg-2b");
+        reg.setStatus(RegistrationStatus.VERIFIED);
+        when(registrationRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Registration result = service.applyVerification(
+                "reg-2b", RegistrationStatus.REJECTED, "hodcs", ActorRole.HOD);
+
+        assertThat(result.getStatus()).isEqualTo(RegistrationStatus.REJECTED);
+        ArgumentCaptor<RegistrationEvent> event = ArgumentCaptor.forClass(RegistrationEvent.class);
+        verify(registrationEventRepository).save(event.capture());
+        assertThat(event.getValue().getAction()).isEqualTo(EventAction.REJECTED);
+        assertThat(event.getValue().getActor()).isEqualTo("hodcs");
+    }
+
+    @Test
+    void applyVerificationCannotReRejectAnAlreadyRejectedRegistrationWith409() {
+        Registration reg = pendingRegistration("reg-2c");
+        reg.setStatus(RegistrationStatus.REJECTED);
+
+        ResponseStatusException ex = catchThrowableOfType(ResponseStatusException.class,
+                () -> service.applyVerification("reg-2c", RegistrationStatus.REJECTED, "admin", ActorRole.ADMIN));
 
         assertThat(ex).isNotNull();
         assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
