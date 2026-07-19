@@ -57,11 +57,9 @@ function AdminPage() {
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [subjectFilter, setSubjectFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-  // searchInput is the raw text box value (updates per keystroke); searchFilter
-  // is the debounced value the fetches actually key off, so typing fires one
-  // request pair after the user pauses rather than one per keystroke.
+  // searchInput is the raw text box value (a DRAFT, per keystroke); nothing
+  // fetches off it — it reaches the server only via appliedFilters on Apply.
   const [searchInput, setSearchInput] = useState("");
-  const [searchFilter, setSearchFilter] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
   const [examCycles, setExamCycles] = useState([]);
@@ -94,13 +92,13 @@ function AdminPage() {
   const registrationsAbortRef = useRef(null);
   const countsAbortRef = useRef(null);
 
-  // Debounce the free-text search: push searchInput into searchFilter (the value
-  // the effects depend on) only after the user pauses typing.
-  useEffect(() => {
-    const t = setTimeout(() => setSearchFilter(searchInput), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
-
+  // Subject-dropdown options follow the APPLIED filters (like the table), not the
+  // draft edits — so editing filters fires zero requests until Apply, instead of a
+  // DISTINCT-join query per keystroke/date change. Deps are the four fields the
+  // endpoint accepts (not the whole appliedFilters object), so an Apply that only
+  // changes e.g. the exam cycle doesn't re-fetch identical options. The user's
+  // current selection is never auto-cleared by a narrowed list — applying a
+  // now-unlisted subject just yields no rows.
   useEffect(() => {
     if (!isAdmin || !adminToken) {
       return;
@@ -117,10 +115,10 @@ function AdminPage() {
     // knowing lint error (not disabled).
     setLoadingSubjects(true);
     const subjectParams = new URLSearchParams();
-    if (typeFilter) subjectParams.append("subjectType", typeFilter);
-    if (searchFilter) subjectParams.append("searchQuery", searchFilter);
-    if (startDateFilter) subjectParams.append("startDate", startDateFilter);
-    if (endDateFilter) subjectParams.append("endDate", endDateFilter);
+    if (appliedFilters.subjectType) subjectParams.append("subjectType", appliedFilters.subjectType);
+    if (appliedFilters.searchQuery) subjectParams.append("searchQuery", appliedFilters.searchQuery);
+    if (appliedFilters.startDate) subjectParams.append("startDate", appliedFilters.startDate);
+    if (appliedFilters.endDate) subjectParams.append("endDate", appliedFilters.endDate);
 
     api
       .get(`/admin/subjects-for-filter?${subjectParams.toString()}`, {
@@ -129,8 +127,6 @@ function AdminPage() {
       })
       .then((res) => {
         if (ignore) return;
-        // narrow the dropdown options live, but never auto-clear the user's
-        // current selection — applying a now-unlisted subject just yields no rows
         setAllSubjects(res.data);
       })
       .catch((err) => {
@@ -146,7 +142,14 @@ function AdminPage() {
       ignore = true;
       controller.abort();
     };
-  }, [isAdmin, adminToken, typeFilter, searchFilter, startDateFilter, endDateFilter]);
+  }, [
+    isAdmin,
+    adminToken,
+    appliedFilters.subjectType,
+    appliedFilters.searchQuery,
+    appliedFilters.startDate,
+    appliedFilters.endDate,
+  ]);
 
   useEffect(() => {
     if (!isAdmin || !adminToken) return;
