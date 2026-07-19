@@ -79,6 +79,9 @@ function RegistrationPage() {
     }
 
     let ignoreResponse = false;
+    // abort a superseded fetch (semester re-picked before the reply landed) so it
+    // stops consuming a backend connection; the flag alone only hid the response
+    const controller = new AbortController();
     setLoadingSubjects(true);
     setSubjectsError("");
 
@@ -86,6 +89,7 @@ function RegistrationPage() {
       .get("/student/subjects", {
         headers: getStudentHeaders(),
         params: { semester: searchSemester },
+        signal: controller.signal,
       })
       .then((res) => {
         if (ignoreResponse) return;
@@ -93,7 +97,7 @@ function RegistrationPage() {
         setResolvedAcademicYear(res.data?.academicYear ?? null);
       })
       .catch((err) => {
-        if (ignoreResponse) return;
+        if (ignoreResponse || err.code === "ERR_CANCELED") return;
         setSubjects([]);
         setResolvedAcademicYear(null);
         // surface the server's explanation (e.g. missing progression record)
@@ -109,6 +113,7 @@ function RegistrationPage() {
 
     return () => {
       ignoreResponse = true;
+      controller.abort();
     };
   }, [searchSemester]);
 

@@ -89,6 +89,10 @@ function AdminPage() {
   // applies its response if still the latest — so out-of-order completions from
   // rapid filter changes are dropped instead of clobbering the table.
   const registrationsReqRef = useRef(0);
+  // In-flight controllers: each new fetch aborts its predecessor (whose response
+  // the seq guard would drop anyway), freeing the backend connection early.
+  const registrationsAbortRef = useRef(null);
+  const countsAbortRef = useRef(null);
 
   // Debounce the free-text search: push searchInput into searchFilter (the value
   // the effects depend on) only after the user pauses typing.
@@ -102,8 +106,11 @@ function AdminPage() {
       return;
     }
 
-    // ignore guards against a stale response landing after a newer filter change
+    // ignore guards against a stale response landing after a newer filter change;
+    // the AbortController goes further and cancels the superseded request itself,
+    // so it stops consuming a backend connection instead of running to completion
     let ignore = false;
+    const controller = new AbortController();
     // NOTE: eslint react-hooks/set-state-in-effect flags this setState. Intended
     // and correct — a leading loading flag for an API fetch, exactly the
     // "synchronize with an external system" case the rule carves out. Left as a
@@ -118,6 +125,7 @@ function AdminPage() {
     api
       .get(`/admin/subjects-for-filter?${subjectParams.toString()}`, {
         headers: getAdminHeaders(),
+        signal: controller.signal,
       })
       .then((res) => {
         if (ignore) return;
@@ -126,7 +134,7 @@ function AdminPage() {
         setAllSubjects(res.data);
       })
       .catch((err) => {
-        if (ignore) return;
+        if (ignore || err.code === "ERR_CANCELED") return;
         console.error("Failed to fetch subjects list for filter", err);
         setAllSubjects([]);
       })
@@ -136,14 +144,16 @@ function AdminPage() {
 
     return () => {
       ignore = true;
+      controller.abort();
     };
   }, [isAdmin, adminToken, typeFilter, searchFilter, startDateFilter, endDateFilter]);
 
   useEffect(() => {
     if (!isAdmin || !adminToken) return;
     let ignore = false;
+    const controller = new AbortController();
     api
-      .get("/admin/exam-cycles", { headers: getAdminHeaders() })
+      .get("/admin/exam-cycles", { headers: getAdminHeaders(), signal: controller.signal })
       .then((res) => {
         if (ignore) return;
         setExamCycles(res.data);
@@ -157,12 +167,13 @@ function AdminPage() {
         }
       })
       .catch((err) => {
-        if (ignore) return;
+        if (ignore || err.code === "ERR_CANCELED") return;
         console.error("Failed to fetch exam cycles", err);
         setExamCycles([]);
       });
     return () => {
       ignore = true;
+      controller.abort();
     };
   }, [isAdmin, adminToken]);
 
@@ -181,6 +192,9 @@ function AdminPage() {
     if (!isAdmin || !adminToken) return Promise.resolve();
     // tag this request; only the latest one is allowed to apply its result
     const seq = ++registrationsReqRef.current;
+    registrationsAbortRef.current?.abort();
+    const controller = new AbortController();
+    registrationsAbortRef.current = controller;
     const params = new URLSearchParams();
     appendFilterParams(params);
     // status filtering is now server-side (a page only holds part of the result)
@@ -191,6 +205,7 @@ function AdminPage() {
     return api
       .get(`/admin/registrations?${params.toString()}`, {
         headers: getAdminHeaders(),
+        signal: controller.signal,
       })
       .then((res) => {
         if (seq !== registrationsReqRef.current) return; // superseded
@@ -203,6 +218,7 @@ function AdminPage() {
         setLoading(false);
       })
       .catch((error) => {
+        if (error.code === "ERR_CANCELED") return; // superseded request aborted
         console.error("Failed to fetch dashboard data:", error);
         // An auth failure invalidates the session regardless of ordering, so the
         // redirect is not gated on seq; only the success state-write is.
@@ -215,14 +231,21 @@ function AdminPage() {
 
   const fetchCounts = useCallback(() => {
     if (!isAdmin || !adminToken) return Promise.resolve();
+    countsAbortRef.current?.abort();
+    const controller = new AbortController();
+    countsAbortRef.current = controller;
     const params = new URLSearchParams();
     appendFilterParams(params); // no status: cards span all statuses of the filtered set
     return api
       .get(`/admin/registrations/summary-counts?${params.toString()}`, {
         headers: getAdminHeaders(),
+        signal: controller.signal,
       })
       .then((res) => setCounts(res.data))
-      .catch((err) => console.error("Failed to fetch summary counts", err));
+      .catch((err) => {
+        if (err.code === "ERR_CANCELED") return; // superseded request aborted
+        console.error("Failed to fetch summary counts", err);
+      });
   }, [isAdmin, adminToken, appendFilterParams]);
 
   useEffect(() => {
@@ -232,6 +255,15 @@ function AdminPage() {
   useEffect(() => {
     fetchCounts();
   }, [fetchCounts]);
+
+  // leaving the page cancels whatever is still in flight
+  useEffect(
+    () => () => {
+      registrationsAbortRef.current?.abort();
+      countsAbortRef.current?.abort();
+    },
+    [],
+  );
 
   // ---- filter apply / clear (draft -> applied) ----
   const draftFilters = {
