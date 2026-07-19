@@ -828,7 +828,7 @@ function AdminPage() {
                                 onClick={() => handleVerify(reg.regId)}
                                 disabled={verifyingRegId === reg.regId || rejectingRegId === reg.regId}
                                 data-cy="admin-verify"
-                                className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-2 py-1 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                                className="inline-flex w-15 items-center justify-center gap-1 rounded-lg bg-[var(--color-primary)] py-1 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
                               >
                                 {verifyingRegId === reg.regId ? (
                                   <LoaderCircle size={13} className="animate-spin" />
@@ -842,7 +842,7 @@ function AdminPage() {
                                 onClick={() => handleReject(reg.regId)}
                                 disabled={rejectingRegId === reg.regId || verifyingRegId === reg.regId}
                                 data-cy="admin-reject"
-                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                                className="inline-flex w-15 items-center justify-center gap-1 rounded-lg border border-red-200 bg-red-50 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
                               >
                                 {rejectingRegId === reg.regId ? (
                                   <LoaderCircle size={14} className="animate-spin" />
@@ -865,27 +865,26 @@ function AdminPage() {
                         ) : reg.status === "VERIFIED" ? (
                           <div className="flex flex-col gap-1.5">
                             {confirmRejectVerifiedId === reg.regId ? (
-                              <div className="flex flex-wrap items-center gap-1.5">
+                              <div className="flex flex-col items-start gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() => handleReject(reg.regId)}
                                   disabled={rejectingRegId === reg.regId}
                                   data-cy="admin-reject-verified-confirm"
-                                  className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                                  className="inline-flex w-14 items-center justify-center rounded-lg bg-red-600 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                                 >
                                   {rejectingRegId === reg.regId ? (
                                     <LoaderCircle size={14} className="animate-spin" />
                                   ) : (
-                                    <XCircle size={14} />
+                                    "Confirm"
                                   )}
-                                  Confirm
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setConfirmRejectVerifiedId("")}
                                   disabled={rejectingRegId === reg.regId}
                                   data-cy="admin-reject-verified-cancel"
-                                  className="inline-flex items-center rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-sm font-semibold text-[var(--text-main)] transition-colors hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                                  className="inline-flex w-14 items-center justify-center rounded-lg border border-[var(--stroke)] py-1.5 text-xs font-semibold text-[var(--text-main)] transition-colors hover:bg-[var(--surface-muted)] disabled:opacity-50"
                                 >
                                   Cancel
                                 </button>
@@ -903,11 +902,9 @@ function AdminPage() {
                                       setConfirmRejectVerifiedId(reg.regId);
                                     }}
                                     data-cy="admin-reject-verified"
-                                    aria-label="Reject"
-                                    title="Reject"
-                                    className="inline-flex items-center rounded-lg border border-red-200 px-2 py-1.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+                                    className="inline-flex w-14 items-center justify-center rounded-lg border border-red-200 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
                                   >
-                                    <XCircle size={18} />
+                                    Reject
                                   </button>
                                 ) : null}
                               </div>
