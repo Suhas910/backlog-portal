@@ -822,7 +822,7 @@ function AdminPage() {
                       <td className="px-4 py-3">
                         {reg.status === "SUBMITTED" && adminRole !== "PRINCIPAL" ? (
                           <div className="flex flex-col gap-1.5">
-                            <div className="flex gap-1.5">
+                            <div className="flex flex-col items-start gap-1.5">
                               <button
                                 type="button"
                                 onClick={() => handleVerify(reg.regId)}
@@ -842,15 +842,14 @@ function AdminPage() {
                                 onClick={() => handleReject(reg.regId)}
                                 disabled={rejectingRegId === reg.regId || verifyingRegId === reg.regId}
                                 data-cy="admin-reject"
-                                aria-label="Reject"
-                                title="Reject"
-                                className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
                               >
                                 {rejectingRegId === reg.regId ? (
                                   <LoaderCircle size={14} className="animate-spin" />
                                 ) : (
                                   <XCircle size={14} />
                                 )}
+                                Reject
                               </button>
                             </div>
                             {rowErrors[reg.regId] && (
@@ -867,15 +866,12 @@ function AdminPage() {
                           <div className="flex flex-col gap-1.5">
                             {confirmRejectVerifiedId === reg.regId ? (
                               <div className="flex flex-wrap items-center gap-1.5">
-                                <span className="text-sm text-[var(--text-muted)]">
-                                  Reject this verified registration?
-                                </span>
                                 <button
                                   type="button"
                                   onClick={() => handleReject(reg.regId)}
                                   disabled={rejectingRegId === reg.regId}
                                   data-cy="admin-reject-verified-confirm"
-                                  className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                                  className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
                                 >
                                   {rejectingRegId === reg.regId ? (
                                     <LoaderCircle size={14} className="animate-spin" />
@@ -895,7 +891,7 @@ function AdminPage() {
                                 </button>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-col items-start gap-1">
                                 <span className="text-sm font-semibold text-[var(--color-primary)]">
                                   Verified
                                 </span>
