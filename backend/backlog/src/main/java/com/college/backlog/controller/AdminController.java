@@ -58,6 +58,9 @@ public class AdminController {
     private RegistrationRepository registrationRepository;
 
     @Autowired
+    private com.college.backlog.service.RegistrationService registrationService;
+
+    @Autowired
     private SubjectService subjectService;
 
     @Autowired
@@ -84,11 +87,21 @@ public class AdminController {
     @Autowired
     private com.college.backlog.service.ProctorScopeService proctorScope;
 
-    private Long resolveCallerDeptId(Authentication auth) {
+    // One DB lookup per request: endpoints that need both the dept scope and the
+    // proctor scope load the caller once and pass the User to the helpers below
+    // (previously each helper re-fetched the same row).
+    private User callerUser(Authentication auth) {
         if (auth == null) return null;
-        User user = userRepository.findById(auth.getName()).orElse(null);
+        return userRepository.findById(auth.getName()).orElse(null);
+    }
+
+    private Long resolveCallerDeptId(User user) {
         if (user == null || !DEPT_ROLES.contains(user.getRole()) || user.getDepartment() == null) return null;
         return user.getDepartment().getId();
+    }
+
+    private Long resolveCallerDeptId(Authentication auth) {
+        return resolveCallerDeptId(callerUser(auth));
     }
 
     /**
@@ -97,9 +110,8 @@ public class AdminController {
      * assignments sees no registrations; callers must special-case that (an
      * empty IN list is not valid SQL).
      */
-    private java.util.Set<String> proctorRollNos(Authentication auth) {
-        if (auth == null) return null;
-        return proctorScope.assignedRollNos(userRepository.findById(auth.getName()).orElse(null));
+    private java.util.Set<String> proctorRollNos(User user) {
+        return proctorScope.assignedRollNos(user);
     }
 
     /**
@@ -109,14 +121,12 @@ public class AdminController {
      * A PROCTOR's scope is the assigned student instead of the subject department.
      */
     private void assertRegistrationInScope(Authentication auth, Registration reg) {
-        if (auth != null) {
-            User user = userRepository.findById(auth.getName()).orElse(null);
-            if (proctorScope.isProctor(user)) {
-                proctorScope.assertSupervises(user, reg.getStudent().getRollNo());
-                return;
-            }
+        User user = callerUser(auth);
+        if (proctorScope.isProctor(user)) {
+            proctorScope.assertSupervises(user, reg.getStudent().getRollNo());
+            return;
         }
-        Long callerDeptId = resolveCallerDeptId(auth);
+        Long callerDeptId = resolveCallerDeptId(user);
         if (callerDeptId == null) return; // ADMIN / PRINCIPAL: unrestricted
         boolean hasAccess = reg.getSubjects().stream().anyMatch(s -> {
             if (s.getDepartment() != null && callerDeptId.equals(s.getDepartment().getId())) return true;
@@ -148,8 +158,9 @@ public class AdminController {
             @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
             Authentication authentication
     ) {
-        Long callerDeptId = resolveCallerDeptId(authentication);
-        java.util.Set<String> proctorRolls = proctorRollNos(authentication);
+        User caller = callerUser(authentication);
+        Long callerDeptId = resolveCallerDeptId(caller);
+        java.util.Set<String> proctorRolls = proctorRollNos(caller);
 
         int safeSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         int safePage = Math.max(page, 0);
@@ -186,28 +197,26 @@ public class AdminController {
             @RequestParam Optional<Long> examCycleId,
             Authentication authentication
     ) {
-        Long callerDeptId = resolveCallerDeptId(authentication);
-        java.util.Set<String> proctorRolls = proctorRollNos(authentication);
+        User caller = callerUser(authentication);
+        Long callerDeptId = resolveCallerDeptId(caller);
+        java.util.Set<String> proctorRolls = proctorRollNos(caller);
         if (proctorRolls != null && proctorRolls.isEmpty()) {
             return Map.of("total", 0L, "submitted", 0L, "verified", 0L, "rejected", 0L);
         }
-        long submitted = countByStatus(subjectId, callerDeptId, proctorRolls, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.SUBMITTED);
-        long verified = countByStatus(subjectId, callerDeptId, proctorRolls, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.VERIFIED);
-        long rejected = countByStatus(subjectId, callerDeptId, proctorRolls, subjectType, searchQuery, startDate, endDate, examCycleId, RegistrationStatus.REJECTED);
+        // one GROUP BY query over the filtered set (no status filter — the cards
+        // span every status) instead of one count query per status
+        Map<RegistrationStatus, Long> counts = registrationService.countGroupedByStatus(
+            new RegistrationSpecification(
+                subjectId.orElse(null), callerDeptId, subjectType.orElse(null), searchQuery.orElse(null),
+                startDate.orElse(null), endDate.orElse(null), examCycleId.orElse(null), null, proctorRolls));
+        long submitted = counts.getOrDefault(RegistrationStatus.SUBMITTED, 0L);
+        long verified = counts.getOrDefault(RegistrationStatus.VERIFIED, 0L);
+        long rejected = counts.getOrDefault(RegistrationStatus.REJECTED, 0L);
         return Map.of(
             "total", submitted + verified + rejected,
             "submitted", submitted,
             "verified", verified,
             "rejected", rejected);
-    }
-
-    private long countByStatus(Optional<Long> subjectId, Long callerDeptId, java.util.Set<String> proctorRolls,
-                               Optional<String> subjectType,
-                               Optional<String> searchQuery, Optional<LocalDate> startDate, Optional<LocalDate> endDate,
-                               Optional<Long> examCycleId, RegistrationStatus status) {
-        return registrationRepository.count(new RegistrationSpecification(
-                subjectId.orElse(null), callerDeptId, subjectType.orElse(null), searchQuery.orElse(null),
-                startDate.orElse(null), endDate.orElse(null), examCycleId.orElse(null), status, proctorRolls));
     }
 
     /** Parse the optional status filter; blank/absent means "all statuses". 400 on an unknown value. */
@@ -388,8 +397,9 @@ public class AdminController {
             Authentication authentication,
             HttpServletResponse response
     ) throws Exception {
-        Long callerDeptId = resolveCallerDeptId(authentication);
-        java.util.Set<String> proctorRolls = proctorRollNos(authentication);
+        User caller = callerUser(authentication);
+        Long callerDeptId = resolveCallerDeptId(caller);
+        java.util.Set<String> proctorRolls = proctorRollNos(caller);
 
         // Scope to a single exam cycle: the one explicitly selected, else the active
         // cycle. Without this the report would span every cycle. If nothing is

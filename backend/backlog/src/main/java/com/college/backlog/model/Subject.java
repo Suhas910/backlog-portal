@@ -1,6 +1,7 @@
 package com.college.backlog.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.ColumnDefault;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +47,11 @@ public class Subject {
     @Column(name = "subject_type")
     private SubjectType subjectType = SubjectType.REGULAR;
 
+    // @BatchSize: EAGER means every subject hydration loads this collection; without
+    // batching a list of N subjects issues N join-table queries. Batching collapses
+    // them into a few IN queries per list (same pattern as Registration.subjects).
     @ManyToMany(fetch = FetchType.EAGER)
+    @BatchSize(size = 50)
     @JoinTable(
         name = "subject_eligible_departments",
         joinColumns = @JoinColumn(name = "subject_id"),

@@ -3,7 +3,13 @@ package com.college.backlog.service;
 import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.*;
 import com.college.backlog.repository.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -46,6 +52,34 @@ public class RegistrationService {
 
     @Autowired
     private StudentSemesterTermRepository studentSemesterTermRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    /**
+     * Status-bucketed counts for the admin dashboard cards: ONE {@code GROUP BY
+     * status} query over the filtered set instead of one full count query per
+     * status. {@code countDistinct} on the entity id keeps the numbers correct
+     * when the specification's subjects join fans out rows. Statuses with no
+     * matching rows are simply absent from the result.
+     */
+    public java.util.Map<RegistrationStatus, Long> countGroupedByStatus(Specification<Registration> spec) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
+        Root<Registration> root = query.from(Registration.class);
+        Predicate predicate = spec.toPredicate(root, query, cb);
+        query.multiselect(root.get("status"), cb.countDistinct(root.get("id")));
+        if (predicate != null) {
+            query.where(predicate);
+        }
+        query.groupBy(root.get("status"));
+
+        java.util.Map<RegistrationStatus, Long> counts = new java.util.EnumMap<>(RegistrationStatus.class);
+        for (Object[] row : entityManager.createQuery(query).getResultList()) {
+            counts.put((RegistrationStatus) row[0], (Long) row[1]);
+        }
+        return counts;
+    }
 
     // One transaction for the registration insert AND its SUBMITTED audit event —
     // an event-write failure rolls the registration back too, so history can never
@@ -104,6 +138,13 @@ public class RegistrationService {
                 "One or more selected subjects are invalid.");
         }
 
+        // one query for the whole progression (≤ a handful of rows per student)
+        // instead of one findByRollNoAndSemester per selected subject
+        java.util.Map<Integer, StudentSemesterTerm> termsBySemester =
+            studentSemesterTermRepository.findByRollNo(rollNo).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                    StudentSemesterTerm::getSemester, java.util.function.Function.identity()));
+
         for (Subject subject : subjects) {
             // backlog window: a subject's semester must be one the student may still
             // register for, given their current semester (mirrors the UI constraint)
@@ -116,11 +157,12 @@ public class RegistrationService {
             // student actually studied that semester. Fail closed if there is no
             // progression record — mirrors the read path so a crafted/stale request
             // cannot register a subject from a different year's offering.
-            StudentSemesterTerm term = studentSemesterTermRepository
-                .findByRollNoAndSemester(rollNo, subject.getSemester())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
+            StudentSemesterTerm term = termsBySemester.get(subject.getSemester());
+            if (term == null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "We don't have a record of the academic year you studied semester "
-                        + subject.getSemester() + ". Please contact the department office."));
+                        + subject.getSemester() + ". Please contact the department office.");
+            }
             if (subject.getAcademicYearOffered() != term.getAcademicYear()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Subject '" + subject.getSubjectName() + "' is not from your semester "
@@ -146,10 +188,8 @@ public class RegistrationService {
         // limit: at most MAX_PENDING_PER_CYCLE pending submission(s) per student per exam
         // cycle. VERIFIED/REJECTED rows in the cycle don't count toward the limit.
         long pendingCount = registrationRepository
-                .findByStudent_RollNoAndExamCycle_Id(rollNo, cycle.getId())
-                .stream()
-                .filter(existing -> existing.getStatus() == RegistrationStatus.SUBMITTED)
-                .count();
+                .countByStudent_RollNoAndExamCycle_IdAndStatus(
+                    rollNo, cycle.getId(), RegistrationStatus.SUBMITTED);
         if (pendingCount >= MAX_PENDING_PER_CYCLE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "You already have a pending registration for this exam cycle. "

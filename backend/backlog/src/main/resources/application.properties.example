@@ -45,3 +45,9 @@ admin.password.admin=${ADMIN_PASSWORD_ADMIN:}
 spring.application.name=backlog
 server.port=8080
 server.error.include-message=never
+
+# Gzip API responses (Boot's default mime-type list already covers
+# application/json). Registration/subject list payloads compress ~5-10x; PDFs are
+# internally compressed already and stay untouched (application/pdf not listed).
+server.compression.enabled=true
+server.compression.min-response-size=1024

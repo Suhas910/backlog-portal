@@ -78,17 +78,16 @@ class RegistrationServiceTest {
         subject.setSubjectType(SubjectType.REGULAR);
         when(subjectRepository.findAllById(List.of(100L))).thenReturn(List.of(subject));
 
-        when(studentSemesterTermRepository.findByRollNoAndSemester(ROLL, 4))
-                .thenReturn(Optional.of(new StudentSemesterTerm(ROLL, 4, 2022)));
+        when(studentSemesterTermRepository.findByRollNo(ROLL))
+                .thenReturn(List.of(new StudentSemesterTerm(ROLL, 4, 2022)));
     }
 
     @Test
     void secondPendingInSameCycleIsRejectedWith409() {
         // an existing SUBMITTED registration in this cycle -> at the limit of 1
-        Registration existing = new Registration();
-        existing.setStatus(RegistrationStatus.SUBMITTED);
-        when(registrationRepository.findByStudent_RollNoAndExamCycle_Id(ROLL, 10L))
-                .thenReturn(List.of(existing));
+        when(registrationRepository.countByStudent_RollNoAndExamCycle_IdAndStatus(
+                ROLL, 10L, RegistrationStatus.SUBMITTED))
+                .thenReturn(1L);
 
         ResponseStatusException ex = catchThrowableOfType(
                 ResponseStatusException.class, () -> service.register(ROLL, List.of(100L)));
@@ -101,13 +100,11 @@ class RegistrationServiceTest {
 
     @Test
     void actionedRegistrationsInTheCycleDoNotCountTowardTheLimit() {
-        // a VERIFIED + a REJECTED row exist, but zero SUBMITTED -> submission allowed
-        Registration verified = new Registration();
-        verified.setStatus(RegistrationStatus.VERIFIED);
-        Registration rejected = new Registration();
-        rejected.setStatus(RegistrationStatus.REJECTED);
-        when(registrationRepository.findByStudent_RollNoAndExamCycle_Id(ROLL, 10L))
-                .thenReturn(List.of(verified, rejected));
+        // VERIFIED/REJECTED rows exist but zero SUBMITTED — the count query is
+        // status-filtered, so it returns 0 and the submission is allowed
+        when(registrationRepository.countByStudent_RollNoAndExamCycle_IdAndStatus(
+                ROLL, 10L, RegistrationStatus.SUBMITTED))
+                .thenReturn(0L);
         when(registrationRepository.saveAndFlush(any()))
                 .thenAnswer(inv -> inv.getArgument(0));
 
@@ -121,8 +118,9 @@ class RegistrationServiceTest {
     void concurrentInsertRaceIsMappedTo409ByTheUniqueIndexBackstop() {
         // count check passes (no SUBMITTED yet) but the DB partial unique index
         // rejects the concurrent insert -> surfaced as 409, not a 500
-        when(registrationRepository.findByStudent_RollNoAndExamCycle_Id(ROLL, 10L))
-                .thenReturn(List.of());
+        when(registrationRepository.countByStudent_RollNoAndExamCycle_IdAndStatus(
+                ROLL, 10L, RegistrationStatus.SUBMITTED))
+                .thenReturn(0L);
         when(registrationRepository.saveAndFlush(any()))
                 .thenThrow(new DataIntegrityViolationException("duplicate key uq_pending_reg_per_cycle"));
 

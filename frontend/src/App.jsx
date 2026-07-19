@@ -1,25 +1,34 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import HomePage from "./pages/HomePage";
-import RegistrationPage from "./pages/RegistrationPage";
-import AdminPage from "./pages/AdminPage";
-import AdminLoginPage from "./pages/AdminLoginPage";
 import { ThemeProvider } from "./context/ThemeContext";
-import ManageSubjectsPage from "./pages/manageSubjects/ManageSubjectsPage";
-import ExamCyclePage from "./pages/ExamCyclePage";
-import DepartmentsPage from "./pages/DepartmentsPage";
-import ManageUsersPage from "./pages/ManageUsersPage";
-import StudentsPage from "./pages/students/StudentsPage";
-import ChangePasswordPage from "./pages/ChangePasswordPage";
-import StudentLoginPage from "./pages/StudentLoginPage";
-import StudentDashboardPage from "./pages/StudentDashboardPage";
 import ProtectedStudentRoute from "./components/ProtectedStudentRoute";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+
+// Route-level code splitting: each page loads as its own chunk on first visit,
+// so a student never downloads the admin pages (and vice versa). The route
+// guards and theme provider stay in the entry chunk — they're tiny and gate
+// rendering.
+const HomePage = lazy(() => import("./pages/HomePage"));
+const RegistrationPage = lazy(() => import("./pages/RegistrationPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage"));
+const ManageSubjectsPage = lazy(() => import("./pages/manageSubjects/ManageSubjectsPage"));
+const ExamCyclePage = lazy(() => import("./pages/ExamCyclePage"));
+const DepartmentsPage = lazy(() => import("./pages/DepartmentsPage"));
+const ManageUsersPage = lazy(() => import("./pages/ManageUsersPage"));
+const StudentsPage = lazy(() => import("./pages/students/StudentsPage"));
+const ChangePasswordPage = lazy(() => import("./pages/ChangePasswordPage"));
+const StudentLoginPage = lazy(() => import("./pages/StudentLoginPage"));
+const StudentDashboardPage = lazy(() => import("./pages/StudentDashboardPage"));
 
 function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <Routes>
+        {/* blank full-height fallback: page chunks load near-instantly, so no
+            spinner flash; min-h-screen keeps the layout from collapsing mid-swap */}
+        <Suspense fallback={<div className="min-h-screen" />}>
+          <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/student/login" element={<StudentLoginPage />} />
           <Route
@@ -95,7 +104,8 @@ function App() {
               </ProtectedAdminRoute>
             }
           />
-        </Routes>
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ThemeProvider>
   );

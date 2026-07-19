@@ -50,9 +50,14 @@ public class RegistrationSpecification implements Specification<Registration> {
     @Override
     public Predicate toPredicate(Root<Registration> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
         List<Predicate> predicates = new ArrayList<>();
-        query.distinct(true);
 
         if (subjectId != null || departmentId != null || (subjectType != null && !subjectType.isBlank())) {
+            // DISTINCT only when the subjects collection join below can fan out rows.
+            // The other joins are all many-to-one (student, examCycle) and cannot
+            // duplicate, so the common no-subject-filter case stays a plain query —
+            // an unconditional DISTINCT forced a sort/hash over the wide snapshot
+            // rows on every page and count.
+            query.distinct(true);
             Join<Registration, Subject> subjectJoin = root.join("subjects", JoinType.LEFT);
             if (subjectId != null) {
                 predicates.add(cb.equal(subjectJoin.get("id"), subjectId));

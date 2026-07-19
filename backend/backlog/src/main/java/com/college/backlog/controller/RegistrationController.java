@@ -40,9 +40,9 @@ public class RegistrationController {
     @Autowired
     private ProctorScopeService proctorScope;
 
-    private void checkDeptAccess(Authentication auth, Registration reg) {
-        if (auth == null) return;
-        User user = userRepository.findById(auth.getName()).orElse(null);
+    // Takes the already-loaded caller so verify doesn't fetch the same user row
+    // twice (once for scoping, once for the audit actor role).
+    private void checkDeptAccess(User user, Registration reg) {
         // a proctor's scope is the assigned STUDENT, not the subject's department
         if (user != null && user.getRole() == UserRole.PROCTOR) {
             proctorScope.assertSupervises(user, reg.getStudent().getRollNo());
@@ -88,7 +88,11 @@ public class RegistrationController {
         Registration reg = registrationRepository.findByRegId(regId)
             .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
-        checkDeptAccess(authentication, reg);
+        // load the caller once; used for both the scope check and the audit actor role
+        User caller = authentication != null
+            ? userRepository.findById(authentication.getName()).orElse(null)
+            : null;
+        checkDeptAccess(caller, reg);
 
         // require an explicit, known action — never default a typo to VERIFIED
         String requested = body != null ? body.get("action") : null;
@@ -104,9 +108,8 @@ public class RegistrationController {
 
         String actor = authentication != null ? authentication.getName() : null;
         // UserRole is a subset of ActorRole by name, so the mapping is always valid.
-        ActorRole actorRole = (actor != null)
-            ? userRepository.findById(actor)
-                .map(u -> ActorRole.valueOf(u.getRole().name())).orElse(ActorRole.ADMIN)
+        ActorRole actorRole = (caller != null)
+            ? ActorRole.valueOf(caller.getRole().name())
             : ActorRole.ADMIN;
 
         // status flip + audit event committed atomically; the pending-state check

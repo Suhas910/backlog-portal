@@ -1,6 +1,7 @@
 package com.college.backlog.repository;
 
 import com.college.backlog.model.Registration;
+import com.college.backlog.model.RegistrationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -20,7 +21,10 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
     List<Registration> findByStudent_RollNo(String rollNo);
 
-    List<Registration> findByStudent_RollNoAndExamCycle_Id(String rollNo, Long examCycleId);
+    // Pending-limit check: a single indexed COUNT (served exactly by the partial
+    // unique index uq_pending_reg_per_cycle when status=SUBMITTED) instead of
+    // hydrating full rows just to count them in Java.
+    long countByStudent_RollNoAndExamCycle_IdAndStatus(String rollNo, Long examCycleId, RegistrationStatus status);
 
     // Delete guard: is any registration referencing this subject? Blocks deletion
     // of a subject that students have already registered for.
