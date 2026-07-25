@@ -129,11 +129,13 @@ function AdminLoginPage() {
         className="mx-auto w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
       >
         <div className="mb-6 text-left">
-          <BrandIdentity compact onSurface />
-          <p className="mb-2 mt-4 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
+          <div className="mb-4 flex items-center rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-3 text-white shadow-soft">
+            <BrandIdentity compact />
+          </div>
+          <p className="mb-2 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
             Restricted Access
           </p>
-          <h1 className="text-3xl font-semibold text-[var(--color-secondary)]">
+          <h1 className="admin-login-heading text-3xl font-semibold text-[var(--color-secondary)]">
             {step === 1 ? "Select Designation" : "Staff Login"}
           </h1>
           <p className="mt-2 text-sm text-[var(--text-main)]">
@@ -163,7 +165,7 @@ function AdminLoginPage() {
                 <ShieldCheck size={24} />
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
                   Administrator
                 </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-main)]">
@@ -180,7 +182,7 @@ function AdminLoginPage() {
                 <GraduationCap size={24} />
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
                   Principal / Registrar / COE
                 </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-main)]">
@@ -197,7 +199,7 @@ function AdminLoginPage() {
                 <Briefcase size={24} />
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
                   Head of Department (HOD)
                 </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-main)]">
@@ -214,7 +216,7 @@ function AdminLoginPage() {
                 <Building2 size={24} />
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
                   Department Office
                 </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-main)]">
@@ -232,7 +234,7 @@ function AdminLoginPage() {
                 <UserCheck size={24} />
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
                   Proctor
                 </h3>
                 <p className="mt-0.5 text-xs text-[var(--text-main)]">
@@ -344,7 +346,7 @@ function AdminLoginPage() {
         <div className="mt-4 text-center">
           <Link
             to="/"
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-secondary)] underline-offset-4 hover:underline"
+            className="login-back-link inline-flex items-center gap-1 text-sm font-medium text-[var(--color-secondary)] underline-offset-4 hover:underline"
           >
             <ArrowLeft size={14} /> Back to home
           </Link>

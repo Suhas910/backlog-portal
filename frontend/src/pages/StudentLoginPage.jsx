@@ -73,8 +73,10 @@ function StudentLoginPage() {
         className="mx-auto w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
       >
         <div className="mb-6 text-left">
-          <BrandIdentity compact onSurface />
-          <p className="mb-2 mt-4 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
+          <div className="mb-4 flex items-center rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-3 text-white shadow-soft">
+            <BrandIdentity compact />
+          </div>
+          <p className="mb-2 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
             Student Login
           </p>
           <h1 className="text-3xl font-semibold text-[var(--color-secondary)]">Sign in</h1>
@@ -153,7 +155,7 @@ function StudentLoginPage() {
         <div className="mt-6 text-center">
           <Link
             to="/"
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-secondary)] underline-offset-4 hover:underline"
+            className="login-back-link inline-flex items-center gap-1 text-sm font-medium text-[var(--color-secondary)] underline-offset-4 hover:underline"
           >
             <ArrowLeft size={14} /> Back to home
           </Link>
