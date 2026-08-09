@@ -16,6 +16,11 @@ import java.util.Optional;
 
 @Repository
 public interface RegistrationRepository extends JpaRepository<Registration, Long>, JpaSpecificationExecutor<Registration> {
+    // Fetch-joins the relations every caller touches: the dept/proctor scope checks
+    // walk `subjects` (and each subject's eligible departments) before the response
+    // is built, and the PDF path needs the same. Safe to join the collection here —
+    // this is a single-row lookup, so there is no pagination to push in memory.
+    @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
     Optional<Registration> findByRegId(String regId);
 
     @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})

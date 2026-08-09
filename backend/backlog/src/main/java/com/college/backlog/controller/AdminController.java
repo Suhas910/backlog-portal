@@ -179,7 +179,9 @@ public class AdminController {
                 examCycleId.orElse(null),
                 parseStatus(status.orElse(null)),
                 proctorRolls);
-        return registrationRepository.findAll(spec, pageable).map(this::toSummary);
+        // mapping happens inside the service transaction — the page's `subjects` are
+        // lazily loaded during mapping, so it cannot be done out here
+        return registrationService.listSummaries(spec, pageable);
     }
 
     // Status-bucketed counts for the dashboard stat cards, over the SAME filters as
@@ -229,22 +231,6 @@ public class AdminController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown status filter: " + status);
         }
-    }
-
-    private RegistrationSummaryResponse toSummary(Registration reg) {
-        return new RegistrationSummaryResponse(
-            reg.getRegId(),
-            reg.getStudent().getRollNo(),
-            reg.getSnapName() != null ? reg.getSnapName() : reg.getStudent().getName(),
-            reg.getSnapSemester() != null ? reg.getSnapSemester() : reg.getStudent().getCurrentSemester(),
-            reg.getSnapYearOfJoining() != null ? reg.getSnapYearOfJoining() : reg.getStudent().getYearOfJoining(),
-            reg.getSubjects().stream()
-                .map(s -> s.getSubjectName() + " (" + s.getCourseCode() + ")")
-                .collect(Collectors.toList()),
-            reg.getStatus().name(),
-            reg.getRegisteredAt().toString(),
-            reg.getVerifiedBy(),
-            reg.getExamCycle() != null ? reg.getExamCycle().getName() : null);
     }
 
     @GetMapping("/registrations/{regId}/events")

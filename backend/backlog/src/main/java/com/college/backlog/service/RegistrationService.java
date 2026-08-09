@@ -1,5 +1,6 @@
 package com.college.backlog.service;
 
+import com.college.backlog.controller.dto.RegistrationSummaryResponse;
 import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.*;
 import com.college.backlog.repository.*;
@@ -9,6 +10,8 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -79,6 +82,49 @@ public class RegistrationService {
             counts.put((RegistrationStatus) row[0], (Long) row[1]);
         }
         return counts;
+    }
+
+    /**
+     * Paginated admin list, mapped to DTOs INSIDE the transaction.
+     *
+     * <p>The mapping must live here, not in the controller: the paginated query
+     * deliberately does not fetch-join `subjects` (a collection fetch would force
+     * Hibernate to paginate in memory instead of issuing a real SQL LIMIT), so
+     * reading {@code reg.getSubjects()} is a lazy load. Doing that in the controller
+     * only worked because {@code spring.jpa.open-in-view} was left at its default;
+     * inside this transaction it is legal on its own terms. The per-row loads are
+     * still collapsed into one batch by {@code @BatchSize(30)} on the association.
+     *
+     * <p>{@code readOnly} additionally skips dirty-check and flush for every entity
+     * hydrated by the page — nothing here is ever mutated.
+     */
+    @Transactional(readOnly = true)
+    public Page<RegistrationSummaryResponse> listSummaries(Specification<Registration> spec, Pageable pageable) {
+        return registrationRepository.findAll(spec, pageable).map(this::toSummary);
+    }
+
+    /** Private on purpose: mapping a Registration touches lazy state, so it must not
+     *  be reachable from a controller (see {@link #listSummaries}). */
+    private RegistrationSummaryResponse toSummary(Registration reg) {
+        // Held in locals because both are nullable Integer falling back to a primitive int:
+        // `Integer != null ? Integer : int` promotes to int (JLS 15.25), so the boxed branch
+        // is implicitly unboxed. Calling the getter twice leaves null analysis unable to carry
+        // the guard across the second call; a local makes the non-null provable.
+        Integer snapSemester = reg.getSnapSemester();
+        Integer snapYearOfJoining = reg.getSnapYearOfJoining();
+        return new RegistrationSummaryResponse(
+            reg.getRegId(),
+            reg.getStudent().getRollNo(),
+            reg.getSnapName() != null ? reg.getSnapName() : reg.getStudent().getName(),
+            snapSemester != null ? snapSemester : reg.getStudent().getCurrentSemester(),
+            snapYearOfJoining != null ? snapYearOfJoining : reg.getStudent().getYearOfJoining(),
+            reg.getSubjects().stream()
+                .map(s -> s.getSubjectName() + " (" + s.getCourseCode() + ")")
+                .collect(java.util.stream.Collectors.toList()),
+            reg.getStatus().name(),
+            reg.getRegisteredAt().toString(),
+            reg.getVerifiedBy(),
+            reg.getExamCycle() != null ? reg.getExamCycle().getName() : null);
     }
 
     // One transaction for the registration insert AND its SUBMITTED audit event —

@@ -28,6 +28,12 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<!-- Ahead of Boot 3.5.16's managed Flyway 11.7.2, whose Postgres module tops out at
+		     PG 17 and logs "Flyway upgrade recommended" against our PG 18 (Neon and the local
+		     test container both run 18.4). 11.13.3 is the first release that certifies PG 18.
+		     Overriding the property (not the two artifacts) keeps flyway-core and
+		     flyway-database-postgresql in lockstep. -->
+		<flyway.version>11.13.3</flyway.version>
 	</properties>
 	<dependencies>
 		<dependency>

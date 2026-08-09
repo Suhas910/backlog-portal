@@ -17,7 +17,13 @@ spring.datasource.hikari.minimum-idle=${DB_POOL_MIN_IDLE:1}
 spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:validate}
 spring.jpa.show-sql=${JPA_SHOW_SQL:false}
 spring.jpa.properties.hibernate.format_sql=${JPA_FORMAT_SQL:false}
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+# No hibernate.dialect here on purpose: Hibernate 6 resolves it from JDBC metadata and
+# warns (HHH90000025) if you set it. Auto-detection also reads the server version, where
+# a hardcoded PostgreSQLDialect would pin us to the base dialect. Don't re-add it.
+# OFF deliberately — read paths fetch-join what they need or map inside a
+# transaction, so no query should ever run during response rendering.
+#   JPA_OPEN_IN_VIEW=true   -> emergency escape hatch only; means a fetch regressed
+spring.jpa.open-in-view=${JPA_OPEN_IN_VIEW:false}
 spring.sql.init.mode=${SQL_INIT_MODE:never}
 
 # Flyway: baseline an existing (already-populated) DB at V1; a fresh empty DB runs V1
