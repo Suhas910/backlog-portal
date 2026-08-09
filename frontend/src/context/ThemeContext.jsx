@@ -18,6 +18,8 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.theme = theme;
+    // data-theme is the source of truth (CSS var overrides + the `dark:` @custom-variant both
+    // key off it). The `dark` class is kept only as the conventional hook — nothing reads it.
     root.classList.toggle("dark", theme === "dark");
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);

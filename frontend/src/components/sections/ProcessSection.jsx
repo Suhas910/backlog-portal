@@ -31,7 +31,7 @@ export default function ProcessSection() {
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-primary)]">
             How It Works
           </p>
-          <h2 className="mt-2 font-serif text-3xl text-[var(--color-primary)] sm:text-4xl">
+          <h2 className="mt-2 text-3xl text-[var(--color-primary)] sm:text-4xl">
             From Login to Verification
           </h2>
           <p className="mt-3 max-w-xl text-[var(--text-muted)]">

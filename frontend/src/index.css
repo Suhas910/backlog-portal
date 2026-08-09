@@ -1,6 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&family=Sora:wght@600;700;800&display=swap");
 @import "tailwindcss";
 
+/* Selector-based `dark:` variant. v4 is CSS-first: there is NO tailwind.config.js (v4 ignores a
+   JS config unless a `@config` opts in), so darkMode belongs here. Without this line v4's stock
+   `dark:` follows prefers-color-scheme and ignores the ThemeContext toggle. Theming is otherwise
+   the vars below + the [data-theme="dark"] overrides — `dark:` utilities are the exception. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   /* Brand maroon, the dominant accent: used via Tailwind arbitrary values (`border-`, `text-`,
      `ring-`, `bg-`, `accent-`) across ~23 pages/tabs — mostly borders, focus rings and accent
