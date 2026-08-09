@@ -77,51 +77,55 @@ public class PdfService {
     public void generateRegistrationsSummaryPdf(List<Registration> registrations, java.io.OutputStream out) throws Exception {
         PdfWriter writer = new PdfWriter(out);
         PdfDocument pdfDoc = new PdfDocument(writer);
-        Document doc = new Document(pdfDoc, PageSize.A4.rotate()); // landscape fits the columns
-        doc.setMargins(25f, 25f, 25f, 25f);
 
-        PdfFont bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
-        PdfFont regular = PdfFontFactory.createFont(StandardFonts.HELVETICA);
+        // doc.close() still flushes+closes `out` (and the pdfDoc/writer it owns) — unchanged contract;
+        // t-w-r only adds the failure path: close() runs on a throw, and its own failure is suppressed
+        // so the original error wins. Only `doc` is a resource — listing all three double-closes `out`.
+        try (Document doc = new Document(pdfDoc, PageSize.A4.rotate())) { // landscape fits the columns
+            doc.setMargins(25f, 25f, 25f, 25f);
 
-        Paragraph title = new Paragraph("Registrations Summary Report")
-                .setFont(bold).setFontSize(14f)
-                .setTextAlignment(TextAlignment.CENTER)
-                .setMarginBottom(15f);
-        doc.add(title);
+            PdfFont bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
+            PdfFont regular = PdfFontFactory.createFont(StandardFonts.HELVETICA);
 
-        float[] columnWidths = { 4f, 13f, 20f, 6f, 42f, 15f };
-        Table table = new Table(UnitValue.createPercentArray(columnWidths)).useAllAvailableWidth();
-
-        String[] headers = { "Sl.", "USN", "Name", "Sem", "Subjects", "Date" };
-        for (String h : headers) {
-            table.addHeaderCell(new Cell().add(new Paragraph(h).setFont(bold).setFontSize(9f))
-                    .setBackgroundColor(new DeviceRgb(230, 230, 230))
+            Paragraph title = new Paragraph("Registrations Summary Report")
+                    .setFont(bold).setFontSize(14f)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setVerticalAlignment(VerticalAlignment.MIDDLE));
+                    .setMarginBottom(15f);
+            doc.add(title);
+
+            float[] columnWidths = { 4f, 13f, 20f, 6f, 42f, 15f };
+            Table table = new Table(UnitValue.createPercentArray(columnWidths)).useAllAvailableWidth();
+
+            String[] headers = { "Sl.", "USN", "Name", "Sem", "Subjects", "Date" };
+            for (String h : headers) {
+                table.addHeaderCell(new Cell().add(new Paragraph(h).setFont(bold).setFontSize(9f))
+                        .setBackgroundColor(new DeviceRgb(230, 230, 230))
+                        .setTextAlignment(TextAlignment.CENTER)
+                        .setVerticalAlignment(VerticalAlignment.MIDDLE));
+            }
+
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            int i = 1;
+            for (Registration reg : registrations) {
+                table.addCell(dataCellCentre(String.valueOf(i++), regular));
+                table.addCell(dataCellCentre(safe(reg, r -> r.getStudent().getRollNo()), regular));
+                table.addCell(dataCell(safe(reg, r -> r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()), regular));
+                table.addCell(dataCellCentre(safe(reg, r -> String.valueOf(r.getSnapSemester() != null ? r.getSnapSemester() : r.getStudent().getCurrentSemester())), regular));
+
+                // course code included per subject — it's the canonical identifier
+                String subjectsStr = reg.getSubjects() != null
+                        ? reg.getSubjects().stream()
+                            .map(s -> (s.getCourseCode() != null ? s.getCourseCode() + " " : "") + s.getSubjectName())
+                            .collect(Collectors.joining(", "))
+                        : "";
+                table.addCell(dataCell(subjectsStr, regular));
+
+                String dateStr = reg.getRegisteredAt() != null ? reg.getRegisteredAt().format(dtf) : "";
+                table.addCell(dataCellCentre(dateStr, regular));
+            }
+
+            doc.add(table);
         }
-
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        int i = 1;
-        for (Registration reg : registrations) {
-            table.addCell(dataCellCentre(String.valueOf(i++), regular));
-            table.addCell(dataCellCentre(safe(reg, r -> r.getStudent().getRollNo()), regular));
-            table.addCell(dataCell(safe(reg, r -> r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()), regular));
-            table.addCell(dataCellCentre(safe(reg, r -> String.valueOf(r.getSnapSemester() != null ? r.getSnapSemester() : r.getStudent().getCurrentSemester())), regular));
-
-            // course code included per subject — it's the canonical identifier
-            String subjectsStr = reg.getSubjects() != null
-                    ? reg.getSubjects().stream()
-                        .map(s -> (s.getCourseCode() != null ? s.getCourseCode() + " " : "") + s.getSubjectName())
-                        .collect(Collectors.joining(", "))
-                    : "";
-            table.addCell(dataCell(subjectsStr, regular));
-
-            String dateStr = reg.getRegisteredAt() != null ? reg.getRegisteredAt().format(dtf) : "";
-            table.addCell(dataCellCentre(dateStr, regular));
-        }
-
-        doc.add(table);
-        doc.close(); // flushes and closes the underlying OutputStream
     }
 
     // ---- 1. header ----
