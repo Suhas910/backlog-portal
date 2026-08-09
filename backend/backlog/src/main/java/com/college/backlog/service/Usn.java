@@ -1,16 +1,13 @@
 package com.college.backlog.service;
 
 /**
- * The USN (roll-number) format and its derivations, in one place. A USN is
- * {@code 1MS<YY><BR><NNN>} — e.g. {@code 1MS22CS001}: a fixed {@code 1MS} prefix,
- * a two-digit admission year, a two-letter branch code, and a three-digit serial.
+ * The USN (roll-number) format and its derivations. A USN is {@code 1MS<YY><BR><NNN>} — e.g.
+ * {@code 1MS22CS001}: fixed {@code 1MS} prefix, two-digit admission year, two-letter branch code,
+ * three-digit serial.
  *
- * This is the single source of truth for that rule: validation and the year/branch
- * slicing used to live inline (and copy-pasted) across the registration, student,
- * and progression paths. Route every caller through here so the format can never
- * drift between endpoints.
- *
- * See docs/adr/backlog-progression.md.
+ * Single source of truth for that rule — validation and year/branch slicing were previously
+ * copy-pasted inline across the registration, student, and progression paths. Route every caller
+ * through here so the format can't drift between endpoints. See docs/adr/backlog-progression.md.
  */
 public final class Usn {
 

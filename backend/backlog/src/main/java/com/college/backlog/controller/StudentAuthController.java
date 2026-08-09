@@ -89,11 +89,10 @@ public class StudentAuthController {
     }
 
     /**
-     * Slide the student session: re-mint a fresh-expiry token for the already-
-     * authenticated student (a valid token must have authenticated the request).
-     * Keeps an active student from being logged out mid-form at the 1h mark; an
-     * idle student whose token lapses falls back to re-login. The account is
-     * re-read so a since-deleted student can't refresh.
+     * Slide the student session: re-mint a fresh-expiry token for an already-authenticated student
+     * (a valid token must have authenticated the request), so an active one isn't logged out
+     * mid-form at the 1h mark while an idle one falls back to re-login. The account is re-read,
+     * so a since-deleted student cannot refresh.
      */
     @PostMapping("/refresh")
     public Map<String, String> refresh(HttpServletRequest request, HttpServletResponse response,
@@ -104,7 +103,7 @@ public class StudentAuthController {
         Student student = studentRepository.findByRollNo(auth.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Student account not found"));
         String currentToken = sessionCookieService.read(request, SessionCookieService.STUDENT_COOKIE);
-        // preserve the original session start and enforce the absolute cap
+        // preserves the original session start and enforces the absolute cap
         String token = currentToken == null ? null
                 : jwtService.refreshToken(currentToken, student.getRollNo(), "STUDENT");
         if (token == null) {

@@ -2,9 +2,8 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// The generated clone draft: one row per source subject, with its course code and
-// academic year already bumped to the target year, and a status flag so the UI can
-// show which would be created vs skipped (already exist).
+// The generated clone draft: one row per source subject with course code and academic year
+// already bumped to the target, plus a status flag so the UI can show created vs skipped.
 public class SubjectClonePreviewResponse {
     private int sourceYear;
     private int targetYear;

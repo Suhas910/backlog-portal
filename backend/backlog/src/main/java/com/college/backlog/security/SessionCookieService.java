@@ -9,14 +9,13 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
 /**
- * The JWT rides in an httpOnly cookie (not readable by JS, so not exfiltratable via
- * XSS) instead of the Authorization header + sessionStorage. Two separate cookies
- * keep the admin and student audiences independent, so both can be signed in at once
- * in one browser (as they were with separate sessionStorage keys).
+ * The JWT rides in an httpOnly cookie — unreadable by JS, so not exfiltratable via XSS — rather
+ * than the Authorization header + sessionStorage. Two cookies keep the admin and student audiences
+ * independent, so both can be signed in at once in one browser.
  *
- * Cookies are session-scoped (no Max-Age — cleared on browser close; the JWT's own
- * expiry bounds validity regardless), SameSite=Lax, and Secure in production. Secure
- * is toggled off only for local http dev via {@code app.cookie.secure=false}.
+ * Cookies are session-scoped (no Max-Age, cleared on browser close; the JWT's own expiry bounds
+ * validity anyway), SameSite=Lax, and Secure in production — off only for local http dev via
+ * {@code app.cookie.secure=false}.
  */
 @Component
 public class SessionCookieService {
@@ -24,12 +23,12 @@ public class SessionCookieService {
     public static final String ADMIN_COOKIE = "ADMIN_SESSION";
     public static final String STUDENT_COOKIE = "STUDENT_SESSION";
 
-    // Secure by default; local http dev overrides via APP_COOKIE_SECURE=false, else
-    // the browser drops the cookie over http and login silently fails.
+    // Secure by default; local http dev sets APP_COOKIE_SECURE=false, else the browser drops the
+    // cookie over http and login silently fails.
     @Value("${app.cookie.secure:true}")
     private boolean secure;
 
-    /** Which session cookie applies to a request path (student endpoints vs the rest). */
+    /** Which session cookie a request path uses: student endpoints vs the rest. */
     public String cookieNameForPath(String path) {
         if (path != null && (path.startsWith("/api/student") || path.equals("/api/register"))) {
             return STUDENT_COOKIE;

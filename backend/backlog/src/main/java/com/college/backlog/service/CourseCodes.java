@@ -1,11 +1,9 @@
 package com.college.backlog.service;
 
 /**
- * The course-code ↔ academic-year rule, in one place. The first two digits of a
- * course code are the academic-year start (22CSL44 -> 2022 -> AY 2022-23), a hard
- * institutional invariant. Used to derive/lock the prefix on create, clone, and
- * edit so {@code prefix == academicYearOffered} can never drift.
- *
+ * The course-code to academic-year rule, in one place: a code's first two digits are the
+ * academic-year start (22CSL44 -> 2022 -> AY 2022-23), a hard institutional invariant. Derives and
+ * locks the prefix on create, clone, and edit so {@code prefix == academicYearOffered} can't drift.
  * See docs/adr/backlog-progression.md.
  */
 public final class CourseCodes {
@@ -17,7 +15,7 @@ public final class CourseCodes {
         return String.format("%02d", Math.floorMod(year, 100));
     }
 
-    /** Replace the leading two-digit prefix with the target year's (22CSL44 -> 23CSL44). */
+    /** Swap the leading two-digit prefix for the target year's (22CSL44 -> 23CSL44). */
     public static String bumpPrefix(String code, int targetYear) {
         if (code == null) return null;
         String trimmed = code.trim();

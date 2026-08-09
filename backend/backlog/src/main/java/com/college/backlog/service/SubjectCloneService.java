@@ -16,13 +16,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Clones a department's subject offerings from one academic year to the next: each
- * source row is copied with its course-code prefix and academic_year_offered bumped
- * to the target year. {@code preview} generates the editable draft; {@code apply}
- * commits the admin-approved rows with skip-existing (the
- * (course_code, academic_year_offered) uniqueness is the backstop).
- *
- * See docs/adr/backlog-progression.md.
+ * Clones a department's subject offerings year to year: each row is copied with its course-code
+ * prefix and academic_year_offered bumped to the target. {@code preview} builds the editable
+ * draft; {@code apply} commits the approved rows, skipping existing ones with the
+ * (course_code, academic_year_offered) uniqueness as backstop. See docs/adr/backlog-progression.md.
  */
 @Service
 public class SubjectCloneService {
@@ -55,8 +52,8 @@ public class SubjectCloneService {
         return new SubjectClonePreviewResponse(sourceYear, targetYear, deptId, rows);
     }
 
-    // NOT @Transactional: each createSubject runs in its own transaction, so one
-    // duplicate or bad row doesn't roll back / poison the rest of the batch.
+    // NOT @Transactional: each createSubject gets its own transaction, so a duplicate or bad row
+    // can't roll back the rest of the batch.
     public SubjectCloneResult apply(Long deptId, int targetYear, List<SubjectCloneApplyRequest.Row> rows) {
         int created = 0, skipped = 0, errors = 0;
         List<SubjectCloneResult.ResultRow> results = new ArrayList<>();
@@ -89,12 +86,12 @@ public class SubjectCloneService {
                     results.add(new SubjectCloneResult.ResultRow(code, row.getSemester(), "CREATED", null));
                     created++;
                 } catch (DataIntegrityViolationException e) {
-                    // race backstop: the unique index rejected a concurrent duplicate
+                    // race backstop: unique index rejected a concurrent duplicate
                     results.add(new SubjectCloneResult.ResultRow(code, row.getSemester(), "SKIPPED_EXISTS", "Already exists"));
                     skipped++;
                 } catch (org.springframework.web.server.ResponseStatusException e) {
-                    // e.g. the prefix=year validation in createSubject (shouldn't happen
-                    // since the prefix is locked to the target year, but kept defensive)
+                    // e.g. createSubject's prefix=year validation — shouldn't fire since the
+                    // prefix is locked to the target year, but kept defensive
                     results.add(new SubjectCloneResult.ResultRow(code, row.getSemester(), "ERROR", e.getReason()));
                     errors++;
                 } catch (IllegalArgumentException e) {

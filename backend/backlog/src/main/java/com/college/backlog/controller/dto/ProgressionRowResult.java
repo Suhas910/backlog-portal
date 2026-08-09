@@ -1,6 +1,6 @@
 package com.college.backlog.controller.dto;
 
-// Per-student/row outcome for a bulk progression operation (promote/import/backfill).
+// Per-row outcome of a bulk progression op (promote/import/backfill).
 // status: CREATED | SKIPPED_EXISTS | ERROR | WOULD_CREATE | WOULD_SKIP (dry run).
 public class ProgressionRowResult {
     private String rollNo;

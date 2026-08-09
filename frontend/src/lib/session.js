@@ -1,9 +1,9 @@
-// Sliding-session helpers. The JWT is in an httpOnly cookie now, so JS can't read
-// its `exp`. Instead login/refresh return `expiresIn` (seconds); we persist the
-// derived `expiresAt` and schedule the next refresh from it. See useSessionKeepAlive.
+// Sliding-session helpers. The JWT lives in an httpOnly cookie, so JS can't read its `exp`;
+// login/refresh return `expiresIn` (seconds) instead, and the derived `expiresAt` is persisted and
+// used to schedule the next refresh. See useSessionKeepAlive.
 import api, { clearAdminSession, clearStudentSession } from "./api";
 
-// Per-audience wiring. The two flows keep separate cookies/endpoints/login screens.
+// Per-audience wiring: the two flows keep separate cookies, endpoints and login screens.
 export const SESSION_SCOPES = {
   admin: {
     expiresKey: "adminExpiresAt",
@@ -19,7 +19,7 @@ export const SESSION_SCOPES = {
   },
 };
 
-// Persisted absolute expiry (ms since epoch) for a scope, or null if none/invalid.
+// Persisted absolute expiry (ms since epoch) for a scope; null if absent or invalid.
 export function sessionExpiryMs(scope) {
   const cfg = SESSION_SCOPES[scope];
   if (!cfg) return null;
@@ -28,7 +28,7 @@ export function sessionExpiryMs(scope) {
   return raw && Number.isFinite(value) ? value : null;
 }
 
-// Store expiresAt from an `expiresIn` (seconds) — called on login and refresh.
+// Store expiresAt from an `expiresIn` (seconds); called on login and refresh.
 export function rememberExpiry(scope, expiresInSeconds) {
   const cfg = SESSION_SCOPES[scope];
   const secs = Number(expiresInSeconds);
@@ -37,9 +37,9 @@ export function rememberExpiry(scope, expiresInSeconds) {
   }
 }
 
-// Ask the server for a fresh-expiry cookie (the browser sends the current cookie;
-// axios adds the CSRF header). Updates the stored expiry. Returns true on success.
-// Throws if the request fails (e.g. the absolute cap was hit) — caller handles it.
+// Ask for a fresh-expiry cookie (the browser sends the current one, axios adds the CSRF header)
+// and update the stored expiry. True on success; throws if the request fails, e.g. the absolute
+// cap was hit, which the caller handles.
 export async function refreshSession(scope) {
   const cfg = SESSION_SCOPES[scope];
   if (!cfg) return false;

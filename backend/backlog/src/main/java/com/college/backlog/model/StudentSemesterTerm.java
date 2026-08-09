@@ -3,14 +3,10 @@ package com.college.backlog.model;
 import jakarta.persistence.*;
 
 /**
- * Per-student progression record: the academic year in which a student FIRST
- * studied a given semester. This is the authoritative source for backlog
- * year-binding — a sem-N backlog resolves to the subjects offered in
- * {@code academicYear}, regardless of when the student later retakes it.
- *
- * One row per (rollNo, semester), enforced by the unique constraint, which is
- * what makes writes "first-studied / write-once". See
- * docs/adr/backlog-progression.md.
+ * The academic year a student FIRST studied a semester — the authoritative source for backlog
+ * year-binding: a sem-N backlog resolves to the subjects offered in {@code academicYear} no matter
+ * when it is retaken. One row per (rollNo, semester), enforced by the unique constraint, which is
+ * what makes writes first-studied / write-once. See docs/adr/backlog-progression.md.
  */
 @Entity
 @Table(

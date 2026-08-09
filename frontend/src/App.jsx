@@ -4,10 +4,9 @@ import { ThemeProvider } from "./context/ThemeContext";
 import ProtectedStudentRoute from "./components/ProtectedStudentRoute";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
-// Route-level code splitting: each page loads as its own chunk on first visit,
-// so a student never downloads the admin pages (and vice versa). The route
-// guards and theme provider stay in the entry chunk — they're tiny and gate
-// rendering.
+// Route-level code splitting: each page loads as its own chunk on first visit, so a student never
+// downloads the admin pages or vice versa. The route guards and theme provider stay in the entry
+// chunk — tiny, and they gate rendering.
 const HomePage = lazy(() => import("./pages/HomePage"));
 const RegistrationPage = lazy(() => import("./pages/RegistrationPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));

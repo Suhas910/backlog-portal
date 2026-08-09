@@ -23,10 +23,9 @@ const inputClass =
 
 const PAGE_SIZE = 25;
 
-// Browse / edit / delete / reset-DOB the student roster. Presentational tab — the
-// shell supplies departments + the dept-lock context. For a PROCTOR the server
-// already limits the list to their assigned students, and "delete" becomes
-// "remove from my supervision" (unassign — never an account delete).
+// Browse / edit / delete / reset-DOB the student roster. Presentational tab; the shell supplies
+// departments and the dept-lock context. For a PROCTOR the server already limits the list to
+// assigned students, and "delete" means unassign from supervision, never an account delete.
 function StudentsManageTab({ departments, adminRole, adminDepartment, deptLocked, pinnedDeptId }) {
   const proctorMode = adminRole === "PROCTOR";
   const [fDeptId, setFDeptId] = useState("");
@@ -42,9 +41,9 @@ function StudentsManageTab({ departments, adminRole, adminDepartment, deptLocked
 
   const effectiveDeptId = deptLocked ? pinnedDeptId : fDeptId;
 
-  // The endpoint is paginated: it returns a Page ({content, totalPages, ...}), never
-  // a bare array. Loading the whole roster unfiltered previously timed the client
-  // out; now each call pulls one page (default first). Filters reset to page 0.
+  // The endpoint returns a Page ({content, totalPages, ...}), never a bare array — loading the
+  // whole roster unfiltered used to time the client out. Each call pulls one page; filters reset
+  // to page 0.
   const load = useCallback(async (targetPage = 0) => {
     setError("");
     setBusy(true);
@@ -195,8 +194,8 @@ function StudentsManageTab({ departments, adminRole, adminDepartment, deptLocked
   );
 }
 
-// Prev/next pager over a Spring Page envelope. `onGo(pageIndex)` re-fetches, keeping
-// the current filters (the loader reads them from state).
+// Prev/next pager over a Spring Page envelope. `onGo(pageIndex)` re-fetches, keeping the current
+// filters (the loader reads them from state).
 function Pager({ pageInfo, busy, onGo, noun }) {
   const { number, totalPages, totalElements } = pageInfo;
   return (
@@ -231,7 +230,7 @@ function Pager({ pageInfo, busy, onGo, noun }) {
   );
 }
 
-// Module scope so identity is stable across parent renders (keeps input focus).
+// Module scope, so identity is stable across parent renders and inputs keep focus.
 function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
   const [mode, setMode] = useState("view"); // view | edit | dob
   const [showSems, setShowSems] = useState(false); // toggle the sem-year timeline
@@ -312,8 +311,8 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
     }
   };
 
-  // For a proctor this only ends their supervision (the account stays); for the
-  // other roles it deletes the student account (blocked server-side if referenced).
+  // For a proctor this only ends supervision, leaving the account; for other roles it deletes
+  // the account (blocked server-side if referenced).
   const remove = async () => {
     const prompt = proctorMode
       ? `Remove ${student.name} (${student.rollNo}) from your supervision? Their account is not deleted.`
@@ -356,8 +355,8 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
             </p>
             {!student.progressionComplete &&
               (proctorMode ? (
-                // proctors have no Progression tab — the badge is informational;
-                // they fix years via the Semesters panel below
+                // proctors have no Progression tab, so the badge is informational — they fix
+                // years via the Semesters panel below
                 <span
                   data-cy={`student-gap-${student.rollNo}`}
                   className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800"
@@ -581,20 +580,18 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
   );
 }
 
-// Per-student sem-year timeline, loaded on demand under a student's card. Same view
-// + edit as the Progression tab (shared SemesterTimeline), so an admin can correct a
-// student's academic-year mapping (e.g. after a year-back) right from Manage Students.
-// Current/entry semester stay editable in the row's Edit form and on the Progression
-// page; this panel is only the per-semester academic years.
+// Per-student sem-year timeline, loaded on demand under a student's card. Same view + edit as the
+// Progression tab (shared SemesterTimeline), so an admin can correct a year mapping (e.g. after a
+// year-back) from Manage Students. This panel covers only the per-semester years — current/entry
+// semester stay editable in the row's Edit form and on the Progression page.
 function StudentSemesters({ rollNo }) {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // NOTE: eslint react-hooks/set-state-in-effect flags the setBusy/setError below.
-  // Intended and correct — leading busy/error reset for an API fetch, exactly the
-  // "synchronize with an external system" case the rule carves out. Left as a
-  // knowing lint error (not disabled).
+  // NOTE: react-hooks/set-state-in-effect flags the setBusy/setError below. Intended and correct
+  // — a leading busy/error reset for an API fetch, exactly the "synchronize with an external
+  // system" case the rule carves out. A knowing lint error, deliberately not disabled.
   useEffect(() => {
     let ignore = false;
     setBusy(true);

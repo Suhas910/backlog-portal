@@ -4,10 +4,8 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 import java.time.LocalDate;
 
-/**
- * One row of a student CSV import. currentSemester / entrySemester are nullable:
- * when blank, the batch-level defaults on {@link StudentImportRequest} apply.
- */
+/** One row of a student CSV import. currentSemester / entrySemester are nullable — blank falls
+ *  back to the batch defaults on {@link StudentImportRequest}. */
 public class StudentImportRow {
     private String rollNo;
     private String name;

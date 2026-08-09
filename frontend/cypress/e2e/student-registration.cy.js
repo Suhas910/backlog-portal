@@ -1,6 +1,6 @@
 describe("Student registration flow", () => {
-  // identity now comes from the authenticated account; the student logs in with
-  // USN + date of birth, lands on the dashboard, then registers for subjects.
+  // Identity comes from the authenticated account: the student logs in with USN + date of birth,
+  // lands on the dashboard, then registers for subjects.
   const profile = {
     rollNo: "1MS22CS001",
     name: "Student One",
@@ -48,8 +48,8 @@ describe("Student registration flow", () => {
   it("logs in, registers, and shows submission success", () => {
     stubAuthedSession();
 
-    // the academic year is resolved server-side from the student's progression;
-    // the client sends only the semester and receives { semester, academicYear, subjects }
+    // the year resolves server-side from the student's progression; the client sends only the
+    // semester and receives { semester, academicYear, subjects }
     cy.intercept("GET", "/api/student/subjects*", {
       statusCode: 200,
       body: {
@@ -69,7 +69,7 @@ describe("Student registration flow", () => {
 
     login();
 
-    // dashboard shows the branch name with the USN-derived branch code in brackets
+    // dashboard shows the branch name with the USN-derived code in brackets
     cy.contains("Computer Science (CS)").should("be.visible");
     // and the student's current semester
     cy.contains("Current Semester").should("be.visible");
@@ -79,11 +79,11 @@ describe("Student registration flow", () => {
     cy.get('[data-cy="register-cta"]').click();
     cy.location("pathname").should("eq", "/register");
 
-    // identity is shown locked, sourced from the account (no inputs to fill)
+    // identity is shown locked, from the account — no inputs to fill
     cy.contains("Registering as").should("be.visible");
     cy.contains(profile.rollNo).should("be.visible");
 
-    // pick a semester (no year input — it is resolved from the record)
+    // pick a semester; there is no year input, it resolves from the record
     cy.get('[data-cy="reg-semester"]').select("4");
     cy.wait("@getSubjects");
 
@@ -96,8 +96,8 @@ describe("Student registration flow", () => {
     cy.wait("@registerStudent")
       .its("request.body")
       .should((body) => {
-        // the body carries only the subject selection — never identity or semester
-        // (current semester is snapshotted server-side from the account)
+        // the body carries only the subject selection, never identity or semester — current
+        // semester is snapshotted server-side from the account
         expect(body).to.have.keys(["subjectIds"]);
         expect(body.subjectIds).to.deep.equal([101]);
       });
@@ -112,7 +112,7 @@ describe("Student registration flow", () => {
     cy.get('[data-cy="register-cta"]').click();
     cy.location("pathname").should("eq", "/register");
 
-    // a sem-4 student may register sems 1-4 only — never 5-8
+    // a sem-4 student may register sems 1-4 only, never 5-8
     cy.get('[data-cy="reg-semester"] option').then(($opts) => {
       const labels = [...$opts].map((o) => o.textContent.trim());
       expect(labels).to.include("Semester 4");
@@ -147,7 +147,7 @@ describe("Student registration flow", () => {
     cy.get('[data-cy="register-cta"]').click();
     cy.location("pathname").should("eq", "/register");
 
-    // with no phone on the account, the form refuses and points to the dashboard
+    // with no phone on the account the form refuses and points to the dashboard
     cy.contains("Add your phone number").should("be.visible");
     cy.get('[data-cy="reg-submit"]').should("not.exist");
   });

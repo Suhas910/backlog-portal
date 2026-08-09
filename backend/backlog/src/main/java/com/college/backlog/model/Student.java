@@ -16,8 +16,7 @@ public class Student {
     private String email;
     private String phone;
 
-    // Used together with the USN as the student login credential.
-    // Populated out-of-band (admin/import); never returned by any endpoint.
+    // Login credential alongside the USN. Populated out-of-band (admin/import), never returned.
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
@@ -27,15 +26,12 @@ public class Student {
     @Column(name = "current_semester")
     private int currentSemester;
 
-    // The semester the student first entered the programme here: 1 for a normal
-    // intake, >1 for a lateral-entry/migrant student who joined mid-degree (e.g. 3
-    // for a 2nd-year transfer). Raises the backlog-eligibility floor to
-    // max(normalFloor, entrySemester) so a migrant is never offered semesters they
-    // never studied here. @ColumnDefault("1") mirrors the column's `default 1` in
-    // the Flyway V1 baseline so the mapping matches under ddl-auto=validate; NOT
-    // NULL is enforced at the DB level (folded into the V1 baseline), not via
-    // nullable=false here — schema constraints belong in a V__ migration. See
-    // docs/adr/backlog-progression.md.
+    // Semester the student entered the programme here: 1 for a normal intake, >1 for a
+    // lateral-entry/migrant who joined mid-degree (3 for a 2nd-year transfer). Raises the
+    // eligibility floor to max(normalFloor, entrySemester), so they're never offered semesters
+    // they never studied here. @ColumnDefault("1") mirrors the column's `default 1` in the Flyway
+    // V1 baseline so the mapping matches under ddl-auto=validate; NOT NULL is enforced at the DB
+    // level (also folded into V1), never via nullable=false. See docs/adr/backlog-progression.md.
     @Column(name = "entry_semester")
     @ColumnDefault("1")
     private int entrySemester = 1;

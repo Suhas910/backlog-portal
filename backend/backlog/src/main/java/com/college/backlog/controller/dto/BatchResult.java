@@ -2,8 +2,8 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// Summary of a bulk progression operation. When dryRun is true nothing was written
-// and the counts/results describe what would happen.
+// Summary of a bulk progression op. With dryRun true nothing was written and the counts describe
+// what would happen.
 public class BatchResult {
     private boolean dryRun;
     private int created;

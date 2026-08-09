@@ -21,16 +21,16 @@ const blank = {
 // keep only digits, max 10
 const cleanPhone = (v) => v.replace(/\D/g, "").slice(0, 10);
 
-// Create one student. Presentational tab — the shell supplies departments + the
-// dept-lock context. DOB is a write-only credential; progression is NOT seeded
-// here, so on success we warn the admin to set it now.
+// Create one student. Presentational tab: the shell supplies departments and the dept-lock
+// context. DOB is a write-only credential. The server seeds the full entry..8 academic-year
+// timeline on create, so the success banner normally confirms it rather than prompting.
 function AddStudentTab({ departments, adminDepartment, deptLocked }) {
   const [form, setForm] = useState(blank);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [createdRollNo, setCreatedRollNo] = useState("");
-  // whether the just-created student's progression is already complete — true for a
-  // regular first-year (sems 1-2 auto-seeded on create and nothing else is due yet)
+  // whether the new student's progression is complete — normally true, since createStudent
+  // backfills the whole entry..8 timeline; the false branch is a defensive fallback
   const [createdComplete, setCreatedComplete] = useState(false);
 
   // dept code a dept-scoped admin's USNs must carry, shown as a hint

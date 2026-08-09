@@ -43,9 +43,8 @@ public class SubjectService {
 
     @Transactional
     public Subject createSubject(SubjectCreateRequest request) {
-        // Enforce the prefix=year invariant: the course code's first two digits are
-        // the academic-year start. The UI locks the prefix; this is the server-side
-        // backstop so a crafted request can't persist a mismatched code.
+        // prefix=year invariant: the code's first two digits are the academic-year start. The UI
+        // locks the prefix; this is the server backstop against a crafted request.
         if (!CourseCodes.matchesYear(request.getCourseCode(), request.getAcademicYearOffered())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Course code must start with the academic year's two digits ("
@@ -58,9 +57,8 @@ public class SubjectService {
         Subject subject = new Subject(null, request.getSubjectName(), request.getCourseCode(),
                 request.getSemester(), request.getCredits(), request.getAcademicYearOffered(), department);
 
-        // Unknown/blank types fall back to REGULAR — the create form only ever
-        // sends REGULAR or ELECTIVE, and the DB CHECK constraint would reject
-        // anything else anyway.
+        // unknown/blank falls back to REGULAR: the form only sends REGULAR or ELECTIVE, and the
+        // DB CHECK would reject anything else
         SubjectType type = SubjectType.fromNullable(request.getSubjectType());
         if (type == null) {
             type = SubjectType.REGULAR;
@@ -76,9 +74,9 @@ public class SubjectService {
     }
 
     /**
-     * Edit an existing subject. The academic year is NOT editable (it's the binding
-     * key), so the course-code prefix stays locked to the existing year. callerDeptId
-     * is non-null for HOD/DEPT_OFFICE, who may only touch their own department.
+     * Edit a subject. The academic year is NOT editable (it is the binding key), so the
+     * course-code prefix stays locked to it. callerDeptId is non-null for HOD/DEPT_OFFICE, who may
+     * only touch their own department.
      */
     @Transactional
     public Subject updateSubject(Long id, SubjectUpdateRequest request, Long callerDeptId) {
@@ -91,7 +89,7 @@ public class SubjectService {
                 "You can only edit subjects for your own department.");
         }
 
-        // year is fixed; the prefix must still match it (suffix-only edits)
+        // year is fixed, so the prefix must still match it — suffix-only edits
         if (!CourseCodes.matchesYear(request.getCourseCode(), subject.getAcademicYearOffered())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Course code must start with the academic year's two digits ("
@@ -124,10 +122,8 @@ public class SubjectService {
         }
     }
 
-    /**
-     * Delete a subject, blocked if any registration references it (deleting it out
-     * from under a student's registration would corrupt that record). Dept-scoped.
-     */
+    /** Delete a subject, dept-scoped; blocked if any registration references it, since removing
+     *  it out from under a registration would corrupt that record. */
     @Transactional
     public void deleteSubject(Long id, Long callerDeptId) {
         Subject subject = subjectRepository.findById(id)

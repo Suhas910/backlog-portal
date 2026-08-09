@@ -29,12 +29,12 @@ function RegistrationPage() {
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [searchSemester, setSearchSemester] = useState("");
-  // academic year the chosen semester resolved to (server-derived); shown read-only
+  // academic year the chosen semester resolved to, server-derived and shown read-only
   const [resolvedAcademicYear, setResolvedAcademicYear] = useState(null);
   // null = still checking; otherwise { open, cycleName?, examMonthYear? }
   const [regStatus, setRegStatus] = useState(null);
 
-  // identity comes from the authenticated student account, never from a form
+  // identity comes from the authenticated account, never a form
   useEffect(() => {
     api
       .get("/student/me", { headers: getStudentHeaders() })
@@ -52,25 +52,23 @@ function RegistrationPage() {
     api
       .get("/registration-status")
       .then((res) => setRegStatus(res.data))
-      // fail closed: if we can't confirm a cycle is open, don't let the student
-      // start a submission that the backend would reject anyway
+      // fail closed: without a confirmed open cycle, don't start a submission the backend
+      // would reject anyway
       .catch(() => setRegStatus({ open: false }));
   }, []);
 
-  // backlog semesters the student may register for, from their authoritative
-  // current semester (server-derived).
+  // backlog semesters registerable, from the server-derived current semester
   const eligibleSemesters = useMemo(() => {
     const fromProfile = profile?.eligibleSemesters;
     return Array.isArray(fromProfile) ? fromProfile : [];
   }, [profile]);
 
-  // Subjects are resolved by the server from the student's progression — the
-  // academic year is no longer a client choice. We send only the semester.
-  // NOTE: eslint react-hooks/set-state-in-effect flags the resets below. Intended
-  // and correct — this effect fetches subjects for the chosen semester; when no
-  // semester is selected it clears the previous results before bailing. Both the
-  // clear and the fetch are synchronizing UI with an external system, the case the
-  // rule carves out. Left as a knowing lint error (not disabled).
+  // The server resolves subjects from the student's progression — the academic year is not a
+  // client choice, so only the semester is sent.
+  // NOTE: react-hooks/set-state-in-effect flags the resets below. Intended and correct — this
+  // fetches subjects for the chosen semester, clearing previous results before bailing when none
+  // is selected. Both clear and fetch synchronize UI with an external system, the case the rule
+  // carves out. A knowing lint error, deliberately not disabled.
   useEffect(() => {
     if (!searchSemester) {
       setSubjects([]);
@@ -79,8 +77,8 @@ function RegistrationPage() {
     }
 
     let ignoreResponse = false;
-    // abort a superseded fetch (semester re-picked before the reply landed) so it
-    // stops consuming a backend connection; the flag alone only hid the response
+    // abort a superseded fetch (semester re-picked before the reply landed) so it stops using a
+    // backend connection — the flag alone only hid the response
     const controller = new AbortController();
     setLoadingSubjects(true);
     setSubjectsError("");
@@ -100,7 +98,7 @@ function RegistrationPage() {
         if (ignoreResponse || err.code === "ERR_CANCELED") return;
         setSubjects([]);
         setResolvedAcademicYear(null);
-        // surface the server's explanation (e.g. missing progression record)
+        // surface the server's explanation, e.g. a missing progression record
         setSubjectsError(
           err.response?.data?.message || "Unable to load subjects. Please try again.",
         );
@@ -193,7 +191,7 @@ function RegistrationPage() {
     );
   }
 
-  // phone is required and can only be set in the dashboard
+  // phone is required and settable only in the dashboard
   if (!profile.phone) {
     return (
       <CenteredCard icon={<Phone size={24} />} title="Add your phone number">

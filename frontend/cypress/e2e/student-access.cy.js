@@ -1,6 +1,6 @@
-// Registration edge cases that the happy-path spec doesn't cover: a closed exam
-// cycle, a duplicate-submission conflict, and an expired session. These land
-// straight on /register with a seeded student token to focus on the page.
+// Registration edge cases the happy-path spec doesn't cover: a closed exam cycle, a
+// duplicate-submission conflict, an expired session. Each lands on /register with a seeded student
+// token to focus on the page.
 describe("Student registration — closed cycle, duplicate, expired token", () => {
   const profile = {
     rollNo: "1MS22CS001",
@@ -69,7 +69,7 @@ describe("Student registration — closed cycle, duplicate, expired token", () =
 
     cy.wait("@register");
     cy.contains("You already have a pending registration").should("be.visible");
-    // still on the form (not the submitted-success screen)
+    // still on the form, not the submitted-success screen
     cy.contains("Registration Submitted").should("not.exist");
   });
 

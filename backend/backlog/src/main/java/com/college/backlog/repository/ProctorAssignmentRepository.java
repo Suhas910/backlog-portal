@@ -12,8 +12,8 @@ public interface ProctorAssignmentRepository extends JpaRepository<ProctorAssign
 
     List<ProctorAssignment> findByProctorUsername(String proctorUsername);
 
-    // batch lookup for the claim picker: marks which students of a page are
-    // already supervised — one query, not N
+    // batch lookup for the claim picker: which students on a page are already supervised, in
+    // one query rather than N
     List<ProctorAssignment> findByRollNoIn(Collection<String> rollNos);
 
     boolean existsByProctorUsername(String proctorUsername);

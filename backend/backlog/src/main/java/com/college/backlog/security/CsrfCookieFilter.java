@@ -10,15 +10,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Forces the deferred CsrfToken to be resolved so {@link org.springframework.security.web.csrf.CookieCsrfTokenRepository}
- * actually writes the {@code XSRF-TOKEN} cookie on the response. Without this,
- * Spring Security 6 loads the token lazily and the SPA never receives a cookie to
- * echo back as the {@code X-XSRF-TOKEN} header. Runs on every request; cheap.
+ * Resolves the deferred CsrfToken so {@link org.springframework.security.web.csrf.CookieCsrfTokenRepository}
+ * actually writes the {@code XSRF-TOKEN} cookie: Spring Security 6 loads it lazily otherwise, and
+ * the SPA never gets a cookie to echo as {@code X-XSRF-TOKEN}. Runs per request; cheap.
  *
- * Note: the CSRF token is kept STABLE across requests by disabling the per-request
- * CsrfAuthenticationStrategy rotation in {@link SecurityConfig} — under the stateless
- * JWT setup that rotation fired on every request and deleted this cookie, which broke
- * back-to-back mutations (see SecurityConfig for details).
+ * The token is kept STABLE across requests by disabling per-request CsrfAuthenticationStrategy
+ * rotation in {@link SecurityConfig} — under stateless JWT auth it fired every request and deleted
+ * this cookie, breaking back-to-back mutations.
  */
 public class CsrfCookieFilter extends OncePerRequestFilter {
 

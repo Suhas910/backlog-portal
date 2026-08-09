@@ -90,13 +90,13 @@ public class AuthController {
 
         throttle.clearFailures(SCOPE, username, request);
         String token = jwtService.generateToken(user.getUsername(), user.getRole().name());
-        // token goes in an httpOnly cookie (not the body) so page scripts can't read it
+        // httpOnly cookie, not the body, so page scripts can't read the token
         sessionCookieService.write(response, SessionCookieService.ADMIN_COOKIE, token);
 
         Map<String, String> body2 = new HashMap<>();
         body2.put("message", "Login success");
         body2.put("role", user.getRole().name());
-        // expiresIn lets the SPA schedule its refresh without reading the token
+        // expiresIn lets the SPA schedule a refresh without reading the token
         body2.put("expiresIn", String.valueOf(jwtService.secondsUntilExpiry(token)));
         body2.put("mustChangePassword", String.valueOf(user.isMustChangePassword()));
         if (user.getDepartment() != null) {
@@ -116,11 +116,10 @@ public class AuthController {
     }
 
     /**
-     * Slide the session: re-mint a fresh-expiry token for the already-authenticated
-     * caller. Requires a still-valid token (the JWT filter must have authenticated
-     * the request) — so an active user's session never hard-expires at the 1h mark,
-     * while an idle user (whose token lapses) simply falls back to re-login. The
-     * account is re-read so a since-deleted/renamed user can't refresh.
+     * Slide the session: re-mint a fresh-expiry token for an already-authenticated caller.
+     * Requires a still-valid token (the JWT filter must have authenticated the request), so an
+     * active user never hard-expires at the 1h mark while an idle one falls back to re-login.
+     * The account is re-read, so a since-deleted or renamed user cannot refresh.
      */
     @PostMapping("/refresh")
     public Map<String, String> refresh(HttpServletRequest request, HttpServletResponse response,
@@ -131,8 +130,8 @@ public class AuthController {
         User user = userRepository.findById(auth.getName())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
         String currentToken = sessionCookieService.read(request, SessionCookieService.ADMIN_COOKIE);
-        // preserve the original session start and enforce the absolute cap — null
-        // means the session has outlived maxSessionMs, so force a fresh login
+        // preserves the original session start and enforces the absolute cap; null means the
+        // session outlived maxSessionMs, so force a fresh login
         String token = currentToken == null ? null
                 : jwtService.refreshToken(currentToken, user.getUsername(), user.getRole().name());
         if (token == null) {
@@ -145,11 +144,8 @@ public class AuthController {
         return resp;
     }
 
-    /**
-     * Lets any authenticated admin-type user set a new password for their own
-     * account. Powers both the forced first-login change (mustChangePassword)
-     * and voluntary self-service changes. Requires the current password.
-     */
+    /** Self-service password change for any authenticated admin-type user; requires the current
+     *  password. Powers both the forced first-login change (mustChangePassword) and voluntary ones. */
     @PostMapping("/change-password")
     public Map<String, String> changePassword(@Valid @RequestBody ChangePasswordRequest req, Authentication auth) {
         if (auth == null) {
@@ -179,7 +175,7 @@ public class AuthController {
         if (storedPassword == null || storedPassword.isBlank()) {
             return false;
         }
-        // bcrypt only — legacy plaintext rows are upgraded once at startup (DataSeeder)
+        // bcrypt only — legacy plaintext rows are upgraded once at startup by DataSeeder
         return passwordEncoder.matches(rawPassword, storedPassword);
     }
 

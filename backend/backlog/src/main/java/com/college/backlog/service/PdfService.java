@@ -41,9 +41,7 @@ public class PdfService {
     private static final float FS_SIG         = 8.5f;
     private static final float FS_NOTE        = 8.0f;
 
-    // =========================================================================
-    //  PUBLIC ENTRY POINT
-    // =========================================================================
+    // ---- student registration form ----
     public byte[] generateRegistrationPdf(Registration reg) throws Exception {
 
         ByteArrayOutputStream baos   = new ByteArrayOutputStream();
@@ -71,18 +69,15 @@ public class PdfService {
         return baos.toByteArray();
     }
 
-    // =========================================================================
-    //  EXPORT SUMMARY PDF (ADMIN)
-    // =========================================================================
-    // Writes straight to the caller's stream (the HTTP response) instead of
-    // buffering the whole PDF in a byte[] on the heap — so a large cycle's
-    // summary streams out with bounded memory. Runs synchronously on the request
-    // thread so the still-open (OSIV) session can lazily read each registration.
+    // ---- admin summary export ----
+    // Writes straight to the caller's stream (the HTTP response) rather than buffering the whole
+    // PDF in a byte[], so a large cycle streams out with bounded memory. Runs synchronously on the
+    // request thread; the rows arrive fully fetched (findAll(spec, Sort) entity-graphs `subjects`),
+    // so nothing here lazy-loads — required, since open-in-view is off.
     public void generateRegistrationsSummaryPdf(List<Registration> registrations, java.io.OutputStream out) throws Exception {
         PdfWriter writer = new PdfWriter(out);
         PdfDocument pdfDoc = new PdfDocument(writer);
-        // Using landscape orientation to fit the table columns
-        Document doc = new Document(pdfDoc, PageSize.A4.rotate());
+        Document doc = new Document(pdfDoc, PageSize.A4.rotate()); // landscape fits the columns
         doc.setMargins(25f, 25f, 25f, 25f);
 
         PdfFont bold = PdfFontFactory.createFont(StandardFonts.HELVETICA_BOLD);
@@ -113,7 +108,7 @@ public class PdfService {
             table.addCell(dataCell(safe(reg, r -> r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()), regular));
             table.addCell(dataCellCentre(safe(reg, r -> String.valueOf(r.getSnapSemester() != null ? r.getSnapSemester() : r.getStudent().getCurrentSemester())), regular));
 
-            // include the course code with each subject — the canonical identifier
+            // course code included per subject — it's the canonical identifier
             String subjectsStr = reg.getSubjects() != null
                     ? reg.getSubjects().stream()
                         .map(s -> (s.getCourseCode() != null ? s.getCourseCode() + " " : "") + s.getSubjectName())
@@ -129,9 +124,7 @@ public class PdfService {
         doc.close(); // flushes and closes the underlying OutputStream
     }
 
-    // =========================================================================
-    //  1. HEADER
-    // =========================================================================
+    // ---- 1. header ----
     private void addHeader(Document doc, PdfFont regular, PdfFont bold) throws Exception {
 
         Table header = new Table(UnitValue.createPercentArray(new float[]{42f, 58f}))
@@ -185,9 +178,7 @@ public class PdfService {
         doc.add(header);
     }
 
-    // =========================================================================
-    //  Horizontal rule
-    // =========================================================================
+    // ---- horizontal rule ----
     private void addHorizontalRule(Document doc) {
         Table rule = new Table(UnitValue.createPercentArray(new float[]{100f}))
                 .useAllAvailableWidth()
@@ -202,9 +193,7 @@ public class PdfService {
         doc.add(rule);
     }
 
-    // =========================================================================
-    //  2. DATE LINE
-    // =========================================================================
+    // ---- 2. date line ----
     private void addDateLine(Document doc, PdfFont regular, PdfFont bold,
                              Registration reg) {
         String date = (reg != null && reg.getRegisteredAt() != null)
@@ -220,9 +209,7 @@ public class PdfService {
         doc.add(p);
     }
 
-    // =========================================================================
-    //  3. MAIN TITLE
-    // =========================================================================
+    // ---- 3. main title ----
     private void addMainTitle(Document doc, PdfFont bold) {
         doc.add(new Paragraph("EXAM REGISTRATION FORM FOR  BACKLOG SUBJECT EXAMINATIONS")
                 .setFont(bold).setFontSize(FS_TITLE)
@@ -235,9 +222,7 @@ public class PdfService {
                 .setMarginBottom(1f).setMarginTop(0f));
     }
 
-    // =========================================================================
-    //  4. BATCH LIST
-    // =========================================================================
+    // ---- 4. batch list ----
     private void addBatchList(Document doc, PdfFont regular, PdfFont bold) {
 
         String[][] rows = {
@@ -266,9 +251,7 @@ public class PdfService {
         doc.add(new Paragraph(" ").setFontSize(2f));
     }
 
-    // =========================================================================
-    //  5. CURRENT SEMESTER LABEL
-    // =========================================================================
+    // ---- 5. current semester label ----
     private void addCurrentSemesterLabel(Document doc, PdfFont bold, PdfFont regular,
                                          Registration reg) {
         String sem;
@@ -288,9 +271,7 @@ public class PdfService {
         doc.add(p);
     }
 
-    // =========================================================================
-    //  6. STUDENT DETAILS TABLE
-    // =========================================================================
+    // ---- 6. student details table ----
     private void addStudentDetailsTable(Document doc, PdfFont regular, PdfFont bold,
                                         Registration reg) {
 
@@ -338,10 +319,7 @@ public class PdfService {
         doc.add(t);
     }
 
-    // =========================================================================
-    //  7. SUBJECTS TABLE
-    //     Now uses courseCode and credits from the Subject model
-    // =========================================================================
+    // ---- 7. subjects table (courseCode + credits from Subject) ----
     private void addSubjectsTable(Document doc, PdfFont regular, PdfFont bold,
                                   Registration reg) {
 
@@ -416,9 +394,7 @@ public class PdfService {
         doc.add(t);
     }
 
-    // =========================================================================
-    //  8. SIGNATURE ROW
-    // =========================================================================
+    // ---- 8. signature row ----
     private void addSignatureRow(Document doc, PdfFont regular, PdfFont bold) {
 
         Table t = new Table(UnitValue.createPercentArray(new float[]{33.33f, 33.33f, 33.33f}))
@@ -438,9 +414,7 @@ public class PdfService {
         doc.add(t);
     }
 
-    // =========================================================================
-    //  9. NOTE
-    // =========================================================================
+    // ---- 9. note ----
     private void addNote(Document doc, PdfFont regular, PdfFont bold) {
         Paragraph note = new Paragraph().setFontSize(FS_NOTE).setMarginTop(2f);
         note.add(new Text("Note : ").setFont(bold));
@@ -450,9 +424,7 @@ public class PdfService {
         doc.add(note);
     }
 
-    // =========================================================================
-    //  HELPERS
-    // =========================================================================
+    // ---- helpers ----
 
     private byte[] loadLogoBytes() {
         try (InputStream is = getClass().getClassLoader()

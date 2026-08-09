@@ -17,8 +17,8 @@ const HEADER = "USN,name,phone,dateOfBirth,currentSemester,entrySemester";
 const TEMPLATE =
   HEADER + "\n1MS24CS001,Asha Rao,9999999999,2006-04-12,1,1\n1MS24CS002,Migrant Kid,,2005-09-01,3,3";
 
-// Parse a CSV body into import rows. Blank semester cells fall back to the batch
-// defaults server-side. The header line (if present) is skipped.
+// Parse a CSV body into import rows; blank semester cells fall back to the batch defaults
+// server-side, and a header line is skipped if present.
 function parseCsv(text) {
   return text
     .split("\n")
@@ -73,8 +73,8 @@ function ResultTable({ result }) {
   );
 }
 
-// Bulk-import students from CSV. Presentational tab. Per-row semesters fall back to
-// the batch defaults; existing USNs are skipped. dryRun previews without writing.
+// Bulk-import students from CSV. Presentational tab: per-row semesters fall back to the batch
+// defaults, existing USNs are skipped, and dryRun previews without writing.
 function ImportStudentsTab() {
   const [csv, setCsv] = useState("");
   const [defaultCurrent, setDefaultCurrent] = useState("1");

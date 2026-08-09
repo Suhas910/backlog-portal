@@ -27,16 +27,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Proctor supervision assignments. A PROCTOR claims existing students to
- * themselves (self-service) through the minimal claim picker; HOD (own dept)
- * and ADMIN/PRINCIPAL manage any proctor's list by naming a target proctor.
- * One proctor per student — a claim on a supervised student fails per-row,
- * naming the current proctor; reassignment is unassign + assign by HOD/admin.
+ * Proctor supervision assignments. A PROCTOR self-serves via the claim picker; HOD (own dept) and
+ * ADMIN/PRINCIPAL manage any proctor's list by naming a target. One proctor per student — claiming
+ * a supervised student fails per-row naming the current proctor, and reassignment is
+ * unassign + assign by HOD/admin.
  *
- * The picker is the ONLY window a proctor gets onto students outside their
- * set, and it returns a minimal projection (see ClaimableStudentResponse).
- * Everything else about unassigned students stays hard-scoped (fail closed).
- * DEPT_OFFICE has no access here — proctor management is HOD and above.
+ * The picker is the ONLY window a proctor gets onto students outside their set, and returns a
+ * minimal projection (ClaimableStudentResponse); everything else stays hard-scoped (fail closed).
+ * DEPT_OFFICE has no access — proctor management is HOD and above.
  */
 @RestController
 @RequestMapping("/api/admin/proctor")
@@ -152,8 +150,8 @@ public class ProctorAssignmentController {
                             "already under this proctor"));
                         skipped++;
                     } else {
-                        // the one place the current holder is named — the proctor
-                        // needs it to know who to ask (or the HOD, to reassign)
+                        // the one place the current holder is named — the proctor needs to know
+                        // who to ask, or the HOD who to reassign from
                         results.add(new ProgressionRowResult(roll, null, "ERROR",
                             "Already assigned to " + existing.get().getProctorUsername() + "."));
                         errors++;
@@ -167,9 +165,8 @@ public class ProctorAssignmentController {
                 results.add(new ProgressionRowResult(roll, null, "ERROR", e.getMessage()));
                 errors++;
             } catch (RuntimeException e) {
-                // e.g. two proctors racing on the same student: the PK on roll_no
-                // makes the second save a constraint violation — report per-row,
-                // never abort the batch
+                // e.g. two proctors racing on one student: the PK on roll_no makes the second save
+                // a constraint violation — reported per-row, never aborting the batch
                 results.add(new ProgressionRowResult(roll, null, "ERROR",
                     "Could not assign this student (it may have just been claimed)."));
                 errors++;
@@ -212,11 +209,8 @@ public class ProctorAssignmentController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
     }
 
-    /**
-     * Whose assignment list is being read or written. A PROCTOR may only target
-     * themselves; HOD targets proctors of their own department; ADMIN/PRINCIPAL
-     * target any proctor.
-     */
+    /** Whose assignment list is read/written: PROCTOR only themselves, HOD proctors of their own
+     *  department, ADMIN/PRINCIPAL any proctor. */
     private User resolveTargetProctor(User actor, String proctorParam) {
         if (actor.getRole() == UserRole.PROCTOR) {
             if (proctorParam != null && !proctorParam.isBlank()

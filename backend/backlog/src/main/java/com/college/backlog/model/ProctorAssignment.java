@@ -4,14 +4,12 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * One student's supervision by one proctor. The roll number is the primary key,
- * which is what enforces the one-proctor-per-student rule — a second claim is a
- * key conflict, not a silent reassignment.
+ * One student's supervision by one proctor. The roll number is the primary key, which is what
+ * enforces one-proctor-per-student — a second claim is a key conflict, not a silent reassignment.
  *
- * Both sides are plain string columns; the FKs (with ON DELETE CASCADE both
- * ways) live at the DB level only — see V3__proctor_role.sql. Removing a row
- * removes supervision, nothing else: it is not history and never blocks a
- * student delete.
+ * Both sides are plain string columns; the FKs (ON DELETE CASCADE both ways) live at the DB level
+ * only, in V3__proctor_role.sql. Removing a row removes supervision and nothing else — it is not
+ * history and never blocks a student delete.
  */
 @Entity
 @Table(name = "proctor_students")
@@ -24,7 +22,7 @@ public class ProctorAssignment {
     @Column(name = "proctor_username", nullable = false)
     private String proctorUsername;
 
-    // who created the assignment (the proctor themselves, or an HOD/admin)
+    // who created it: the proctor themselves, or an HOD/admin
     @Column(name = "assigned_by")
     private String assignedBy;
 

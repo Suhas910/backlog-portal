@@ -2,9 +2,9 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// The admin-approved (and possibly edited) draft to commit. academicYearOffered is
-// NOT taken from the rows — the server forces it to targetYear — and deptId is
-// re-validated against the caller's scope, so the rows carry only editable fields.
+// The admin-approved (possibly edited) draft to commit. academicYearOffered is NOT read from the
+// rows — the server forces targetYear — and deptId is re-validated against the caller's scope, so
+// rows carry only editable fields.
 public class SubjectCloneApplyRequest {
     private Long deptId;
     private int targetYear;

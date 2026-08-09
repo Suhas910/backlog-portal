@@ -1,6 +1,5 @@
-// Coverage for the Progression tab of Manage Students (promote batch, CSV import,
-// lookup & correct, and dept pinning). Sessions are seeded so each test lands
-// straight on the tab and exercises one tool.
+// The Progression tab of Manage Students: promote batch, CSV import, lookup & correct, dept
+// pinning. Sessions are seeded so each test lands on the tab and exercises one tool.
 describe("Manage Students — Progression tab", () => {
   const seed = (win, role, department) => {
     win.sessionStorage.setItem("adminRole", role);
@@ -207,8 +206,8 @@ describe("Manage Students — Progression tab", () => {
     cy.get('[data-cy="prog-lookup-load"]').click();
     cy.wait("@lookup");
 
-    // sem 1 is prefilled; sems 2 and 3 render blank + flagged; the timeline runs all
-    // the way to sem 8 (sems past the current one are shown but muted)
+    // sem 1 prefilled, sems 2-3 blank + flagged; the timeline runs to sem 8, with sems past the
+    // current one shown but muted
     cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2024-25");
     cy.get('[data-cy="prog-term-year-2"]').should("have.value", "");
     cy.get('[data-cy="prog-term-missing-2"]').should("contain", "not set");

@@ -15,8 +15,7 @@ import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
-// Roles each actor is allowed to create. The server enforces the same rules;
-// this only shapes the UI.
+// Roles each actor may create. The server enforces the same rules; this only shapes the UI.
 const CREATABLE_ROLES = {
   ADMIN: ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"],
   PRINCIPAL: ["HOD", "DEPT_OFFICE", "PROCTOR"],
@@ -36,8 +35,8 @@ function ManageUsersPage() {
   const adminRole = sessionStorage.getItem("adminRole") || "";
   const adminDepartment = sessionStorage.getItem("adminDepartment") || "";
   const creatableRoles = CREATABLE_ROLES[adminRole] || [];
-  // HOD can only manage accounts in their own department — the server enforces
-  // this; pinning the dropdown just keeps the UI honest about it.
+  // HOD manages only their own department's accounts. The server enforces it; pinning the
+  // dropdown just keeps the UI honest.
   const deptLocked = adminRole === "HOD";
 
   const [users, setUsers] = useState([]);
@@ -75,10 +74,9 @@ function ManageUsersPage() {
   }, []);
 
   useEffect(() => {
-    // NOTE: eslint react-hooks/set-state-in-effect flags this (loadUsers setStates
-    // internally). Intended and correct — a fetch-on-mount into an external system;
-    // state lands in the async .then/.finally. Left as a knowing lint error (not
-    // disabled).
+    // NOTE: react-hooks/set-state-in-effect flags this (loadUsers setStates internally).
+    // Intended and correct — fetch-on-mount into an external system, state lands in the async
+    // .then/.finally. A knowing lint error, deliberately not disabled.
     loadUsers();
     api
       .get("/departments")
@@ -86,13 +84,11 @@ function ManageUsersPage() {
       .catch(() => {});
   }, [loadUsers]);
 
-  // Pin the department to the HOD's own once departments are loaded.
-  // NOTE: eslint react-hooks/set-state-in-effect flags the setNewDeptId below.
-  // Intended and correct — this seeds an *editable* create-form field once the
-  // async departments list arrives (the user can still change it when not
-  // dept-locked, and it's reset after each create). That makes it initialization
-  // of editable state, not pure derivation, so useMemo doesn't apply here. Left as
-  // a knowing lint error (not disabled).
+  // pin the department to the HOD's own once departments load
+  // NOTE: react-hooks/set-state-in-effect flags the setNewDeptId below. Intended and correct —
+  // it seeds an *editable* create-form field once the async departments list arrives (still
+  // changeable when not dept-locked, reset after each create). That is initialization of editable
+  // state, not pure derivation, so useMemo doesn't apply. A knowing lint error, not disabled.
   useEffect(() => {
     if (deptLocked && adminDepartment && departments.length > 0) {
       const myDept = departments.find((d) => d.deptName === adminDepartment);

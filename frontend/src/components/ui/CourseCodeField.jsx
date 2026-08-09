@@ -1,10 +1,9 @@
 import { academicYearPrefix, courseCodeSuffix } from "../../lib/academicYear";
 
-// Course-code input with a locked two-digit academic-year prefix + an editable
-// suffix. The prefix is derived from `year` (the binding key), so it can never
-// disagree with it. The parent owns the full `value`; this emits the recomposed
-// `prefix + suffix` on every edit. Disabled until a year is chosen, which enforces
-// "pick the year first". See docs/adr/backlog-progression.md.
+// Course-code input: locked two-digit academic-year prefix plus an editable suffix. The prefix is
+// derived from `year` (the binding key), so the two can't disagree. The parent owns the full
+// `value`; this emits the recomposed `prefix + suffix` on each edit. Disabled until a year is
+// chosen, enforcing "pick the year first". See docs/adr/backlog-progression.md.
 function CourseCodeField({
   id,
   year,

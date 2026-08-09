@@ -8,8 +8,8 @@ import CourseCodeField from "../../components/ui/CourseCodeField";
 const inputClass =
   "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]";
 
-// Add a single subject. Presentational tab — the shell supplies departments + the
-// dept-lock context; this tab keeps only the form state.
+// Add a single subject. Presentational tab: the shell supplies departments and the dept-lock
+// context, this keeps only form state.
 function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
   const [formData, setFormData] = useState({
     subjectName: "",
@@ -26,13 +26,11 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // dept-scoped roles are pinned to their own department (resolved by the shell).
-  // NOTE: eslint react-hooks/set-state-in-effect flags the setFormData below.
-  // Intended and correct — this seeds one field of the *editable* form once the
-  // shell resolves the async pin (the user still edits the rest of formData, and
-  // deptId is reset after each submit). That's initialization of editable state,
-  // not pure derivation, so useMemo doesn't apply. Left as a knowing lint error
-  // (not disabled).
+  // dept-scoped roles are pinned to their own department, resolved by the shell
+  // NOTE: react-hooks/set-state-in-effect flags the setFormData below. Intended and correct —
+  // it seeds one field of the *editable* form once the shell resolves the async pin (the rest of
+  // formData stays user-edited, deptId resets after each submit). That is initialization of
+  // editable state, not pure derivation, so useMemo doesn't apply. A knowing lint error, not disabled.
   useEffect(() => {
     if (deptLocked && pinnedDeptId) {
       setFormData((prev) => ({ ...prev, deptId: pinnedDeptId }));
@@ -44,8 +42,8 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // The academic year is authoritative: it stamps the locked two-digit prefix of
-  // the course code. Changing the year re-prefixes the code, preserving the suffix.
+  // The academic year is authoritative and stamps the course code's locked two-digit prefix;
+  // changing it re-prefixes the code, preserving the suffix.
   const handleYearChange = (e) => {
     const year = e.target.value;
     setFormData((prev) => ({
@@ -72,7 +70,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
         return;
       }
     }
-    // a year stamps only the prefix; the admin must still enter the code suffix
+    // a year stamps only the prefix — the admin still enters the suffix
     if (!courseCodeSuffix(formData.courseCode)) {
       setError("Enter the course code.");
       return;
@@ -108,7 +106,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
         semester: "",
         credits: "",
         academicYearOffered: "",
-        // a dept-scoped admin's department is pinned; everyone else re-picks it
+        // a dept-scoped admin's department stays pinned; everyone else re-picks
         deptId: deptLocked ? prev.deptId : "",
       }));
       setSubjectType("REGULAR");
@@ -126,7 +124,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
   const selectedYear = formData.academicYearOffered
     ? Number(formData.academicYearOffered)
     : NaN;
-  // Recent years for the dropdown, plus the selected one if it falls outside the window.
+  // recent years for the dropdown, plus the selected one if outside that window
   const baseYears = Array.from(
     { length: 6 },
     (_, i) => new Date().getFullYear() - i + 1,

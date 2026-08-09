@@ -6,29 +6,25 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Backlog semester-eligibility rule. A student may register backlogs only for the
- * semesters in their current academic year plus the previous one, capped at their
- * current semester — so promotion into a new year retires the oldest year's backlogs.
+ * Backlog semester-eligibility rule: only the semesters of the current academic year plus the
+ * previous one, capped at the current semester — so moving up a year retires the oldest backlogs.
  *
  * <pre>
  *   floor = max(currentSem &lt;= 4 ? 1 : currentSem &lt;= 6 ? 3 : 5, entrySemester)
  *   eligible = { floor .. currentSem }
  * </pre>
  *
- * For a normal student (entrySemester = 1): 1-{1} 2-{1,2} 3-{1,2,3} 4-{1,2,3,4}
- * 5-{3,4,5} 6-{3,4,5,6} 7-{5,6,7} 8-{5,6,7,8}. {@code entrySemester} raises the
- * floor for a lateral-entry/migrant student so they are never offered semesters
- * they never studied here (e.g. entry 3, current 5 -&gt; {3,4,5}).
+ * Normal intake (entrySemester = 1): 1-{1} 2-{1,2} 3-{1,2,3} 4-{1,2,3,4} 5-{3,4,5} 6-{3,4,5,6}
+ * 7-{5,6,7} 8-{5,6,7,8}. {@code entrySemester} raises the floor for a lateral/migrant student so
+ * semesters they never studied here are never offered (entry 3, current 5 -&gt; {3,4,5}).
  *
- * Pure function of the (admin-maintained) current and entry semesters — see
+ * Pure function of the admin-maintained current and entry semesters — see
  * docs/adr/backlog-progression.md.
  */
 @Service
 public class EligibilityService {
 
-    /**
-     * Backwards-compatible overload for a normal intake (entrySemester = 1).
-     */
+    /** Overload for a normal intake (entrySemester = 1). */
     public Set<Integer> eligibleSemesters(int currentSemester) {
         return eligibleSemesters(currentSemester, 1);
     }
@@ -40,7 +36,7 @@ public class EligibilityService {
             return eligible;
         }
         int normalFloor = currentSemester <= 4 ? 1 : currentSemester <= 6 ? 3 : 5;
-        // a lateral entrant's window starts no earlier than the semester they joined
+        // a lateral entrant's window starts no earlier than the semester they joined in
         int floor = Math.max(normalFloor, Math.max(entrySemester, 1));
         for (int sem = floor; sem <= currentSemester; sem++) {
             eligible.add(sem);
@@ -49,10 +45,9 @@ public class EligibilityService {
     }
 
     /**
-     * Whether {@code targetSemester} is in the student's backlog window. Always pass
-     * {@code entrySemester} explicitly — there is deliberately no two-arg overload,
-     * because {@code isEligible(current, target)} reads ambiguously as if the second
-     * argument were the entry semester. For a normal intake pass {@code entrySemester = 1}.
+     * Whether {@code targetSemester} is in the student's backlog window. There is deliberately no
+     * two-arg overload — {@code isEligible(current, target)} reads as if arg 2 were the entry
+     * semester — so always pass it explicitly ({@code 1} for a normal intake).
      */
     public boolean isEligible(int currentSemester, int entrySemester, int targetSemester) {
         return eligibleSemesters(currentSemester, entrySemester).contains(targetSemester);

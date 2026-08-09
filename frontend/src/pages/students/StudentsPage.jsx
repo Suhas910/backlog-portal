@@ -13,10 +13,9 @@ import ClaimStudentsTab from "./ClaimStudentsTab";
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
 const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"];
 
-// Tab set varies by role: a PROCTOR gets only their supervised roster plus the
-// claim picker (no create/import/bulk-progression — the server refuses those
-// anyway); HOD and above additionally manage proctor assignments; DEPT_OFFICE
-// keeps the original four (no proctor management).
+// Tab set varies by role: a PROCTOR gets only their supervised roster and the claim picker (no
+// create/import/bulk-progression — the server refuses those anyway); HOD and above also manage
+// proctor assignments; DEPT_OFFICE keeps the original four, without proctor management.
 const STAFF_TABS = [
   { key: "manage", label: "Manage", icon: Users },
   { key: "add", label: "Add", icon: UserPlus },
@@ -35,11 +34,10 @@ function tabsForRole(role) {
   return STAFF_TABS;
 }
 
-// Admin student management behind one route as four tabs (Manage / Add / Import /
-// Progression). The shell owns what the tabs share — the role guard, the single
-// departments fetch, and dept-pin resolution — so each tab is presentational. All
-// auth/dept scope is enforced server-side on /api/admin/students/** and
-// /api/admin/progression/**.
+// Admin student management behind one route as four tabs (Manage / Add / Import / Progression).
+// The shell owns what they share — role guard, the single departments fetch, dept-pin resolution
+// — leaving each tab presentational. Auth/dept scope is enforced server-side on
+// /api/admin/students/** and /api/admin/progression/**.
 function StudentsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -53,12 +51,11 @@ function StudentsPage() {
   const tabs = tabsForRole(adminRole);
   const tabKeys = new Set(tabs.map((t) => t.key));
 
-  // Dept-scoped roles are pinned to their own department. This is pure derivation
-  // from (departments, role, dept) — computed during render, not stored via an
-  // effect, so it's resolved on first paint with no cascading re-render. A plain
-  // expression (no manual useMemo): the React Compiler couldn't preserve the
-  // manual memo once the role-dependent tab derivation joined this render, and
-  // the find() is cheap enough to run per render anyway.
+  // Dept-scoped roles are pinned to their own department: pure derivation from (departments,
+  // role, dept), computed during render rather than stored via an effect, so it resolves on first
+  // paint with no cascading re-render. Left as a plain expression — the React Compiler couldn't
+  // preserve a manual useMemo once the role-dependent tab derivation joined this render, and the
+  // find() is cheap enough per render.
   const pinnedDept =
     deptLocked && adminDepartment && departments.length > 0
       ? departments.find((d) => d.deptName === adminDepartment)

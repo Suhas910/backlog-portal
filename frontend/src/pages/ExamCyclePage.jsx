@@ -38,10 +38,9 @@ function ExamCyclePage() {
       navigate("/admin/login");
       return;
     }
-    // NOTE: eslint react-hooks/set-state-in-effect flags this (loadCycles setStates
-    // internally). Intended and correct — a fetch-on-mount into an external system;
-    // state lands in the async .then/.finally. Left as a knowing lint error (not
-    // disabled).
+    // NOTE: react-hooks/set-state-in-effect flags this (loadCycles setStates internally).
+    // Intended and correct — fetch-on-mount into an external system, state lands in the async
+    // .then/.finally. A knowing lint error, deliberately not disabled.
     loadCycles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

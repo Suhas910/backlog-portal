@@ -3,10 +3,9 @@ import HeroSection from "../components/sections/HeroSection";
 import ProcessSection from "../components/sections/ProcessSection";
 import { useTheme } from "../context/ThemeContext";
 
-// One fixed, full-viewport backdrop shared by the whole page: the content
-// scrolls over it, so the hero, the steps and the footer read as one continuous
-// surface instead of each section starting its own background. Dark mode shows
-// the brand gradient; light mode shows the pale corner blobs.
+// One fixed, full-viewport backdrop for the whole page: content scrolls over it, so hero, steps
+// and footer read as one continuous surface rather than each section starting its own background.
+// Dark shows the brand gradient, light the pale corner blobs.
 function FixedBackdrop() {
   const { isDark } = useTheme();
 

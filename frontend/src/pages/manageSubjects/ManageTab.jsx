@@ -19,8 +19,8 @@ const inputClass =
 
 const PAGE_SIZE = 25;
 
-// Browse / edit / delete the subject catalog. Presentational tab — the shell
-// supplies departments + the dept-lock context; this tab only filters and loads.
+// Browse / edit / delete the subject catalog. Presentational tab: the shell supplies departments
+// and the dept-lock context, this only filters and loads.
 function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
   const [fDeptId, setFDeptId] = useState("");
   const [fYear, setFYear] = useState("");
@@ -34,9 +34,9 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
 
   const effectiveDeptId = deptLocked ? pinnedDeptId : fDeptId;
 
-  // The endpoint is paginated: it returns a Page ({content, totalPages, ...}), never
-  // a bare array. Loading the whole catalog unfiltered previously timed the client
-  // out; now each call pulls one page (default first). Filters reset to page 0.
+  // The endpoint returns a Page ({content, totalPages, ...}), never a bare array — loading the
+  // whole catalog unfiltered used to time the client out. Each call pulls one page; filters reset
+  // to page 0.
   const loadSubjects = useCallback(async (targetPage = 0) => {
     setError("");
     setBusy(true);
@@ -183,8 +183,8 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
   );
 }
 
-// Prev/next pager over a Spring Page envelope. `onGo(pageIndex)` re-fetches, keeping
-// the current filters (the loader reads them from state).
+// Prev/next pager over a Spring Page envelope. `onGo(pageIndex)` re-fetches, keeping the current
+// filters (the loader reads them from state).
 function Pager({ pageInfo, busy, onGo, noun }) {
   const { number, totalPages, totalElements } = pageInfo;
   return (
@@ -219,7 +219,7 @@ function Pager({ pageInfo, busy, onGo, noun }) {
   );
 }
 
-// Module scope so identity is stable across parent renders (keeps input focus).
+// Module scope, so identity is stable across parent renders and inputs keep focus.
 function SubjectRow({ subject, departments, onUpdated, onRemoved }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(subject.subjectName || "");

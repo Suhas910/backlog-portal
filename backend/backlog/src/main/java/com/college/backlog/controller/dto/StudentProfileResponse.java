@@ -2,8 +2,7 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// Read-only profile shown on the student dashboard. Deliberately omits DOB
-// (it is a login secret) and password fields.
+// Read-only profile for the student dashboard; omits DOB (a login secret) and password fields.
 public class StudentProfileResponse {
     private String rollNo;
     private String name;
@@ -11,7 +10,7 @@ public class StudentProfileResponse {
     private String branch;
     private String phone;          // may be null until the student sets it
     private int currentSemester;
-    // backlog semesters this student may register for, derived from currentSemester
+    // backlog semesters registerable, derived from currentSemester
     private List<Integer> eligibleSemesters;
 
     public StudentProfileResponse(String rollNo, String name, String email,

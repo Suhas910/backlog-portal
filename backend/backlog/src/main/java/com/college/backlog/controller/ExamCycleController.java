@@ -21,9 +21,8 @@ public class ExamCycleController {
     @Autowired
     private ExamCycleRepository examCycleRepository;
 
-    // Read is also open to PROCTOR (the registrations page's cycle filter needs
-    // the list); the method-level annotation overrides the class-level one.
-    // Activate/deactivate below stay closed to proctors.
+    // Read is open to PROCTOR too — the registrations page's cycle filter needs the list — via
+    // the method-level annotation overriding the class-level one. The writes below stay closed.
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public List<ExamCycle> list() {
@@ -37,8 +36,8 @@ public class ExamCycleController {
         return examCycleRepository.save(cycle);
     }
 
-    // Opens registrations for exactly this cycle: close whatever is open, then
-    // open the target — atomically, so there is never more than one active cycle.
+    // Opens registrations for exactly this cycle: close whatever is open, then open the target,
+    // atomically — there is never more than one active cycle.
     @PutMapping("/{id}/activate")
     @Transactional
     public ExamCycle activate(@PathVariable Long id) {
@@ -49,8 +48,7 @@ public class ExamCycleController {
         return examCycleRepository.save(target);
     }
 
-    // Ends the cycle (closes registrations). With no active cycle, the portal
-    // reports registrations as closed.
+    // Ends the cycle. With no active cycle the portal reports registrations as closed.
     @PutMapping("/{id}/deactivate")
     @Transactional
     public ExamCycle deactivate(@PathVariable Long id) {

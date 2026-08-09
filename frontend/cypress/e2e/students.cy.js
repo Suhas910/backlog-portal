@@ -1,6 +1,6 @@
-// Coverage for the Students admin page (tabbed: Manage / Add / Import). Create a
-// student, edit one, delete (blocked when referenced by registrations, allowed
-// otherwise), the "progression incomplete" badge, and a bulk-import dry-run.
+// The Students admin page (tabs: Manage / Add / Import): create, edit, delete (blocked when
+// referenced by registrations, allowed otherwise), the "progression incomplete" badge, and a
+// bulk-import dry-run.
 describe("Students page", () => {
   const student = {
     rollNo: "1MS22CS001",
@@ -110,7 +110,7 @@ describe("Students page", () => {
     cy.get('[data-cy="prog-term-year-4"]').should("have.value", "");
     cy.get('[data-cy="prog-term-missing-4"]').should("contain", "not set");
 
-    // fill the blank sem and save -> PUT override carries the parsed start-year int
+    // fill the blank sem and save -> the PUT override carries the parsed start-year int
     cy.get('[data-cy="prog-term-year-4"]').type("2023-24");
     cy.get('[data-cy="prog-term-save-4"]').click();
     cy.wait("@setSem4").its("request.body").should("deep.equal", { academicYear: 2023 });
@@ -168,7 +168,7 @@ describe("Students page", () => {
   });
 
   it("shows the seeded-timeline banner when create returns a complete progression", () => {
-    // the full sem 1-8 timeline is auto-seeded on create, so the student comes back
+    // the full sem 1-8 timeline is auto-seeded on create, so the student returns
     // progression-complete and the green "timeline seeded" banner shows
     cy.intercept("POST", "/api/admin/students", {
       statusCode: 201,

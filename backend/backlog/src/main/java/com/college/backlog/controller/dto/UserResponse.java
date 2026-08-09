@@ -2,10 +2,8 @@ package com.college.backlog.controller.dto;
 
 import com.college.backlog.model.User;
 
-/**
- * Safe view of a {@link User} for the admin user-management page.
- * Deliberately never carries the password (stored as a one-way bcrypt hash).
- */
+/** Safe view of a {@link User} for admin user-management; never carries the password (stored as
+ *  a one-way bcrypt hash). */
 public class UserResponse {
     private String username;
     private String role;

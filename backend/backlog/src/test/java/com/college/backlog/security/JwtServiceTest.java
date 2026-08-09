@@ -51,10 +51,9 @@ class JwtServiceTest {
     void tamperedTokenFailsValidation() {
         JwtService service = newService(SECRET, 3_600_000L);
         String token = service.generateToken("admin", "ADMIN");
-        // Flip the FIRST character of the payload — a full 6-bit base64url char, so the
-        // decoded bytes always change and the signature no longer matches. (Flipping the
-        // last char of the signature is unreliable: its trailing padding bits can decode
-        // to the same bytes, leaving the token valid.)
+        // Flip the payload's FIRST char — a full 6-bit base64url char, so the decoded bytes
+        // always change and the signature fails. Flipping the signature's last char is
+        // unreliable: its padding bits can decode to the same bytes, leaving the token valid.
         int payloadStart = token.indexOf('.') + 1;
         char c = token.charAt(payloadStart);
         String tampered = token.substring(0, payloadStart)
@@ -93,7 +92,7 @@ class JwtServiceTest {
 
     @Test
     void refreshPreservesTheOriginalAuthTimeWhileReissuing() {
-        // a token whose session began 2h ago, still valid (1h expiry from now)
+        // session began 2h ago, token still valid (1h expiry from now)
         JwtService service = newService(SECRET, 3_600_000L, TWELVE_HOURS);
         long startedAt = System.currentTimeMillis() - (2L * 60 * 60 * 1000);
         String old = service.generateToken("admin", "ADMIN", startedAt);
@@ -102,7 +101,7 @@ class JwtServiceTest {
 
         assertThat(refreshed).isNotNull();
         assertThat(service.validateToken(refreshed)).isTrue();
-        // authTime carried through unchanged -> the absolute cap tracks the whole session
+        // authTime carried through unchanged, so the cap tracks the whole session
         assertThat(service.getAuthTimeFromToken(refreshed)).isEqualTo(startedAt);
     }
 
@@ -113,7 +112,7 @@ class JwtServiceTest {
         long startedAt = System.currentTimeMillis() - (2L * 60 * 60 * 1000);
         String old = issuer.generateToken("admin", "ADMIN", startedAt);
 
-        // a service with a 1h cap sees that session as too old to slide -> null (=> 401)
+        // a 1h cap sees that session as too old to slide -> null (=> 401)
         JwtService cappedAt1h = newService(SECRET, 3_600_000L, 60L * 60 * 1000);
         assertThat(cappedAt1h.refreshToken(old, "admin", "ADMIN")).isNull();
     }

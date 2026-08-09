@@ -49,8 +49,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/admin")
 public class AdminController {
 
-    // PROCTOR is dept-pinned like HOD/DEPT_OFFICE and additionally restricted to
-    // their assigned students (see proctorRollNos below).
+    // PROCTOR is dept-pinned like HOD/DEPT_OFFICE, plus restricted to assigned students
+    // (see proctorRollNos below).
     private static final java.util.Set<UserRole> DEPT_ROLES =
         java.util.Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
 
@@ -87,9 +87,8 @@ public class AdminController {
     @Autowired
     private com.college.backlog.service.ProctorScopeService proctorScope;
 
-    // One DB lookup per request: endpoints that need both the dept scope and the
-    // proctor scope load the caller once and pass the User to the helpers below
-    // (previously each helper re-fetched the same row).
+    // One DB lookup per request: endpoints needing both dept and proctor scope load the caller
+    // once and pass the User to the helpers below, rather than each helper re-fetching the row.
     private User callerUser(Authentication auth) {
         if (auth == null) return null;
         return userRepository.findById(auth.getName()).orElse(null);
@@ -105,20 +104,18 @@ public class AdminController {
     }
 
     /**
-     * The assigned-student scope for a PROCTOR caller, or null for every other
-     * role (no student-level restriction). May be empty — a proctor with no
-     * assignments sees no registrations; callers must special-case that (an
-     * empty IN list is not valid SQL).
+     * Assigned-student scope for a PROCTOR caller; null for every other role (unrestricted).
+     * May be empty — a proctor with no assignments sees nothing, and callers must special-case
+     * that because an empty IN list is not valid SQL.
      */
     private java.util.Set<String> proctorRollNos(User user) {
         return proctorScope.assignedRollNos(user);
     }
 
     /**
-     * A dept-scoped caller (HOD / DEPT_OFFICE) may only touch a registration that
-     * involves their department — one of its subjects is owned by or eligible for
-     * that department. Mirrors checkDeptAccess in RegistrationController (verify).
-     * A PROCTOR's scope is the assigned student instead of the subject department.
+     * A dept-scoped caller (HOD/DEPT_OFFICE) may only touch a registration involving their
+     * department — one of its subjects owned by or eligible for it. Mirrors checkDeptAccess in
+     * RegistrationController (verify). A PROCTOR is scoped by student instead.
      */
     private void assertRegistrationInScope(Authentication auth, Registration reg) {
         User user = callerUser(auth);
@@ -139,8 +136,7 @@ public class AdminController {
         }
     }
 
-    // Max page size a client can request — a guard so `size` can't be used to pull
-    // the whole (append-only, ever-growing) table in one shot.
+    // Cap on client-requested `size`, so it can't pull the whole append-only table in one shot.
     private static final int MAX_PAGE_SIZE = 200;
     private static final int DEFAULT_PAGE_SIZE = 25;
 
@@ -179,15 +175,12 @@ public class AdminController {
                 examCycleId.orElse(null),
                 parseStatus(status.orElse(null)),
                 proctorRolls);
-        // mapping happens inside the service transaction — the page's `subjects` are
-        // lazily loaded during mapping, so it cannot be done out here
+        // mapping stays in the service transaction — `subjects` loads lazily during it
         return registrationService.listSummaries(spec, pageable);
     }
 
-    // Status-bucketed counts for the dashboard stat cards, over the SAME filters as
-    // the list but WITHOUT the status filter — so the cards show the totals for the
-    // filtered set regardless of which status tab is open. Cheap count queries; no
-    // rows hydrated.
+    // Dashboard stat cards: same filters as the list but WITHOUT status, so the cards show totals
+    // for the filtered set whichever status tab is open. Count queries only; no rows hydrated.
     @GetMapping("/registrations/summary-counts")
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public Map<String, Long> getRegistrationSummaryCounts(
@@ -205,8 +198,7 @@ public class AdminController {
         if (proctorRolls != null && proctorRolls.isEmpty()) {
             return Map.of("total", 0L, "submitted", 0L, "verified", 0L, "rejected", 0L);
         }
-        // one GROUP BY query over the filtered set (no status filter — the cards
-        // span every status) instead of one count query per status
+        // one GROUP BY over the filtered set (status left null — the cards span every status)
         Map<RegistrationStatus, Long> counts = registrationService.countGroupedByStatus(
             new RegistrationSpecification(
                 subjectId.orElse(null), callerDeptId, subjectType.orElse(null), searchQuery.orElse(null),
@@ -221,7 +213,7 @@ public class AdminController {
             "rejected", rejected);
     }
 
-    /** Parse the optional status filter; blank/absent means "all statuses". 400 on an unknown value. */
+    /** Optional status filter; blank/absent = all statuses, unknown value = 400. */
     private RegistrationStatus parseStatus(String status) {
         if (status == null || status.isBlank()) {
             return null;
@@ -237,8 +229,8 @@ public class AdminController {
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public List<RegistrationEventResponse> getRegistrationEvents(@PathVariable String regId,
                                                                  Authentication authentication) {
-        // dept-scoped roles may only read the event trail of registrations their
-        // department can act on — same rule as verify (RegistrationController)
+        // dept-scoped roles may only read event trails their department can act on
+        // — same rule as verify (RegistrationController)
         Registration reg = registrationRepository.findByRegId(regId)
             .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
         assertRegistrationInScope(authentication, reg);
@@ -256,8 +248,8 @@ public class AdminController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
     public Subject addSubject(@Valid @RequestBody SubjectCreateRequest request, Authentication authentication) {
-        // dept-scoped roles (HOD / DEPT_OFFICE) may only create subjects for their own
-        // department — enforced here on the server, not just pinned in the UI.
+        // dept-scoped roles may only create subjects for their own department — server-side,
+        // not just pinned in the UI
         Long callerDeptId = resolveCallerDeptId(authentication);
         if (callerDeptId != null && !callerDeptId.equals(request.getDeptId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -266,8 +258,7 @@ public class AdminController {
         return subjectService.createSubject(request);
     }
 
-    // Read is open to all admin-type roles (matches the other read endpoints here);
-    // creating/editing departments below stays restricted to ADMIN/PRINCIPAL.
+    // Read is open to all admin roles like the other reads here; the writes below stay ADMIN/PRINCIPAL.
     @GetMapping("/departments")
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public List<Department> getDepartments() {
@@ -295,16 +286,15 @@ public class AdminController {
     public Department updateDepartment(@PathVariable Long id, @Valid @RequestBody DepartmentRequest request) {
         Department dept = departmentRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + id));
-        // Conflict detection: the @Version lock only guards a race within this
-        // request — it can't catch a stale-page overwrite, because we just loaded
-        // the *current* row. So compare the version the client last saw against the
-        // current one and reject if another admin has saved in between.
+        // The @Version lock only guards a race within this request — it can't catch a stale-page
+        // overwrite, since we just loaded the *current* row. So compare the version the client
+        // last saw and reject if another admin saved in between.
         if (request.getVersion() != null && !request.getVersion().equals(dept.getVersion())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "This department was changed by someone else. Reload and try again.");
         }
         String code = request.getCode().trim().toUpperCase();
-        // allow keeping the same code; only block if another department already owns it
+        // keeping the same code is fine; only block if another department owns it
         departmentRepository.findByCodeIgnoreCase(code).ifPresent(other -> {
             if (!other.getId().equals(id)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -315,10 +305,8 @@ public class AdminController {
         dept.setCode(code);
         dept.setContactEmail(request.getContactEmail() != null ? request.getContactEmail().trim() : null);
         try {
-            // saveAndFlush so a genuine concurrent write surfaces here as an
-            // optimistic-lock failure (the @Version backstop for the narrow window
-            // between the check above and the flush), not later. Rethrown as 409 —
-            // otherwise the generic handler would map it to a 500.
+            // saveAndFlush so the @Version backstop for the window between the check above and
+            // the flush fires here, not later. Rethrown as 409 — the generic handler maps it to 500.
             return departmentRepository.saveAndFlush(dept);
         } catch (ObjectOptimisticLockingFailureException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -326,11 +314,9 @@ public class AdminController {
         }
     }
 
-    // Delete a department, restricted to ADMIN/PRINCIPAL like create/edit. Blocked
-    // (409) if the department is still referenced anywhere — a subject (owning or
-    // eligible), a staff user, or a student of that branch — since removing it would
-    // break the FK and orphan those records. Discontinue an in-use department by not
-    // referencing it, not by deleting.
+    // ADMIN/PRINCIPAL like create/edit. 409 if still referenced by a subject (owning or eligible),
+    // a staff user, or a student of that branch — deleting would break the FK and orphan them.
+    // Discontinue an in-use department by not referencing it, not by deleting.
     @DeleteMapping("/departments/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL')")
@@ -387,9 +373,8 @@ public class AdminController {
         Long callerDeptId = resolveCallerDeptId(caller);
         java.util.Set<String> proctorRolls = proctorRollNos(caller);
 
-        // Scope to a single exam cycle: the one explicitly selected, else the active
-        // cycle. Without this the report would span every cycle. If nothing is
-        // selected and no cycle is active, there is nothing to export.
+        // Scope to one exam cycle — the selected one, else the active one — otherwise the report
+        // spans every cycle. Neither selected nor active means nothing to export.
         Long effectiveCycleId = examCycleId.orElseGet(() ->
                 examCycleRepository.findByActiveTrue().map(ExamCycle::getId).orElse(null));
 
@@ -397,9 +382,8 @@ public class AdminController {
         if (effectiveCycleId == null || (proctorRolls != null && proctorRolls.isEmpty())) {
             registrations = List.of();
         } else {
-            // the summary report covers only verified registrations — push the status
-            // filter into the query so only those rows are hydrated (never load
-            // pending/rejected just to discard them)
+            // the report covers only verified rows — filter in the query so pending/rejected
+            // are never hydrated just to be discarded
             Specification<Registration> spec = new RegistrationSpecification(
                     subjectId.orElse(null),
                     callerDeptId,
@@ -415,8 +399,8 @@ public class AdminController {
                     .findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
         }
 
-        // Stream the PDF straight to the response — no full-document byte[] buffered
-        // in heap. Set headers before the first byte is written.
+        // Stream straight to the response, no full-document byte[] on the heap.
+        // Headers must be set before the first byte is written.
         response.setContentType(MediaType.APPLICATION_PDF_VALUE);
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
                 "attachment; filename=\"registrations-summary.pdf\"");

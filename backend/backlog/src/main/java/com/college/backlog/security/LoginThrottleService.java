@@ -9,18 +9,13 @@ import java.time.Instant;
 import java.util.Locale;
 
 /**
- * Brute-force throttling backed by the {@code login_throttle} table, shared by
- * the admin and student login flows.
+ * Brute-force throttling on the {@code login_throttle} table, shared by the admin and student
+ * login flows. Counters are keyed {@code scope:username:ip} so admin and student failures never
+ * cross-count, failures against different accounts never cross-count, and an attacker IP can only
+ * lock out the (account, that-IP) pair rather than the victim's own IP.
  *
- * Counters are keyed by {@code scope:username:ip} so that:
- *  - admin and student failures never cross-count (distinct scope),
- *  - failures against different accounts never cross-count (distinct username),
- *  - a single attacker IP can only lock out the (account, that-IP) pair, not the
- *    victim's own IP (distinct ip).
- *
- * The client IP is taken from {@link HttpServletRequest#getRemoteAddr()} only.
- * There is no reverse proxy in front of the app, so {@code X-Forwarded-For} is
- * untrusted (client-spoofable) and deliberately ignored.
+ * The client IP comes from {@link HttpServletRequest#getRemoteAddr()} only: there is no reverse
+ * proxy in front of the app, so {@code X-Forwarded-For} is client-spoofable and deliberately ignored.
  */
 @Service
 public class LoginThrottleService {
@@ -69,7 +64,7 @@ public class LoginThrottleService {
     }
 
     private String resolveClientIp(HttpServletRequest request) {
-        // getRemoteAddr() only — no reverse proxy, so X-Forwarded-For is untrusted.
+        // getRemoteAddr() only — no reverse proxy, so X-Forwarded-For is untrusted
         return request.getRemoteAddr();
     }
 }

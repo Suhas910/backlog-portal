@@ -13,11 +13,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * The proctor scope primitives. A PROCTOR is dept-pinned like HOD/DEPT_OFFICE
- * (their User.department, matched by USN branch code) and, on top of that,
- * hard-scoped to the students explicitly assigned to them (proctor_students).
- * Outside that set every read and write must fail closed — controllers call
- * these helpers server-side; the UI only mirrors the result.
+ * Proctor scope primitives. A PROCTOR is dept-pinned like HOD/DEPT_OFFICE (User.department matched
+ * by USN branch code) and additionally hard-scoped to explicitly assigned students
+ * (proctor_students). Outside that set every read and write fails closed — controllers call these
+ * server-side, the UI only mirrors the result.
  */
 @Service
 public class ProctorScopeService {
@@ -30,10 +29,9 @@ public class ProctorScopeService {
     }
 
     /**
-     * The roll numbers this actor supervises, or {@code null} when the actor is
-     * not a proctor (i.e. unrestricted at the assignment layer — any dept scope
-     * still applies separately). May be an empty set: a proctor with no
-     * assignments yet sees nothing.
+     * Roll numbers this actor supervises; {@code null} for a non-proctor, meaning unrestricted at
+     * the assignment layer (dept scope still applies separately). May be empty — a proctor with no
+     * assignments sees nothing.
      */
     public Set<String> assignedRollNos(User actor) {
         if (!isProctor(actor)) return null;

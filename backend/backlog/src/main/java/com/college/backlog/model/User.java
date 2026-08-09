@@ -12,17 +12,14 @@ public class User {
 
     private String password;
 
-    // Stored as the enum name (varchar) and used verbatim as the Spring Security
-    // authority / JWT role claim. A DB CHECK constraint guards the values at the
-    // database level — see db/migrations/2026-06-13-add-enum-check-constraints.sql.
+    // Stored as the enum name (varchar), used verbatim as the Spring Security authority and JWT
+    // role claim, with a DB CHECK constraint on the values.
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
-    // When true, the user is forced to set a new password on their next login.
-    // Set on account creation, on admin password reset, and on the seeded default
-    // accounts so the weak default passwords cannot survive first login.
-    // @ColumnDefault makes the generated DDL emit `default false`, so the NOT NULL
-    // column can be added to the already-populated users table (existing rows get false).
+    // Forces a new password on next login. Set on account creation, admin password reset, and
+    // seeded accounts, so a weak default can't survive first login. @ColumnDefault emits
+    // `default false` in DDL, letting this NOT NULL column be added to the populated users table.
     @Column(name = "must_change_password", nullable = false)
     @ColumnDefault("false")
     private boolean mustChangePassword = false;

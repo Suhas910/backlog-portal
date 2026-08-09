@@ -85,7 +85,7 @@ class ProgressionServiceTest {
 
         int created = service.backfillLinear("1MS24CS191");
 
-        // the full plan (sems 1..8) is seeded, not just up to currentSemester
+        // the full plan (1..8) is seeded, not just up to currentSemester
         assertThat(created).isEqualTo(8);
         ArgumentCaptor<StudentSemesterTerm> captor = ArgumentCaptor.forClass(StudentSemesterTerm.class);
         verify(termRepository, times(8)).save(captor.capture());
@@ -113,8 +113,7 @@ class ProgressionServiceTest {
 
         int created = service.backfillLinear("1MS24CS191");
 
-        // no sem 1-2 (never sat them); entry sem 3 anchors to the admission year and
-        // the plan runs through sem 8
+        // no sems 1-2 (never sat them); entry sem 3 anchors the admission year, plan runs to 8
         assertThat(created).isEqualTo(6);
         ArgumentCaptor<StudentSemesterTerm> captor = ArgumentCaptor.forClass(StudentSemesterTerm.class);
         verify(termRepository, times(6)).save(captor.capture());
@@ -134,7 +133,7 @@ class ProgressionServiceTest {
     void backfillLinearPreservesExistingRowsWriteOnce() {
         Student s = student("1MS24CS191", 4); // admission 2024, entry sem 1
         when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
-        // sems 1 and 3 already recorded (e.g. hand-corrected after a year-back)
+        // sems 1 and 3 already recorded, e.g. hand-corrected after a year-back
         when(termRepository.findByRollNo("1MS24CS191")).thenReturn(List.of(
                 new StudentSemesterTerm("1MS24CS191", 1, 2024),
                 new StudentSemesterTerm("1MS24CS191", 3, 2026)));

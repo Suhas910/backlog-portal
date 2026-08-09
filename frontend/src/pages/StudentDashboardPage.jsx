@@ -49,7 +49,7 @@ function StudentDashboardPage() {
       setProfile(meRes.data);
       setRegistrations(Array.isArray(regRes.data) ? regRes.data : []);
     } catch (err) {
-      // 401/403 is handled globally (redirect to login); show other errors here
+      // 401/403 redirects to login globally; other errors surface here
       if (![401, 403].includes(err.response?.status)) {
         setError("Unable to load your dashboard. Please refresh and try again.");
       }
@@ -58,10 +58,9 @@ function StudentDashboardPage() {
     }
   }, []);
 
-  // NOTE: eslint react-hooks/set-state-in-effect flags this (load setStates
-  // internally). Intended and correct — a fetch-on-mount into an external system;
-  // state lands in the async body/finally. Left as a knowing lint error (not
-  // disabled).
+  // NOTE: react-hooks/set-state-in-effect flags this (load setStates internally). Intended and
+  // correct — fetch-on-mount into an external system, state lands in the async body/finally.
+  // A knowing lint error, deliberately not disabled.
   useEffect(() => {
     load();
   }, [load]);
@@ -116,7 +115,7 @@ function StudentDashboardPage() {
     }
   };
 
-  // branch code is the 2-letter code embedded in the USN (e.g. 1MS22CS001 -> CS)
+  // branch code is the 2-letter code embedded in the USN: 1MS22CS001 -> CS
   const branchCode = profile?.rollNo ? profile.rollNo.slice(5, 7) : "";
   const branchLabel = profile?.branch
     ? `${profile.branch}${branchCode ? ` (${branchCode})` : ""}`

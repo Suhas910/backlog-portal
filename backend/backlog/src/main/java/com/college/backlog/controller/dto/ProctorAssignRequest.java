@@ -2,9 +2,8 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// Batch claim/assign request. `proctor` is the target proctor's username —
-// required for HOD/ADMIN/PRINCIPAL callers, and for a PROCTOR caller it must be
-// absent or their own username (self-claim only).
+// Batch claim/assign. `proctor` is the target's username: required for HOD/ADMIN/PRINCIPAL, and
+// for a PROCTOR caller must be absent or their own (self-claim only).
 public class ProctorAssignRequest {
     private List<String> rollNos;
     private String proctor;

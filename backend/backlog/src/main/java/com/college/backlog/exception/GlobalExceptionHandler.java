@@ -54,11 +54,11 @@ public class GlobalExceptionHandler {
         return Map.of("message", "Access denied.");
     }
 
-    // Fallback for DB-constraint violations that no endpoint caught locally (e.g. a
-    // duplicate (course_code, academic_year_offered) on subject create, or a duplicate
-    // exam-cycle name). Endpoints with a more specific message still catch it first;
-    // this turns the rest into a 409 instead of a generic 500. The raw exception is
-    // logged, never returned — constraint names/SQL don't belong in API responses.
+    // Fallback for DB-constraint violations no endpoint caught locally — a duplicate
+    // (course_code, academic_year_offered) on subject create, a duplicate exam-cycle name.
+    // Endpoints with a specific message still catch it first; the rest become 409, not 500.
+    // The raw exception is logged, never returned — constraint names and SQL don't belong in
+    // API responses.
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public Map<String, String> handleDataIntegrityViolation(DataIntegrityViolationException ex) {

@@ -29,8 +29,7 @@ class EligibilityServiceTest {
 
     @Test
     void isEligibleReflectsTheWindow() {
-        // a 3rd-year student (sem 6), normal intake (entry 1): may carry sems 3..6,
-        // not 1st-year backlogs
+        // 3rd year (sem 6), normal intake: sems 3..6 only, no 1st-year backlogs
         assertThat(service.isEligible(6, 1, 3)).isTrue();
         assertThat(service.isEligible(6, 1, 6)).isTrue();
         assertThat(service.isEligible(6, 1, 2)).isFalse();
@@ -47,7 +46,7 @@ class EligibilityServiceTest {
 
     @Test
     void entrySemesterRaisesTheFloorForLateralEntrants() {
-        // a migrant who joined at sem 3, now in sem 5: never offered sems 1-2
+        // migrant who joined at sem 3, now sem 5: never offered sems 1-2
         assertThat(service.eligibleSemesters(5, 3)).containsExactlyInAnyOrder(3, 4, 5);
         // joined at sem 3, now in sem 4: {3,4} (normal floor 1 raised to 3)
         assertThat(service.eligibleSemesters(4, 3)).containsExactlyInAnyOrder(3, 4);

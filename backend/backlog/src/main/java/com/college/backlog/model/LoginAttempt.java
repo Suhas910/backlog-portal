@@ -4,12 +4,10 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 /**
- * One brute-force throttle counter, keyed by {@code scope:username:ip}
- * (see {@link com.college.backlog.security.LoginThrottleService}).
- *
- * Backed by the {@code login_throttle} table. The older {@code login_attempts}
- * table was keyed by IP alone (admin + student failures cross-counted); it is
- * superseded by this one and can be dropped manually on Neon.
+ * One brute-force throttle counter keyed {@code scope:username:ip}, on the {@code login_throttle}
+ * table (see {@link com.college.backlog.security.LoginThrottleService}). Supersedes the older
+ * {@code login_attempts} table, which keyed by IP alone so admin and student failures
+ * cross-counted; that one can be dropped manually on Neon.
  */
 @Entity
 @Table(name = "login_throttle")

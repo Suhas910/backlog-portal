@@ -1,9 +1,8 @@
 import axios from "axios";
 
-// The JWT now travels in an httpOnly cookie the browser attaches automatically —
-// it is never readable by JS (so it can't be stolen via XSS). withCredentials sends
-// that cookie; the xsrf* options make axios echo the readable XSRF-TOKEN cookie back
-// as the X-XSRF-TOKEN header so Spring's CSRF check passes on mutating requests.
+// The JWT travels in an httpOnly cookie the browser attaches automatically, never readable by JS
+// so it can't be stolen via XSS. withCredentials sends it; the xsrf* options make axios echo the
+// readable XSRF-TOKEN cookie as X-XSRF-TOKEN, so Spring's CSRF check passes on mutations.
 const api = axios.create({
   baseURL: "/api",
   timeout: 15000,
@@ -12,10 +11,10 @@ const api = axios.create({
   xsrfHeaderName: "X-XSRF-TOKEN",
 });
 
-// NOTE: these sessionStorage values are NOT the credential. The real token is in the
-// httpOnly cookie. "adminToken"/"studentToken" hold only a presence marker ("cookie")
-// so the existing "is a session present?" checks and route guards keep working; the
-// other keys are UI state (role/name) + the refresh schedule (expiresAt).
+// NOTE: these sessionStorage values are NOT the credential — the real token is in the httpOnly
+// cookie. "adminToken"/"studentToken" hold only a presence marker ("cookie") so the existing
+// "session present?" checks and route guards keep working; the rest is UI state (role/name) and
+// the refresh schedule (expiresAt).
 export function getAdminToken() {
   return sessionStorage.getItem("adminToken"); // presence marker, not the JWT
 }
@@ -24,8 +23,8 @@ export function getStudentToken() {
   return sessionStorage.getItem("studentToken"); // presence marker, not the JWT
 }
 
-// Auth is cookie-based now, so no Authorization header is needed. Kept as no-ops so
-// the many `{ headers: getAdminHeaders() }` call sites don't all need editing.
+// Cookie-based auth needs no Authorization header. Kept as no-ops so the many
+// `{ headers: getAdminHeaders() }` call sites don't all need editing.
 export function getAdminHeaders() {
   return {};
 }
@@ -46,8 +45,8 @@ export function clearAdminSession() {
   );
 }
 
-// Best-effort server logout (expires the httpOnly cookie) then local cleanup. The
-// logout endpoints are CSRF-exempt and succeed even with a lapsed session.
+// Best-effort server logout (expires the httpOnly cookie), then local cleanup. The logout
+// endpoints are CSRF-exempt and succeed even with a lapsed session.
 export async function logoutAdmin() {
   try {
     await api.post("/auth/logout");
@@ -66,16 +65,13 @@ export async function logoutStudent() {
   clearStudentSession();
 }
 
-// Student-scoped auth failures: if a student's session is missing/expired, send
-// them back to login. Scoped by URL so admin flows (which handle their own 401s)
-// are untouched. The student login endpoint itself is excluded.
+// Student-scoped auth failures: a missing/expired student session goes back to login. Scoped by
+// URL so admin flows (which handle their own 401s) are untouched; the login endpoint is excluded.
 function isStudentScopedUrl(url = "") {
   if (url.includes("/student/auth/")) return false;
-  // Admin-side endpoints are never student-scoped. This guard is load-bearing: the
-  // admin student-management URLs are "/admin/students/**", which contain the
-  // substring "/student" — without excluding "/admin/" first, a 401/403 on e.g.
-  // the bulk import (/admin/students/import) would be misread as a student auth
-  // failure and bounce the admin to the STUDENT login page.
+  // Load-bearing: admin endpoints are never student-scoped, but the admin student-management URLs
+  // ("/admin/students/**") contain the substring "/student". Without excluding "/admin/" first, a
+  // 401/403 on e.g. /admin/students/import would bounce the admin to the STUDENT login page.
   if (url.includes("/admin/")) return false;
   if (url.includes("/student")) return true;
   // POST /api/register (student submission), but not /register/verify (admin)
@@ -97,9 +93,8 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || "";
-    // Server-side forced password change: the account is still authenticated but
-    // restricted until it sets a new password. Route to the change screen rather
-    // than logging out — clearing the session would strand them.
+    // Forced password change: still authenticated, just restricted until a new password is set.
+    // Route to the change screen — clearing the session would strand them.
     if (status === 403 && error.response?.data?.code === "PASSWORD_CHANGE_REQUIRED") {
       if (!window.location.pathname.startsWith("/admin/change-password")) {
         window.location.assign("/admin/change-password?forced=1");
@@ -107,8 +102,8 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
     if (status === 401 || status === 403) {
-      // a 401 on an authenticated call means the session lapsed/was invalid — flag it
-      // so the login screen can explain the redirect. 403 is a real authz denial.
+      // 401 on an authenticated call = the session lapsed or was invalid; flag it so the login
+      // screen can explain the redirect. 403 is a real authz denial.
       const expiredSuffix = status === 401 ? "?expired=1" : "";
       if (isStudentScopedUrl(url)) {
         clearStudentSession();

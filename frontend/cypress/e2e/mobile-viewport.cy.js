@@ -1,7 +1,6 @@
-// Phone-width regression coverage (from the 2026-07 mobile audit). The two bugs
-// this guards against were both page-level horizontal overflow at 375px: a long
-// subject name blowing out the registration list (missing min-w-0 on a flex
-// label), and the admin header nav clipping half its buttons (missing flex-wrap).
+// Phone-width regression coverage from the 2026-07 mobile audit. Both bugs it guards were
+// page-level horizontal overflow at 375px: a long subject name blowing out the registration list
+// (missing min-w-0 on a flex label), and the admin header nav clipping buttons (missing flex-wrap).
 
 const expectNoHorizontalScroll = () =>
   cy.document().its("documentElement").should((el) => {
@@ -14,8 +13,8 @@ describe("Mobile viewport (375x812)", () => {
   });
 
   it("home page fits the viewport with the header intact", () => {
-    // declare the cycle state explicitly rather than relying on the fetch
-    // failing (no backend in e2e) to land in the closed branch
+    // declare the cycle state explicitly, rather than relying on the fetch failing (no backend in
+    // e2e) to land in the closed branch
     cy.intercept("GET", "/api/registration-status", { open: false }).as("regStatus");
     cy.visit("/");
     cy.contains("Register for your backlog exam").should("be.visible");
@@ -101,7 +100,7 @@ describe("Mobile viewport (375x812)", () => {
     cy.wait("@adminLogin");
     cy.wait("@getRegistrations");
 
-    // all nav buttons must be visible (the row wraps instead of clipping)
+    // all nav buttons visible — the row wraps instead of clipping
     ["Exam Cycles", "Subjects", "Departments", "Users", "Students", "Logout"].forEach(
       (label) => cy.contains(label).should("be.visible"),
     );

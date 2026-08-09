@@ -15,14 +15,12 @@ import java.io.IOException;
 import java.util.Set;
 
 /**
- * Enforces the forced-password-change at the server, not just via the login
- * redirect. While an authenticated admin account has {@code mustChangePassword}
- * set, every API call is rejected with 403 {@code PASSWORD_CHANGE_REQUIRED}
- * except the change-password endpoint itself — so a user holding a valid token
- * cannot navigate past the change screen and keep using the temp password.
+ * Enforces the forced password change server-side, not just via the login redirect: while an
+ * admin account has {@code mustChangePassword}, every API call but change-password is rejected
+ * 403 {@code PASSWORD_CHANGE_REQUIRED}, so a valid token can't navigate past the change screen
+ * and keep using the temp password.
  *
- * Only admin-type principals are checked (students are unaffected), and a DB
- * lookup happens only for those, keeping the per-request cost off other traffic.
+ * Only admin-type principals are checked (students are unaffected), and only they cost a DB lookup.
  */
 @Component
 public class PasswordChangeEnforcementFilter extends OncePerRequestFilter {

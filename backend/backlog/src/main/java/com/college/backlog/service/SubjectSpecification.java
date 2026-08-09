@@ -10,10 +10,8 @@ import org.springframework.data.jpa.domain.Specification;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Filters the subject catalog by department, academic year, and/or semester — any
- * of which may be null (= no filter). Used by the Manage Subjects list.
- */
+/** Filters the Manage Subjects list by department, academic year and/or semester; any may be
+ *  null (= no filter). */
 public class SubjectSpecification implements Specification<Subject> {
 
     private final Long deptId;

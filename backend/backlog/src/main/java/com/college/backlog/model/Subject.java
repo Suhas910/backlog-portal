@@ -17,9 +17,8 @@ public class Subject {
     @Column(name = "subject_name")
     private String subjectName;
 
-    // Composite UNIQUE(course_code, academic_year_offered) enforced at the DB
-    // level (db/migrations/2026-06-13-add-db-constraints.sql) — a course recurs
-    // across academic years, so course_code alone is intentionally NOT unique.
+    // Composite UNIQUE(course_code, academic_year_offered) at the DB level — a course recurs
+    // across years, so course_code alone is intentionally NOT unique.
     @Column(name = "course_code")
     private String courseCode;
 
@@ -27,12 +26,10 @@ public class Subject {
 
     private int credits;
 
-    // Academic year this offering was taught (e.g. 2023 = AY 2023-24). The
-    // authoritative key for backlog year-binding. @ColumnDefault("0") mirrors the
-    // column's `default 0` in the Flyway V1 baseline so the mapping matches under
-    // ddl-auto=validate. NOT NULL is enforced at the DB level (folded into the V1
-    // baseline), not via nullable=false here — schema constraints belong in a V__
-    // migration, never in the entity. See docs/adr/backlog-progression.md.
+    // Year this offering was taught (2023 = AY 2023-24) — the authoritative key for backlog
+    // year-binding. @ColumnDefault("0") mirrors the column's `default 0` in the Flyway V1 baseline
+    // so the mapping matches under ddl-auto=validate; NOT NULL is enforced at the DB level (also
+    // folded into V1), never via nullable=false. See docs/adr/backlog-progression.md.
     @Column(name = "academic_year_offered")
     @ColumnDefault("0")
     private int academicYearOffered;
@@ -41,15 +38,13 @@ public class Subject {
     @JoinColumn(name = "dept_id")
     private Department department;
 
-    // Stored as the enum name (varchar). A DB CHECK constraint guards the values
-    // at the database level — see db/migrations/2026-06-13-add-enum-check-constraints.sql.
+    // Stored as the enum name (varchar), with a DB CHECK constraint guarding the values.
     @Enumerated(EnumType.STRING)
     @Column(name = "subject_type")
     private SubjectType subjectType = SubjectType.REGULAR;
 
-    // @BatchSize: EAGER means every subject hydration loads this collection; without
-    // batching a list of N subjects issues N join-table queries. Batching collapses
-    // them into a few IN queries per list (same pattern as Registration.subjects).
+    // @BatchSize: EAGER means every subject hydration loads this collection, so N subjects would
+    // issue N join-table queries. Batching collapses them into a few INs (as Registration.subjects).
     @ManyToMany(fetch = FetchType.EAGER)
     @BatchSize(size = 50)
     @JoinTable(

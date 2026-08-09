@@ -2,8 +2,8 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// Linear-default backfill over a cohort (same selectors as promote). Seeds every
-// semester up to each student's currentSemester assuming no detention; write-once.
+// Linear-default backfill over a cohort (same selectors as promote). Seeds each student's whole
+// plan, entry semester through 8, assuming no detention; write-once.
 public class BackfillRequest {
     private Long deptId;
     private Integer admissionYear;

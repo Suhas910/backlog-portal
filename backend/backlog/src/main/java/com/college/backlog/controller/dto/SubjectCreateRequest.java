@@ -29,7 +29,6 @@ public class SubjectCreateRequest {
 
     private java.util.List<Long> eligibleDeptIds = new java.util.ArrayList<>();
 
-    // Getters and Setters
     public String getSubjectName() { return subjectName; }
     public void setSubjectName(String subjectName) { this.subjectName = subjectName; }
 

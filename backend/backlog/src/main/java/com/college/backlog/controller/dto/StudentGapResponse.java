@@ -2,11 +2,8 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-/**
- * A student missing progression (StudentSemesterTerm) rows for one or more
- * semesters in their eligibility window — surfaced by the Progression "gaps" view
- * so staff can set the academic-year timeline for newly added students.
- */
+/** A student missing StudentSemesterTerm rows for semesters in their eligibility window —
+ *  surfaced by the Progression "gaps" view so staff can set the academic-year timeline. */
 public class StudentGapResponse {
     private final String rollNo;
     private final String name;

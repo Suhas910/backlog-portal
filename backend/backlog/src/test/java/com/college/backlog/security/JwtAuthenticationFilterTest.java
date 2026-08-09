@@ -42,11 +42,8 @@ class JwtAuthenticationFilterTest {
         return request;
     }
 
-    /**
-     * Regression: an expired/tampered token makes parsing throw. The filter must
-     * swallow it, leave the request anonymous, and still invoke the chain — never
-     * let the exception escape (which would surface as a 500 instead of a 401).
-     */
+    /** Regression: parsing an expired/tampered token throws. The filter must swallow it, leave
+     *  the request anonymous, and still invoke the chain — an escape surfaces as 500, not 401. */
     @Test
     void expiredTokenIsTreatedAsAnonymousAndDoesNotThrow() throws Exception {
         MockHttpServletRequest request = adminRequestWithSessionCookie("expired.token.value");

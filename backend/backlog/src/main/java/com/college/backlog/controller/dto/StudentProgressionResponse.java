@@ -7,8 +7,8 @@ public class StudentProgressionResponse {
     private String rollNo;
     private String name;
     private int currentSemester;
-    // entry semester (1 = regular; >1 = lateral entry) — lets the admin screen render
-    // rows only from the semester the student actually started, not phantom sems 1–2.
+    // entry semester (1 = regular, >1 = lateral) — lets the admin screen start rows at the
+    // semester the student actually began, not phantom sems 1-2
     private int entrySemester;
     private List<Term> terms;
 

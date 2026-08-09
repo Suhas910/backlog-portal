@@ -1,9 +1,9 @@
 package com.college.backlog.controller.dto;
 
 /**
- * Correct a student's current + entry semester from the progression "View & correct"
- * screen. Only these two fields — name/email/phone/DOB are managed elsewhere. Validated
- * 1 ≤ entry ≤ current ≤ 8 in the service (StudentManagementService.updateSemesters).
+ * Correct current + entry semester from the progression "View & correct" screen — only these two;
+ * name/email/phone/DOB are managed elsewhere. Validated 1 ≤ entry ≤ current ≤ 8 in
+ * StudentManagementService.updateSemesters.
  */
 public class SemesterUpdateRequest {
 

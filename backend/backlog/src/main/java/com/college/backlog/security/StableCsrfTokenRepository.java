@@ -7,24 +7,20 @@ import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 
 /**
- * A {@link CookieCsrfTokenRepository} that keeps the {@code XSRF-TOKEN} cookie STABLE by
- * ignoring token-clearing writes (a {@code saveToken} with a null/empty token).
+ * A {@link CookieCsrfTokenRepository} that keeps the {@code XSRF-TOKEN} cookie STABLE by ignoring
+ * token-clearing writes (a {@code saveToken} with a null/empty token).
  *
- * Why this exists: the app is stateless (the JWT is re-authenticated on every request).
- * Spring Security's {@code SessionManagementFilter} therefore treats every request as a
- * fresh authentication and runs {@code CsrfAuthenticationStrategy}, which rotates the CSRF
- * token by first DELETING the cookie (saveToken(null)) and generating a new one. The new
- * token is deferred and never persisted before the response commits, so the cookie is left
- * deleted — and the next mutating request (with no intervening GET to re-mint it) fails the
- * CSRF check with 403, which the SPA treats as a session failure and logs the user out.
- * This surfaced as: fill two blank semesters on the Manage-students / Progression timeline,
- * save the first (works), save the second (403 → logout).
+ * Why: the app is stateless (JWT re-authenticated per request), so {@code SessionManagementFilter}
+ * sees every request as a fresh authentication and runs {@code CsrfAuthenticationStrategy}, which
+ * rotates the token by DELETING the cookie first. The replacement is deferred and never persisted
+ * before the response commits, leaving the cookie deleted — so the next mutating request without
+ * an intervening GET fails CSRF with 403, which the SPA reads as a dead session and logs the user
+ * out. Seen as: fill two blank semesters on the Progression timeline, save one (ok), save the
+ * second (403 -> logout).
  *
- * Ignoring the clearing write keeps the double-submit token in place across requests. This
- * is safe: the CSRF token is a non-secret double-submit value validated cookie-vs-header on
- * each request, and rotate-on-login is a session-fixation defense that does not apply to a
- * stateless cookie token. (Our logout clears the JWT session cookie explicitly and does not
- * rely on clearing this one.)
+ * Safe to ignore that write: the token is a non-secret double-submit value validated
+ * cookie-vs-header per request, and rotate-on-login guards session fixation, which doesn't apply
+ * to a stateless cookie token. Logout clears the JWT cookie explicitly, not via this one.
  */
 public class StableCsrfTokenRepository implements CsrfTokenRepository {
 

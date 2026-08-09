@@ -22,16 +22,13 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // No fallback defaults: an unset env var leaves the password blank, and a
-    // blank seed password skips the account rather than installing a guessable
-    // default (old issue #1). Set these in the environment to provision the
-    // initial accounts on a fresh database.
+    // No fallback defaults: an unset env var leaves the password blank, and a blank one skips the
+    // account rather than installing a guessable default (old issue #1). Set these in the env to
+    // provision initial accounts on a fresh database.
     //
-    // Only the department-less roles (ADMIN, PRINCIPAL) are seedable. HOD /
-    // DEPT_OFFICE accounts need a department, which a seeder on a fresh database
-    // cannot assign — and login rejects a dept role without one, so a seeded
-    // hod/office account could never sign in. Create those through Manage Users
-    // (which requires picking a department) once an admin is in.
+    // Only department-less roles (ADMIN, PRINCIPAL) are seedable: HOD/DEPT_OFFICE need a
+    // department a fresh-database seeder can't assign, and login rejects a dept role without one,
+    // so such an account could never sign in. Create those via Manage Users once an admin exists.
     @Value("${admin.password.principal:}")
     private String principalPassword;
 
@@ -40,13 +37,12 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Default accounts: created only when an explicit seed password is
-        // supplied via env. Existing rows are never overwritten here.
+        // created only when an explicit seed password is supplied; existing rows never overwritten
         seedUser("principal", principalPassword, UserRole.PRINCIPAL);
         seedUser("admin", adminPassword, UserRole.ADMIN);
 
-        // One-time safety net: bcrypt any legacy plaintext password so login can
-        // rely on bcrypt only (the plaintext fallback has been removed).
+        // one-time safety net: bcrypt legacy plaintext passwords, since the plaintext login
+        // fallback has been removed
         migratePlaintextPasswords();
     }
 
@@ -56,7 +52,7 @@ public class DataSeeder implements CommandLineRunner {
 
         if (user == null) {
             if (!hasPassword) {
-                // No env-supplied password — do NOT install a guessable default.
+                // no env-supplied password — do NOT install a guessable default
                 log.warn("Skipping seed of '{}' account: no admin.password.{} configured. "
                         + "Set it in the environment to provision this account.",
                         username, role.name().toLowerCase());
@@ -66,7 +62,7 @@ public class DataSeeder implements CommandLineRunner {
             user.setUsername(username);
             user.setPassword(passwordEncoder.encode(password));
             user.setRole(role);
-            // Force the seeded password to be replaced on first login.
+            // force the seeded password to be replaced on first login
             user.setMustChangePassword(true);
             userRepository.save(user);
             return;
@@ -74,8 +70,7 @@ public class DataSeeder implements CommandLineRunner {
 
         boolean dirty = false;
         if (user.getPassword() == null || user.getPassword().isBlank()) {
-            // Account row exists but has no usable password. Repair it only when
-            // an explicit seed password is configured — never with a default.
+            // row exists without a usable password: repair only from an explicit seed password
             if (!hasPassword) {
                 log.warn("Account '{}' has no usable password and no admin.password.{} is "
                         + "configured to repair it; leaving it untouched.",
@@ -90,9 +85,8 @@ public class DataSeeder implements CommandLineRunner {
             }
         } else if (hasPassword && passwordEncoder.matches(password, user.getPassword())
                 && !user.isMustChangePassword()) {
-            // Existing account still sitting on the seeded password — arm the
-            // forced change. Idempotent: once rotated, the password no longer
-            // matches the seed, so this never re-triggers.
+            // still on the seeded password — arm the forced change. Idempotent: once rotated it
+            // no longer matches the seed, so this never re-triggers.
             user.setMustChangePassword(true);
             dirty = true;
         }

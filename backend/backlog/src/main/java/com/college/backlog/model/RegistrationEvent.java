@@ -3,10 +3,7 @@ package com.college.backlog.model;
 import jakarta.persistence.*;
 import java.time.Instant;
 
-/**
- * Append-only audit record of an action taken on a registration.
- * Rows are never updated or deleted.
- */
+/** Append-only audit record of an action on a registration; rows are never updated or deleted. */
 @Entity
 @Table(name = "registration_events")
 public class RegistrationEvent {
@@ -15,14 +12,12 @@ public class RegistrationEvent {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // FK to registrations.reg_id is enforced at the DB level
-    // (db/migrations/2026-06-13-add-db-constraints.sql); kept as a plain String
-    // here to preserve the append-only audit design.
+    // FK to registrations.reg_id is enforced at the DB level; a plain String here, to keep the
+    // append-only audit design.
     @Column(name = "reg_id")
     private String regId;
 
-    // action / actorRole are stored as enum names (varchar); DB CHECK constraints
-    // guard the values — see db/migrations/2026-06-13-add-enum-check-constraints.sql.
+    // action / actorRole stored as enum names (varchar), with DB CHECK constraints on the values.
     @Enumerated(EnumType.STRING)
     private EventAction action;
 

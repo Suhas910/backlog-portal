@@ -17,15 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 
 /**
- * Write path for student accounts — validation + persistence in one place, shared
- * by the single-create flow and the per-row bulk import. Authorization/department
- * scoping lives in {@code StudentManagementController}; this service only enforces
- * the data rules (USN format, known branch, 1 ≤ entry ≤ current ≤ 8, DOB present).
- *
- * Sensitive actions are audit-logged (mirrors ProgressionService). DOB is never
- * logged — only that a reset happened.
- *
- * See docs/adr/backlog-progression.md.
+ * Write path for student accounts — validation + persistence in one place, shared by single-create
+ * and per-row bulk import. Enforces only the data rules (USN format, known branch,
+ * 1 ≤ entry ≤ current ≤ 8, DOB present); authorization and dept scoping live in
+ * {@code StudentManagementController}. Sensitive actions are audit-logged like ProgressionService,
+ * but never the DOB itself — only that a reset happened. See docs/adr/backlog-progression.md.
  */
 @Service
 public class StudentManagementService {
@@ -45,9 +41,8 @@ public class StudentManagementService {
     private ProgressionService progressionService;
 
     /**
-     * Create one student. Each create runs in its own transaction so one bad row
-     * can never poison a bulk import. The caller has already enforced uniqueness
-     * (USN not taken) and department scope.
+     * Create one student, in its own transaction so a bad row can't poison a bulk import.
+     * The caller has already enforced USN uniqueness and department scope.
      *
      * @throws IllegalArgumentException on any validation failure
      */
@@ -67,15 +62,14 @@ public class StudentManagementService {
         Student s = new Student();
         s.setRollNo(rollNo);
         s.setName(req.getName().trim());
-        // email is system-managed (<usn>@msrit.edu) and never client-supplied
+        // email is system-managed, never client-supplied
         s.setEmail(institutionalEmail(rollNo));
         s.setPhone(trimToNull(req.getPhone()));
         s.setDateOfBirth(req.getDateOfBirth());
         s.setCurrentSemester(req.getCurrentSemester());
         s.setEntrySemester(req.getEntrySemester());
-        // Store the stable 2-letter branch CODE, not the (now editable) department
-        // name — this is what the delete guard matches on
-        // (existsByBranchIgnoreCase(dept.getCode())) and it survives a dept rename.
+        // the stable 2-letter CODE, not the editable dept name: it survives a rename and is what
+        // the delete guard matches on (existsByBranchIgnoreCase)
         s.setBranch(dept.getCode());
         s.setYearOfJoining(Usn.admissionYear(rollNo));
 
@@ -83,13 +77,11 @@ public class StudentManagementService {
         log.info("STUDENT_CREATE rollNo={} currentSem={} entrySem={}",
                 rollNo, saved.getCurrentSemester(), saved.getEntrySemester());
 
-        // Seed the student's FULL academic-year timeline up front — every semester
-        // from their entry semester through sem 8, mapped linearly from the admission
-        // year (sems 1-2 -> join year, 3-4 -> +1, ...). This is write-once and does
-        // NOT touch currentSemester (which the admin sets on the form and advances on
-        // the Progression page), so a later year-back is handled by editing the
-        // affected future sems there. Lateral entrants get entry..8; pre-entry sems
-        // stay empty. Runs for the CSV import too (it funnels through here).
+        // Seed the FULL timeline up front: entry..8, mapped linearly from the admission year
+        // (1-2 -> join year, 3-4 -> +1, ...); pre-entry sems stay empty for lateral entrants.
+        // Write-once and does NOT touch currentSemester (set on the form, advanced on the
+        // Progression page), so a year-back is fixed by editing the affected sems there.
+        // The CSV import funnels through here too.
         progressionService.backfillLinear(rollNo);
         return saved;
     }
@@ -114,10 +106,9 @@ public class StudentManagementService {
     }
 
     /**
-     * Correct only a student's current + entry semester, leaving name/email/phone/DOB
-     * untouched. Used by the progression "View & correct" screen so the admin can adjust
-     * the current semester right where the academic-year timeline is shown, without having
-     * to round-trip the other fields (which the full update would overwrite).
+     * Correct only current + entry semester, leaving name/email/phone/DOB untouched. Lets the
+     * progression "View & correct" screen adjust the semester where the timeline is shown,
+     * without round-tripping the other fields that a full update would overwrite.
      */
     @Transactional
     public Student updateSemesters(Student existing, int currentSemester, int entrySemester) {
@@ -192,7 +183,7 @@ public class StudentManagementService {
         return t.isEmpty() ? null : t;
     }
 
-    /** Institutional email, always {@code <usn>@msrit.edu} — never client-editable. */
+    /** Always {@code <usn>@msrit.edu} — never client-editable. */
     private String institutionalEmail(String rollNo) {
         return rollNo.toLowerCase() + "@msrit.edu";
     }

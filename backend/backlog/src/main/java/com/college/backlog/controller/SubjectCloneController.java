@@ -21,11 +21,10 @@ import java.time.Year;
 import java.util.Set;
 
 /**
- * Clone a department's subject offerings into a new academic year. Scope: ADMIN /
- * PRINCIPAL may clone for any department; HOD / DEPT_OFFICE are pinned to their own
- * (mirrors the dept-scoping in {@link ProgressionController}). The server forces the
- * target year and re-validates the department, so a crafted request can't write
- * outside the caller's scope or into the wrong year.
+ * Clone a department's subject offerings into a new academic year. ADMIN/PRINCIPAL may clone for
+ * any department, HOD/DEPT_OFFICE are pinned to their own, mirroring {@link ProgressionController}.
+ * The server forces the target year and re-validates the department, so a crafted request can't
+ * write outside the caller's scope or into the wrong year.
  */
 @RestController
 @RequestMapping("/api/admin/subjects/clone")
@@ -53,7 +52,7 @@ public class SubjectCloneController {
         return cloneService.apply(dept.getId(), req.getTargetYear(), req.getRows());
     }
 
-    /** Department the caller may operate on — own dept for HOD/DEPT_OFFICE, any for ADMIN/PRINCIPAL. */
+    /** Department the caller may act on: own for HOD/DEPT_OFFICE, any for ADMIN/PRINCIPAL. */
     private Department resolveDept(Authentication auth, Long requestedDeptId) {
         if (auth == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");

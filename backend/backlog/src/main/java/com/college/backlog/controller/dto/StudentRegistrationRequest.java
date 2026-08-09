@@ -4,9 +4,8 @@ import jakarta.validation.constraints.NotEmpty;
 
 import java.util.List;
 
-// Submitted by an authenticated student. Identity (USN, name, email, phone, DOB) and
-// the student's current semester are taken from the authenticated account, never from
-// the request body — only the subject selection is client-supplied.
+// Submitted by an authenticated student. Identity (USN, name, email, phone, DOB) and current
+// semester come from the account, never the body — only the subject selection is client-supplied.
 public class StudentRegistrationRequest {
 
     @NotEmpty(message = "At least one subject must be selected")

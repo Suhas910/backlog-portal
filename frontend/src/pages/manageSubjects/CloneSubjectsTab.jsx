@@ -26,8 +26,8 @@ const STATUS_STYLES = {
 
 let rowKeySeq = 0;
 
-// Clone a department's subjects from one academic year into the next.
-// Presentational tab — the shell supplies departments + the dept-lock context.
+// Clone a department's subjects into the next academic year. Presentational tab: the shell
+// supplies departments and the dept-lock context.
 function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
   const [deptId, setDeptId] = useState("");
   const [sourceYear, setSourceYear] = useState("");
@@ -117,8 +117,8 @@ function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDept
         headers: getAdminHeaders(),
       });
       setResult(res.data);
-      // reconcile statuses in place (avoids a refetch and keeps the result banner):
-      // just-created rows now "exist", so they drop out of the applicable set.
+      // reconcile statuses in place, avoiding a refetch and keeping the result banner:
+      // just-created rows now "exist" and drop out of the applicable set
       const byCode = new Map((res.data?.rows || []).map((rr) => [rr.courseCode, rr]));
       setRows((prev) =>
         prev.map((r) => {

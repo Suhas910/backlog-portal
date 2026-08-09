@@ -13,15 +13,14 @@ export default function HeroSection() {
   useEffect(() => {
     api
       .get("/registration-status")
-      // fail closed, same as the registration page: never claim a cycle is
-      // open unless the backend confirms it
+      // fail closed like the registration page: never claim a cycle is open unconfirmed
       .then((res) => setRegStatus(res.data))
       .catch(() => setRegStatus({ open: false }));
   }, []);
 
   return (
-    // Transparent — the page-wide fixed backdrop in HomePage provides the
-    // gradient (dark) / blobs (light); the text scrolls over it.
+    // Transparent: HomePage's page-wide fixed backdrop provides the gradient (dark) / blobs
+    // (light), and the text scrolls over it.
     <section
       style={{
         position: "relative",

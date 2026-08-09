@@ -23,8 +23,8 @@ public class RegistrationSpecification implements Specification<Registration> {
     private final LocalDate endDate;
     private final Long examCycleId;
     private final RegistrationStatus status;
-    // proctor scope: only registrations of these students (null = no restriction;
-    // callers must handle the empty set — an empty IN list is not valid SQL)
+    // proctor scope: only these students' registrations. null = no restriction; callers must
+    // handle the empty set, since an empty IN list is not valid SQL.
     private final Collection<String> studentRollNos;
 
     public RegistrationSpecification(Long subjectId, Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate, Long examCycleId) {
@@ -52,11 +52,9 @@ public class RegistrationSpecification implements Specification<Registration> {
         List<Predicate> predicates = new ArrayList<>();
 
         if (subjectId != null || departmentId != null || (subjectType != null && !subjectType.isBlank())) {
-            // DISTINCT only when the subjects collection join below can fan out rows.
-            // The other joins are all many-to-one (student, examCycle) and cannot
-            // duplicate, so the common no-subject-filter case stays a plain query —
-            // an unconditional DISTINCT forced a sort/hash over the wide snapshot
-            // rows on every page and count.
+            // DISTINCT only when the subjects join below can fan out rows: the other joins are
+            // many-to-one (student, examCycle) and can't duplicate. An unconditional DISTINCT
+            // forced a sort/hash over the wide snapshot rows on every page and count.
             query.distinct(true);
             Join<Registration, Subject> subjectJoin = root.join("subjects", JoinType.LEFT);
             if (subjectId != null) {

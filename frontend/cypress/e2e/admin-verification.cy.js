@@ -1,9 +1,8 @@
-// The admin list is now server-paginated: the dashboard reads a Spring `Page`
-// envelope ({ content, totalElements, totalPages, number }) and, after a
-// verify/reject, refetches the page + the summary-counts endpoint (status
-// filtering is server-side, so an actioned row is re-read from the server rather
-// than mutated in place). The mocks below reflect that: the registrations stub is
-// stateful where an action must change what the refetch returns.
+// The admin list is server-paginated: the dashboard reads a Spring `Page` envelope
+// ({ content, totalElements, totalPages, number }) and, after a verify/reject, refetches the page
+// plus summary-counts — status filtering is server-side, so an actioned row is re-read rather than
+// mutated in place. Hence the registrations stub is stateful wherever an action must change what
+// the refetch returns.
 describe("Admin verification flow", () => {
   const row = (overrides = {}) => ({
     regId: "REG-2026-1001",
@@ -66,8 +65,8 @@ describe("Admin verification flow", () => {
     }).as("verifyRegistration");
 
     cy.visit("/admin/login");
-    // the login page gates the credential form behind a designation selection;
-    // the actual role is driven by the (mocked) login response above
+    // the login page gates the credential form behind a designation selection; the real role
+    // comes from the mocked login response above
     cy.contains("Principal / Registrar / COE").click();
     cy.get('[data-cy="admin-username"]').type("admin");
     cy.get('[data-cy="admin-password"]').type("password123");
@@ -203,8 +202,8 @@ describe("Admin verification flow", () => {
     stubCounts();
     stubSideCalls();
 
-    // A non-conflict failure (500): the server state did not move, so we expect
-    // an inline error and the row to stay SUBMITTED with its buttons intact.
+    // A non-conflict failure (500): server state didn't move, so expect an inline error with the
+    // row still SUBMITTED and its buttons intact.
     cy.intercept("PUT", "/api/register/verify/REG-2026-1001", {
       statusCode: 500,
       body: { message: "Verification service unavailable" },
@@ -237,10 +236,10 @@ describe("Admin verification flow", () => {
       body: { message: "Login success", role: "ADMIN", token: "admin-jwt-token" },
     }).as("adminLogin");
 
-    // The row reads SUBMITTED until the conflicting PUT fires; the post-conflict
-    // resync then returns it already VERIFIED (as if another admin actioned it
-    // underneath us). Keying off the PUT — not a call counter — keeps this robust
-    // against however many initial fetches the page makes (StrictMode, filters).
+    // The row reads SUBMITTED until the conflicting PUT fires; the post-conflict resync then
+    // returns it already VERIFIED, as if another admin actioned it underneath us. Keyed off the
+    // PUT rather than a call counter, so it survives however many initial fetches the page makes
+    // (StrictMode, filters).
     let conflictHit = false;
     cy.intercept("GET", "/api/admin/registrations*", (req) => {
       req.reply({
@@ -278,7 +277,7 @@ describe("Admin verification flow", () => {
     cy.wait("@verifyConflict");
     cy.wait("@getRegistrations"); // automatic resync after the 409
 
-    // row now reflects true server state — verified, action buttons gone
+    // row now reflects true server state: verified, action buttons gone
     cy.contains("td", "Verified").should("exist");
     cy.get('[data-cy="admin-verify"]').should("not.exist");
   });

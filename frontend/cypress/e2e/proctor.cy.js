@@ -1,9 +1,8 @@
-// Coverage for the PROCTOR role UI. A proctor gets a two-tab Students page
-// (My Students / Claim Students): the claim picker (dept-pinned, minimal
-// projection, one-proctor conflicts), remove-from-supervision instead of
-// delete, and the trimmed dashboard nav. Staff (HOD+) get the extra Proctors
-// tab with a target-proctor selector. All API responses are stubbed — the
-// server-side scope rules have their own backend tests.
+// The PROCTOR role UI. A proctor gets a two-tab Students page (My Students / Claim Students):
+// the claim picker (dept-pinned, minimal projection, one-proctor conflicts),
+// remove-from-supervision instead of delete, and a trimmed dashboard nav. Staff (HOD+) get the
+// extra Proctors tab with a target selector. All API responses are stubbed — the server-side scope
+// rules have their own backend tests.
 describe("Proctor role", () => {
   const seedProctor = (win) => {
     win.sessionStorage.setItem("adminRole", "PROCTOR");
@@ -42,8 +41,8 @@ describe("Proctor role", () => {
     cy.visit("/admin", { onBeforeLoad: seedProctor });
     cy.contains("My Students").should("be.visible");
     cy.contains("Exam Cycles").should("not.exist");
-    // anchor-scoped: the registrations dashboard legitimately contains the word
-    // "Subjects" elsewhere (e.g. the "All Subjects" filter)
+    // anchor-scoped: the dashboard legitimately contains "Subjects" elsewhere, e.g. the
+    // "All Subjects" filter
     cy.contains("a", "Subjects").should("not.exist");
     cy.contains("a", "Users").should("not.exist");
     cy.contains("Departments").should("not.exist");
@@ -97,7 +96,7 @@ describe("Proctor role", () => {
       .should("include", "admissionYear=2024")
       .and("include", "semester=3");
 
-    // supervised students can't be selected; badges say why
+    // supervised students can't be selected, and badges say why
     cy.get('[data-cy="claim-select-1MS24CS002"]').should("be.disabled");
     cy.contains("Has a proctor").should("be.visible");
     cy.get('[data-cy="claim-select-1MS24CS003"]').should("be.disabled");

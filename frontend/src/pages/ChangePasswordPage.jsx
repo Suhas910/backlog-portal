@@ -6,9 +6,9 @@ import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
-// Serves two flows:
-//  - forced (?forced=1): user just logged in with a temp password and must
-//    set their own before continuing. Back-navigation is hidden.
+// Two flows:
+//  - forced (?forced=1): logged in on a temp password and must set their own first;
+//    back-navigation is hidden.
 //  - voluntary: a logged-in admin changing their own password.
 function ChangePasswordPage() {
   const navigate = useNavigate();

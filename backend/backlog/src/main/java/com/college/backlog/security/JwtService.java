@@ -21,17 +21,15 @@ public class JwtService {
     @Value("${app.jwt.expiration-ms}")
     private long jwtExpirationMs;
 
-    // Absolute session ceiling: the total time a session may live via refresh,
-    // regardless of activity. After this a full re-login is required. Bounds how
-    // long a stolen/refreshed token can be kept alive. Default 12h (a work day).
+    // Absolute session ceiling: total lifetime via refresh regardless of activity, after which
+    // a full re-login is required. Bounds how long a stolen token can be kept alive. Default 12h.
     @Value("${app.jwt.max-session-ms:43200000}")
     private long maxSessionMs;
 
     private SecretKey signingKey;
 
-    // Fail fast at startup if the secret is missing or too weak for HS256 (which
-    // requires a 256-bit / 32-byte key), instead of failing lazily on the first
-    // token operation with an opaque WeakKeyException.
+    // Fail fast at startup on a missing/weak secret (HS256 needs a 256-bit key), rather than
+    // lazily on the first token operation with an opaque WeakKeyException.
     @PostConstruct
     void init() {
         if (jwtSecret == null || jwtSecret.isBlank()) {
@@ -56,11 +54,9 @@ public class JwtService {
     }
 
     /**
-     * Issue a token carrying {@code authTimeMillis} — the moment the session first
-     * began. On a fresh login this is now; on a refresh the ORIGINAL value is passed
-     * through unchanged, so the absolute cap tracks the whole session, not the latest
-     * refresh. The expiry is capped at {@code authTime + maxSessionMs} so no token can
-     * ever outlive the absolute ceiling.
+     * Issue a token carrying {@code authTimeMillis}, the moment the session began: now on a fresh
+     * login, the ORIGINAL value on a refresh, so the cap tracks the whole session rather than the
+     * latest refresh. Expiry is capped at {@code authTime + maxSessionMs}, so no token outlives it.
      */
     public String generateToken(String username, String role, long authTimeMillis) {
         long now = System.currentTimeMillis();
@@ -84,11 +80,9 @@ public class JwtService {
     }
 
     /**
-     * Slide the session: re-mint from a still-valid token, preserving its original
-     * authTime, but refuse once the absolute cap is exceeded. Returns the new token,
-     * or null if the session has lived longer than {@code maxSessionMs} (caller → 401,
-     * forcing a fresh login). A legacy token with no authTime is treated as starting
-     * now (a one-time grace during rollout).
+     * Slide the session: re-mint from a still-valid token preserving its authTime, refusing once
+     * the absolute cap is passed. Returns null past {@code maxSessionMs} (caller → 401, forcing a
+     * fresh login). A legacy token with no authTime is treated as starting now — rollout grace.
      */
     public String refreshToken(String oldToken, String username, String role) {
         Long claimed = getAuthTimeFromToken(oldToken);
@@ -124,11 +118,8 @@ public class JwtService {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    /**
-     * Seconds until this token expires. Returned to the SPA on login/refresh so the
-     * keepalive can schedule the next refresh — it can no longer read the (httpOnly-
-     * cookie) token to decode the exp itself.
-     */
+    /** Seconds until expiry. Returned to the SPA on login/refresh to schedule the next refresh —
+     *  it can't decode the exp itself from the httpOnly cookie. */
     public long secondsUntilExpiry(String token) {
         return Math.max(0, (getExpirationDateFromToken(token).getTime() - System.currentTimeMillis()) / 1000);
     }

@@ -30,16 +30,14 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Admin student-account management. Authorization mirrors ProgressionController:
- * ADMIN / PRINCIPAL act on any department; HOD / DEPT_OFFICE are pinned to students
- * of their own department (matched by the USN branch code). PROCTOR is dept-pinned
- * the same way and additionally hard-scoped to their assigned students: the list
- * shows only those, edit/reset-DOB require supervision, and create/import/delete
- * are refused outright (a proctor "removes a student" by unassigning them —
- * ProctorAssignmentController — never by deleting the account). Enforced here on
- * the server — the UI only mirrors it. DOB is never returned (write-only credential).
+ * Admin student-account management. Authorization mirrors ProgressionController and is enforced
+ * here on the server (the UI only mirrors it): ADMIN/PRINCIPAL act on any department;
+ * HOD/DEPT_OFFICE are pinned to their own by USN branch code; PROCTOR is pinned the same way plus
+ * hard-scoped to assigned students — the list shows only those, edit/reset-DOB require
+ * supervision, and create/import/delete are refused (a proctor "removes a student" by unassigning
+ * in ProctorAssignmentController, never by deleting the account).
  *
- * See docs/adr/backlog-progression.md.
+ * DOB is never returned — it is a write-only credential. See docs/adr/backlog-progression.md.
  */
 @RestController
 @RequestMapping("/api/admin/students")
@@ -49,8 +47,7 @@ public class StudentManagementController {
     private static final Set<UserRole> DEPT_ROLES =
         Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
 
-    // Page-size guards mirror AdminController: a cap so `size` can't be used to pull
-    // the whole (ever-growing) roster in one request, and a sane default page.
+    // Mirrors AdminController: cap so `size` can't pull the whole roster in one request.
     private static final int MAX_PAGE_SIZE = 200;
     private static final int DEFAULT_PAGE_SIZE = 25;
 
@@ -64,9 +61,8 @@ public class StudentManagementController {
 
     // ---- list ----
 
-    // Returns a Spring Page envelope ({content, totalPages, totalElements, number, ...}).
-    // Previously an unbounded findAll, which timed out the client on an unfiltered
-    // "load everything" once the roster grew — hence pagination, matching /registrations.
+    // Spring Page envelope ({content, totalPages, totalElements, number, ...}), matching
+    // /registrations. Was an unbounded findAll, which timed out clients once the roster grew.
     @GetMapping
     public Page<StudentSummaryResponse> list(
             @RequestParam Optional<Long> deptId,
@@ -84,9 +80,8 @@ public class StudentManagementController {
         int safePage = Math.max(page, 0);
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by("rollNo"));
 
-        // proctor: restrict the roster to their assigned students. An empty IN
-        // list is not valid SQL, so a proctor with no assignments short-circuits
-        // to an empty page instead of an unfiltered query.
+        // proctor: roster restricted to assigned students. An empty IN list is not valid SQL, so
+        // no assignments short-circuits to an empty page rather than an unfiltered query.
         Set<String> assigned = proctorScope.assignedRollNos(actor);
         if (assigned != null && assigned.isEmpty()) {
             return Page.empty(pageable);
@@ -95,8 +90,7 @@ public class StudentManagementController {
             rollNoLike, semester.orElse(null), query.orElse(null), assigned);
         Page<Student> studentsPage = studentRepository.findAll(spec, pageable);
 
-        // batch the term lookup over just this page's roll numbers so progressionComplete
-        // is one query, not N
+        // term lookup batched over this page's roll numbers, so progressionComplete is 1 query, not N
         Map<String, Set<Integer>> termsByRoll = termsByRoll(
             studentsPage.getContent().stream().map(Student::getRollNo).collect(Collectors.toList()));
 
@@ -195,7 +189,7 @@ public class StudentManagementController {
             int currentSem = firstNonNull(row.getCurrentSemester(), req.getDefaultCurrentSemester(), 0);
             int entrySem = firstNonNull(row.getEntrySemester(), req.getDefaultEntrySemester(), 1);
             try {
-                // validate USN + scope + ranges + branch up front (covers dry-run)
+                // USN + scope + branch + ranges up front, so the dry-run sees the same errors
                 studentService.validateUsn(roll);
                 if (callerDeptCode != null && !callerDeptCode.equalsIgnoreCase(studentDeptCode(roll))) {
                     throw new IllegalArgumentException("Outside your department's scope.");
@@ -228,10 +222,9 @@ public class StudentManagementController {
                 results.add(new ProgressionRowResult(roll, currentSem, "ERROR", e.getMessage()));
                 errors++;
             } catch (RuntimeException e) {
-                // Any unexpected per-row failure (e.g. a DB constraint) must be reported
-                // as an ERROR row, never allowed to abort the whole batch / surface as a
-                // request-level 4xx/5xx (each createStudent is its own REQUIRES_NEW tx, so
-                // one row's rollback doesn't poison the rest).
+                // an unexpected per-row failure (e.g. a DB constraint) becomes an ERROR row, never
+                // aborting the batch or surfacing as a request-level 4xx/5xx — each createStudent
+                // is its own REQUIRES_NEW tx, so one rollback doesn't poison the rest
                 results.add(new ProgressionRowResult(roll, currentSem, "ERROR", "Could not import this row."));
                 errors++;
             }

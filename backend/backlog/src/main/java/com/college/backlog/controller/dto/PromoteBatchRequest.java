@@ -2,9 +2,9 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// Bulk promotion: advance a cohort to targetSemester for the given academic year.
-// Cohort = (deptId and/or admissionYear) OR an explicit rollNos list. Students in
-// excludeRollNos are held back (detention). dryRun previews without writing.
+// Bulk promotion to targetSemester for the given academic year. Cohort = (deptId and/or
+// admissionYear) OR an explicit rollNos list; excludeRollNos are held back (detention).
+// dryRun previews without writing.
 public class PromoteBatchRequest {
     private Long deptId;            // optional dept filter
     private Integer admissionYear;  // optional 4-digit admission year (e.g. 2024)

@@ -1,7 +1,6 @@
-// Coverage for the Add Subject tab (Manage Subjects → ?tab=add). The academic year
-// is authoritative: it stamps the locked two-digit prefix of the course code, and
-// the admin types only the suffix. The composed code is what gets posted; the year
-// drives the prefix.
+// The Add Subject tab (Manage Subjects ?tab=add). The academic year is authoritative: it stamps
+// the course code's locked two-digit prefix and the admin types only the suffix; the composed code
+// is what gets posted.
 describe("Add Subject tab", () => {
   const seed = (win) => {
     win.sessionStorage.setItem("adminRole", "ADMIN");

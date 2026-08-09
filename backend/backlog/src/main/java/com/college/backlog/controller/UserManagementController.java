@@ -24,19 +24,17 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Admin-facing user management. Authorization is enforced here on the server —
- * the UI only mirrors these rules.
+ * Admin-facing user management, enforced here on the server — the UI only mirrors it.
  *
  * Who may manage whom:
- *   ADMIN      -> any user, any role
- *   PRINCIPAL  -> HOD, DEPT_OFFICE and PROCTOR (any department)
- *   HOD        -> DEPT_OFFICE and PROCTOR in the HOD's own department only
- *   DEPT_OFFICE-> no access
- *   PROCTOR    -> no access
+ *   ADMIN       -> any user, any role
+ *   PRINCIPAL   -> HOD, DEPT_OFFICE, PROCTOR (any department)
+ *   HOD         -> DEPT_OFFICE, PROCTOR in their own department only
+ *   DEPT_OFFICE -> no access
+ *   PROCTOR     -> no access
  *
- * Passwords are never returned. Create/reset issue a one-time temp password
- * (shown once) and force a change on next login. Self password changes go
- * through {@code POST /api/auth/change-password}, not this controller.
+ * Passwords are never returned. Create/reset issue a one-time temp password, shown once, and force
+ * a change on next login. Self-service changes go through {@code POST /api/auth/change-password}.
  */
 @RestController
 @RequestMapping("/api/admin/users")
@@ -92,7 +90,7 @@ public class UserManagementController {
             }
             department = departmentRepository.findById(req.getDepartmentId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown department"));
-            // HOD may only create accounts within their own department.
+            // HOD may only create within their own department
             if (actor.getRole() == UserRole.HOD && !sameDept(actor, department.getId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only manage users in your own department");
             }
@@ -137,7 +135,7 @@ public class UserManagementController {
         if (target.getUsername().equals(actor.getUsername())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot delete your own account");
         }
-        // Never allow the system to be left with no administrator.
+        // never leave the system with no administrator
         if (target.getRole() == UserRole.ADMIN && userRepository.countByRole(UserRole.ADMIN) <= 1) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete the last administrator account");
         }
@@ -173,7 +171,7 @@ public class UserManagementController {
         if (!canManageRole(actor, target.getRole())) {
             return false;
         }
-        // HOD is additionally constrained to their own department.
+        // HOD is additionally constrained to their own department
         if (actor.getRole() == UserRole.HOD) {
             Long deptId = target.getDepartment() == null ? null : target.getDepartment().getId();
             return deptId != null && sameDept(actor, deptId);

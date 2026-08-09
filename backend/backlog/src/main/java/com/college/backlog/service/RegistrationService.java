@@ -26,10 +26,9 @@ import java.util.UUID;
 @Service
 public class RegistrationService {
 
-    /** Max simultaneous pending (SUBMITTED) registrations a student may hold per exam cycle.
-     *  At 1, the partial unique index uq_pending_reg_per_cycle (roll_no, exam_cycle_id) WHERE
-     *  status='SUBMITTED' enforces this at the DB level too — see
-     *  db/migrations/2026-07-04-registrations-one-pending.sql. */
+    /** Max pending (SUBMITTED) registrations per student per exam cycle. At 1 the partial unique
+     *  index uq_pending_reg_per_cycle (roll_no, exam_cycle_id) WHERE status='SUBMITTED' enforces
+     *  it at the DB level too. */
     private static final int MAX_PENDING_PER_CYCLE = 1;
 
     @Autowired
@@ -60,11 +59,9 @@ public class RegistrationService {
     private EntityManager entityManager;
 
     /**
-     * Status-bucketed counts for the admin dashboard cards: ONE {@code GROUP BY
-     * status} query over the filtered set instead of one full count query per
-     * status. {@code countDistinct} on the entity id keeps the numbers correct
-     * when the specification's subjects join fans out rows. Statuses with no
-     * matching rows are simply absent from the result.
+     * Status counts for the admin dashboard cards: one {@code GROUP BY status} over the filtered
+     * set, not one count query per status. {@code countDistinct} on the id keeps counts right when
+     * the spec's subjects join fans out rows. Statuses with no rows are absent from the map.
      */
     public java.util.Map<RegistrationStatus, Long> countGroupedByStatus(Specification<Registration> spec) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
@@ -85,31 +82,22 @@ public class RegistrationService {
     }
 
     /**
-     * Paginated admin list, mapped to DTOs INSIDE the transaction.
-     *
-     * <p>The mapping must live here, not in the controller: the paginated query
-     * deliberately does not fetch-join `subjects` (a collection fetch would force
-     * Hibernate to paginate in memory instead of issuing a real SQL LIMIT), so
-     * reading {@code reg.getSubjects()} is a lazy load. Doing that in the controller
-     * only worked because {@code spring.jpa.open-in-view} was left at its default;
-     * inside this transaction it is legal on its own terms. The per-row loads are
-     * still collapsed into one batch by {@code @BatchSize(30)} on the association.
-     *
-     * <p>{@code readOnly} additionally skips dirty-check and flush for every entity
-     * hydrated by the page — nothing here is ever mutated.
+     * Paginated admin list, mapped to DTOs INSIDE the transaction — required, not stylistic.
+     * The paginated query deliberately does not fetch-join {@code subjects} (a collection fetch
+     * makes Hibernate paginate in memory instead of emitting SQL LIMIT), so {@code getSubjects()}
+     * is a lazy load; mapping in the controller would only work with open-in-view, which is off.
+     * {@code @BatchSize(30)} collapses the per-row loads. {@code readOnly} skips dirty-check/flush.
      */
     @Transactional(readOnly = true)
     public Page<RegistrationSummaryResponse> listSummaries(Specification<Registration> spec, Pageable pageable) {
         return registrationRepository.findAll(spec, pageable).map(this::toSummary);
     }
 
-    /** Private on purpose: mapping a Registration touches lazy state, so it must not
-     *  be reachable from a controller (see {@link #listSummaries}). */
+    /** Private on purpose: touches lazy state, so it must not be reachable from a controller
+     *  (see {@link #listSummaries}). */
     private RegistrationSummaryResponse toSummary(Registration reg) {
-        // Held in locals because both are nullable Integer falling back to a primitive int:
-        // `Integer != null ? Integer : int` promotes to int (JLS 15.25), so the boxed branch
-        // is implicitly unboxed. Calling the getter twice leaves null analysis unable to carry
-        // the guard across the second call; a local makes the non-null provable.
+        // Locals, not repeated getter calls: `Integer != null ? Integer : int` unboxes the boxed
+        // branch (JLS 15.25), and null analysis can't carry the guard across a second getter call.
         Integer snapSemester = reg.getSnapSemester();
         Integer snapYearOfJoining = reg.getSnapYearOfJoining();
         return new RegistrationSummaryResponse(
@@ -127,34 +115,30 @@ public class RegistrationService {
             reg.getExamCycle() != null ? reg.getExamCycle().getName() : null);
     }
 
-    // One transaction for the registration insert AND its SUBMITTED audit event —
-    // an event-write failure rolls the registration back too, so history can never
-    // gain a row without its audit trail. The unique-index race backstop below
-    // still works: the catch rethrows immediately, and the transaction rolls back.
+    // One transaction for the insert AND its SUBMITTED audit event, so history can never gain a
+    // row without its audit trail. The unique-index backstop below still works — its catch
+    // rethrows immediately and the transaction rolls back.
     @Transactional
     public Registration register(String rollNo, List<Long> subjectIds) {
 
-        // an exam cycle must be open for registrations to be accepted
+        // registrations are only accepted while an exam cycle is open
         ExamCycle cycle = examCycleRepository.findByActiveTrue()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
                 "Registrations are currently closed. No active exam cycle."));
 
-        // year of joining and branch are encoded in the USN: 1MS<YY><BR><NNN>.
-        // The USN format is validated upstream, so the substrings are safe here.
+        // joining year and branch are encoded in the USN (1MS<YY><BR><NNN>), so validate it first
         if (!Usn.isValid(rollNo)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "USN must be in the format 1MS22CS001.");
         }
 
-        // the owner is an authenticated student; identity (name/email/phone) comes
-        // from the account, never from the request — so a USN cannot be impersonated
-        // or have its record overwritten by the submission.
+        // identity (name/email/phone) comes from the account, never the request — a USN cannot be
+        // impersonated or have its record overwritten by the submission
         Student student = studentRepository.findByRollNo(rollNo)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                 "Student account not found."));
 
-        // phone is set only from the dashboard; a missing phone blocks registration.
-        // Server-side guard — cannot be bypassed by a crafted request.
+        // phone is set only from the dashboard; server-side guard, not bypassable by a crafted request
         if (student.getPhone() == null || !student.getPhone().matches("^[0-9]{10}$")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Add your phone number in your profile before registering.");
@@ -167,8 +151,7 @@ public class RegistrationService {
                 "Unknown branch code '" + branchCode + "' in USN. Contact the department office."));
         String branch = department.getDeptName();
 
-        // semester-eligibility window is derived from the authoritative, admin-maintained
-        // current semester on the student record — never from the client request.
+        // eligibility window derives from the admin-maintained current semester, never the request
         java.util.Set<Integer> eligibleSemesters =
             eligibilityService.eligibleSemesters(student.getCurrentSemester(), student.getEntrySemester());
         if (eligibleSemesters.isEmpty()) {
@@ -184,25 +167,23 @@ public class RegistrationService {
                 "One or more selected subjects are invalid.");
         }
 
-        // one query for the whole progression (≤ a handful of rows per student)
-        // instead of one findByRollNoAndSemester per selected subject
+        // one query for the whole progression (a handful of rows) instead of one per selected subject
         java.util.Map<Integer, StudentSemesterTerm> termsBySemester =
             studentSemesterTermRepository.findByRollNo(rollNo).stream()
                 .collect(java.util.stream.Collectors.toMap(
                     StudentSemesterTerm::getSemester, java.util.function.Function.identity()));
 
         for (Subject subject : subjects) {
-            // backlog window: a subject's semester must be one the student may still
-            // register for, given their current semester (mirrors the UI constraint)
+            // backlog window: subject's semester must be one the student may still register for
+            // (mirrors the UI constraint)
             if (!eligibleSemesters.contains(subject.getSemester())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Subject '" + subject.getSubjectName() + "' is for semester "
                         + subject.getSemester() + ", which you are not eligible to register for.");
             }
-            // year-binding: the subject must be the offering from the academic year the
-            // student actually studied that semester. Fail closed if there is no
-            // progression record — mirrors the read path so a crafted/stale request
-            // cannot register a subject from a different year's offering.
+            // year-binding: subject must be the offering from the academic year the student
+            // actually studied that semester. Fail closed with no progression row — mirrors the
+            // read path, so a crafted/stale request can't register another year's offering.
             StudentSemesterTerm term = termsBySemester.get(subject.getSemester());
             if (term == null) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -231,8 +212,8 @@ public class RegistrationService {
             }
         }
 
-        // limit: at most MAX_PENDING_PER_CYCLE pending submission(s) per student per exam
-        // cycle. VERIFIED/REJECTED rows in the cycle don't count toward the limit.
+        // at most MAX_PENDING_PER_CYCLE pending rows per student per cycle;
+        // VERIFIED/REJECTED rows don't count
         long pendingCount = registrationRepository
                 .countByStudent_RollNoAndExamCycle_IdAndStatus(
                     rollNo, cycle.getId(), RegistrationStatus.SUBMITTED);
@@ -242,11 +223,9 @@ public class RegistrationService {
                     + "Wait for it to be verified or rejected before submitting another.");
         }
 
-        // the student row is immutable identity (set at import; phone via dashboard).
-        // branch/year are derived from the USN at read time, and the per-registration
-        // semester lives in the snapshot below — so registration writes nothing to it.
-
-        // create registration with an immutable snapshot of the account details
+        // Registration writes nothing back to the student row: it is immutable identity (set at
+        // import, phone via dashboard), branch/year derive from the USN, and the per-registration
+        // semester lives in the snapshot below.
         Registration reg = new Registration();
         reg.setRegId(UUID.randomUUID().toString());
         reg.setStudent(student);
@@ -258,14 +237,12 @@ public class RegistrationService {
         reg.setSnapEmail(student.getEmail());
         reg.setSnapPhone(student.getPhone());
         reg.setSnapBranch(branch);
-        // "current semester of the student" on the printed form — snapshot the
-        // authoritative, admin-maintained value from the account, never a client
-        // value. (The form is for a backlog of an earlier semester; the label still
-        // reflects where the student currently stands.)
+        // "CURRENT SEMESTER OF THE STUDENT" on the printed form — the admin-maintained account
+        // value, never a client one. (The backlog is for an earlier semester; the label still
+        // means where the student stands now.)
         reg.setSnapSemester(student.getCurrentSemester());
         reg.setSnapYearOfJoining(yearOfJoining);
-        // capture the academic-year offering when unambiguous (single-semester
-        // submission); null if the selection spans multiple years
+        // academic-year offering only when unambiguous; null if the selection spans years
         java.util.Set<Integer> distinctAcademicYears = subjects.stream()
             .map(Subject::getAcademicYearOffered)
             .collect(java.util.stream.Collectors.toSet());
@@ -274,12 +251,11 @@ public class RegistrationService {
 
         Registration saved;
         try {
-            // saveAndFlush so the partial-unique-index race backstop fires here, not later
+            // saveAndFlush so the index violation surfaces here, not at a later flush
             saved = registrationRepository.saveAndFlush(reg);
         } catch (DataIntegrityViolationException e) {
-            // race backstop — a concurrent submit that slipped past the count check above
-            // is caught here by the partial unique index uq_pending_reg_per_cycle
-            // (db/migrations/2026-07-04-registrations-one-pending.sql).
+            // race backstop: a concurrent submit that slipped past the count check above is
+            // caught by the partial unique index uq_pending_reg_per_cycle
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "You already have a pending registration for this exam cycle. "
                     + "Wait for it to be verified or rejected before submitting another.");
@@ -292,12 +268,10 @@ public class RegistrationService {
     }
 
     /**
-     * Action a pending registration: flip SUBMITTED -> VERIFIED/REJECTED and record
-     * the audit event in ONE transaction, so the status change can never commit
-     * without its event row. The registration is re-loaded and its state re-checked
-     * inside the transaction; a concurrent action is caught either by that check or
-     * by the {@code @Version} optimistic lock on the flush. Authorization (dept
-     * scoping, role checks) stays with the caller.
+     * Action a pending registration: status flip and audit event in ONE transaction, so a status
+     * change can never commit without its event row. State is re-checked inside the transaction;
+     * a concurrent action is caught by that check or by the {@code @Version} lock on flush.
+     * Authorization (dept scoping, role checks) stays with the caller.
      */
     @Transactional
     public Registration applyVerification(String regId, RegistrationStatus action,
@@ -308,10 +282,9 @@ public class RegistrationService {
         Registration reg = registrationRepository.findByRegId(regId)
             .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
-        // state machine (one-way tightening — REJECTED is terminal):
+        // one-way state machine; REJECTED is terminal (no un-reject, no re-verify):
         //   SUBMITTED -> VERIFIED | REJECTED
-        //   VERIFIED  -> REJECTED           (override a completed verification)
-        //   REJECTED  -> (nothing)          no un-reject, no re-verify
+        //   VERIFIED  -> REJECTED   (override a completed verification)
         RegistrationStatus current = reg.getStatus();
         boolean allowed = (action == RegistrationStatus.VERIFIED && current == RegistrationStatus.SUBMITTED)
             || (action == RegistrationStatus.REJECTED
@@ -326,7 +299,7 @@ public class RegistrationService {
             reg.setVerifiedBy(actor);
         }
         try {
-            // @Version on Registration makes a concurrent action fail here instead of silently overwriting
+            // @Version makes a concurrent action fail here instead of silently overwriting
             registrationRepository.saveAndFlush(reg);
         } catch (OptimisticLockingFailureException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

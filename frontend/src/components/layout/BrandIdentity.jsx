@@ -1,8 +1,7 @@
 import logo from "../../assets/MSRIT.png";
 
-// `onSurface`: set when the brand sits on the page/card background (login and
-// change-password cards) instead of a navy header bar — the wordmark then uses
-// the theme text color so it stays legible in light mode.
+// `onSurface`: set when the brand sits on the page/card background (login, change-password) rather
+// than a navy header bar — the wordmark then uses the theme text color to stay legible in light.
 export default function BrandIdentity({ compact = false, wordmarkClassName = "", onSurface = false }) {
   return (
     <div className="flex items-center gap-3">

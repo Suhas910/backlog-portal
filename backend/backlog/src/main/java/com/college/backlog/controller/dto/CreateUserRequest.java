@@ -9,7 +9,7 @@ public class CreateUserRequest {
     @NotBlank(message = "Role cannot be empty")
     private String role;
 
-    // Required for HOD / DEPT_OFFICE accounts; ignored for ADMIN / PRINCIPAL.
+    // Required for HOD / DEPT_OFFICE / PROCTOR accounts; ignored for ADMIN / PRINCIPAL.
     private Long departmentId;
 
     public String getUsername() { return username; }

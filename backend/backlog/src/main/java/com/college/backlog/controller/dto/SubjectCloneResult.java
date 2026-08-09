@@ -2,8 +2,8 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// Outcome of an apply: per-row CREATED / SKIPPED_EXISTS / ERROR plus tallies,
-// mirroring the shape of the progression BatchResult.
+// Outcome of an apply: per-row CREATED / SKIPPED_EXISTS / ERROR plus tallies, mirroring the
+// progression BatchResult shape.
 public class SubjectCloneResult {
     private int created;
     private int skipped;

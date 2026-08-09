@@ -3,9 +3,9 @@ package com.college.backlog.controller.dto;
 import java.util.List;
 
 /**
- * Bulk student import. Rows that omit currentSemester / entrySemester fall back to
- * the batch-level defaults below (entrySemester default is 1 = normal intake).
- * dryRun validates without writing. Mirrors the progression CSV-import flow.
+ * Bulk student import, mirroring the progression CSV-import flow. Rows omitting currentSemester /
+ * entrySemester fall back to the batch defaults below (entrySemester defaults to 1 = normal
+ * intake). dryRun validates without writing.
  */
 public class StudentImportRequest {
     private List<StudentImportRow> rows;

@@ -16,38 +16,32 @@ import java.util.Optional;
 
 @Repository
 public interface RegistrationRepository extends JpaRepository<Registration, Long>, JpaSpecificationExecutor<Registration> {
-    // Fetch-joins the relations every caller touches: the dept/proctor scope checks
-    // walk `subjects` (and each subject's eligible departments) before the response
-    // is built, and the PDF path needs the same. Safe to join the collection here —
-    // this is a single-row lookup, so there is no pagination to push in memory.
+    // Fetch-joins what every caller touches: the dept/proctor scope checks walk `subjects` (and
+    // each subject's eligible departments) before the response is built, and the PDF path needs
+    // the same. Joining the collection is safe here — single-row lookup, no pagination to break.
     @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
     Optional<Registration> findByRegId(String regId);
 
     @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
     List<Registration> findByStudent_RollNo(String rollNo);
 
-    // Pending-limit check: a single indexed COUNT (served exactly by the partial
-    // unique index uq_pending_reg_per_cycle when status=SUBMITTED) instead of
-    // hydrating full rows just to count them in Java.
+    // Pending-limit check: one indexed COUNT (served exactly by the partial unique index
+    // uq_pending_reg_per_cycle when status=SUBMITTED), not rows hydrated to count in Java.
     long countByStudent_RollNoAndExamCycle_IdAndStatus(String rollNo, Long examCycleId, RegistrationStatus status);
 
-    // Delete guard: is any registration referencing this subject? Blocks deletion
-    // of a subject that students have already registered for.
+    // Delete guard: blocks deleting a subject students have already registered for.
     boolean existsBySubjects_Id(Long subjectId);
 
-    // Delete guard: has this student ever registered? Blocks deletion of a student
-    // referenced by immutable registration history.
+    // Delete guard: blocks deleting a student referenced by immutable registration history.
     boolean existsByStudent_RollNo(String rollNo);
 
-    // Fetch-joins the relations the PDF export touches per row; safe here because
-    // this overload is unpaginated (export streams every matching row).
+    // Fetch-joins what the PDF export touches per row; safe because this overload is unpaginated.
     @Override
     @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
     List<Registration> findAll(Specification<Registration> spec, Sort sort);
 
-    // Paginated admin list. Only the ManyToOne relations are fetch-joined —
-    // fetching the `subjects` collection here would force Hibernate to paginate
-    // in memory. `subjects` is loaded per row via @BatchSize during mapping.
+    // Paginated admin list: ManyToOne relations only — fetching the `subjects` collection here
+    // would make Hibernate paginate in memory. `subjects` loads per row via @BatchSize on mapping.
     @Override
     @EntityGraph(attributePaths = {"student", "examCycle"})
     Page<Registration> findAll(Specification<Registration> spec, Pageable pageable);

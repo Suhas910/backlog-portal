@@ -1,7 +1,6 @@
-// Role/department-scoped access on the admin dashboard. The server enforces the
-// actual data scoping (these stubs can't prove that); what these tests lock down
-// is the frontend-observable side of scoping — the department badge, the default
-// filter for dept roles, role-gated navigation, and PRINCIPAL being read-only.
+// Role/department-scoped access on the admin dashboard. The server enforces the real data
+// scoping, which stubs can't prove; these lock down the frontend-observable side — department
+// badge, the default filter for dept roles, role-gated navigation, PRINCIPAL read-only.
 describe("Admin dashboard — role & department scoped access", () => {
   const seedSession = (win, role, department) => {
     win.sessionStorage.setItem("adminRole", role);
@@ -11,8 +10,8 @@ describe("Admin dashboard — role & department scoped access", () => {
   };
 
   const stubDashboard = (registrations) => {
-    // paginated list: honor the server-side status filter (dept roles default to
-    // the SUBMITTED tab) and return the Spring Page envelope
+    // paginated: honor the server-side status filter (dept roles default to SUBMITTED) and
+    // return the Spring Page envelope
     cy.intercept("GET", "/api/admin/registrations*", (req) => {
       const status = req.query.status;
       const content = status
@@ -74,10 +73,8 @@ describe("Admin dashboard — role & department scoped access", () => {
     cy.contains("td", "Pending Pam").should("exist");
     cy.contains("td", "Verified Vic").should("not.exist");
 
-    // HOD can manage users, students (progression is now a tab under Manage
-    // Students), and the curriculum for their own department (add / clone / edit
-    // subjects now live as tabs under the single Manage Subjects entry), but not
-    // departments
+    // HOD manages users, students (progression is a tab under Manage Students), and their own
+    // department's curriculum (add / clone / edit are tabs under Manage Subjects) — not departments
     cy.contains("a", "Users").should("exist");
     cy.contains("a", "Students").should("exist");
     cy.contains("a", "Progression").should("not.exist");

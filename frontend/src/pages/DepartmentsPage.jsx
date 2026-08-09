@@ -64,10 +64,9 @@ function DepartmentsPage() {
       navigate("/admin/login");
       return;
     }
-    // NOTE: eslint react-hooks/set-state-in-effect flags this (loadDepartments
-    // setStates internally). Intended and correct — a fetch-on-mount into an
-    // external system; state lands in the async .then/.finally. Left as a knowing
-    // lint error (not disabled).
+    // NOTE: react-hooks/set-state-in-effect flags this (loadDepartments setStates internally).
+    // Intended and correct — fetch-on-mount into an external system, state lands in the async
+    // .then/.finally. A knowing lint error, deliberately not disabled.
     loadDepartments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -121,8 +120,8 @@ function DepartmentsPage() {
       setError(`Code for ${dept.deptName} must be exactly 2 letters.`);
       return;
     }
-    // Email is optional; if provided, sanity-check it client-side (the server also
-    // enforces @Email). A blank field clears the address (sent as null).
+    // Email is optional and sanity-checked client-side when given (the server also enforces
+    // @Email). A blank field clears the address, sent as null.
     if (nextEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
       setError(`Contact email for ${dept.deptName} must be a valid address.`);
       return;
@@ -135,8 +134,8 @@ function DepartmentsPage() {
           deptName: nextName,
           code: nextCode.toUpperCase(),
           contactEmail: nextEmail || null,
-          // version the row was loaded at — lets the server reject a stale
-          // overwrite if another admin saved this department in the meantime
+          // version the row was loaded at, so the server can reject a stale overwrite if
+          // another admin saved this department meanwhile
           version: dept.version,
         },
         { headers: getAdminHeaders() },
@@ -144,8 +143,8 @@ function DepartmentsPage() {
       setSuccess(`Department "${dept.deptName}" saved.`);
       loadDepartments();
     } catch (err) {
-      // 409 = someone edited this department underneath us. Resync the list so
-      // the admin sees the current value (and version) before retrying.
+      // 409 = edited underneath us; resync so the admin sees the current value and version
+      // before retrying
       if (err.response?.status === 409) {
         setError(
           err.response?.data?.message ||
@@ -170,8 +169,8 @@ function DepartmentsPage() {
       setConfirmDeleteId(null);
       loadDepartments();
     } catch (err) {
-      // 409 = still referenced (subjects / users / students). Surface the server's
-      // specific reason so the admin knows what to clear first.
+      // 409 = still referenced by subjects / users / students; surface the server's specific
+      // reason so the admin knows what to clear first
       setError(err.response?.data?.message || "Failed to delete department.");
     } finally {
       setDeletingId(null);

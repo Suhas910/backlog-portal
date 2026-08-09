@@ -1,8 +1,7 @@
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
 
-// White-on-navy icon button sized to sit beside the pill buttons used in the
-// sticky nav and the dashboard header bars.
+// White-on-navy icon button, sized to sit beside the sticky-nav and dashboard-header pill buttons.
 export default function ThemeToggle({ className = "" }) {
   const { isDark, toggleTheme } = useTheme();
 

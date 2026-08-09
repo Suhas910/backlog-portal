@@ -1,6 +1,5 @@
-// Coverage for the Manage Subjects page: load the catalog, edit a subject (the
-// academic year is locked, the code prefix with it), and delete — blocked when the
-// subject is referenced by registrations, allowed otherwise.
+// The Manage Subjects page: load the catalog, edit a subject (academic year locked, and the code
+// prefix with it), and delete — blocked when referenced by registrations, allowed otherwise.
 describe("Manage Subjects page", () => {
   const subject = {
     id: 10,

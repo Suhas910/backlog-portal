@@ -17,8 +17,8 @@ public class DepartmentRequest {
     @Email(message = "Contact email must be a valid address")
     private String contactEmail;
 
-    // Optimistic-lock version the client last saw; sent on update so the server
-    // can reject a stale overwrite (409). Null on create — ignored there.
+    // Optimistic-lock version the client last saw, sent on update so the server can reject a
+    // stale overwrite (409). Null on create, where it is ignored.
     private Long version;
 
     public DepartmentRequest() {}

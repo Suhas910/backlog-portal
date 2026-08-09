@@ -28,9 +28,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // The JWT now travels in an httpOnly cookie (not the Authorization header),
-        // so it can't be read/stolen by page scripts. Pick the cookie that matches
-        // the request's audience (student endpoints vs admin) so an admin+student
+        // The JWT travels in an httpOnly cookie, not the Authorization header, so page scripts
+        // can't read it. Pick the cookie matching the request's audience (student vs admin) so a
         // dual session in one browser resolves to the right identity.
         final String jwt = sessionCookieService.read(
                 request, sessionCookieService.cookieNameForPath(request.getRequestURI()));
@@ -39,12 +38,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Parsing verifies the signature and can throw on an expired/tampered/malformed
-        // token (ExpiredJwtException et al). This runs in a servlet filter, so such an
-        // exception would escape the DispatcherServlet and surface as a 500 rather than
-        // being handled as "unauthenticated" — stranding any client whose token simply
-        // expired. Treat any parse failure as anonymous and continue the chain; the
-        // downstream authorization rules then produce a clean 401/403.
+        // Parsing verifies the signature and throws on an expired/tampered/malformed token. In a
+        // servlet filter that escapes the DispatcherServlet as a 500 instead of "unauthenticated",
+        // stranding clients whose token merely expired — so treat any parse failure as anonymous
+        // and continue the chain, letting the authorization rules produce a clean 401/403.
         String username;
         try {
             username = jwtService.getUsernameFromToken(jwt);

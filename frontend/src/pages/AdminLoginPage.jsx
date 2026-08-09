@@ -32,11 +32,9 @@ function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Already signed in (e.g. wandered to the homepage and came back via "Admin
-  // Access") — skip the credential form and return to the dashboard. The marker
-  // is just a presence hint: if the cookie has actually expired, the dashboard's
-  // 401 interceptor bounces back here with ?expired=1, which clears the marker
-  // and suppresses this redirect.
+  // Already signed in (e.g. back via "Admin Access") — skip the form and return to the dashboard.
+  // The marker is only a presence hint: if the cookie really expired, the dashboard's 401
+  // interceptor bounces back with ?expired=1, which clears the marker and suppresses this.
   useEffect(() => {
     if (!sessionExpired && getAdminToken()) {
       navigate("/admin", { replace: true });
@@ -77,8 +75,8 @@ function AdminLoginPage() {
 
       const validRoles = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"];
       if (validRoles.includes(res.data.role)) {
-        // the JWT is now in an httpOnly cookie set by the server; store only a
-        // presence marker + UI state + the refresh schedule (expiresIn)
+        // the server set the JWT in an httpOnly cookie; store only a presence marker, UI state,
+        // and the refresh schedule (expiresIn)
         sessionStorage.setItem("adminRole", res.data.role);
         sessionStorage.setItem("adminToken", "cookie");
         sessionStorage.setItem("adminUsername", username);
@@ -89,8 +87,7 @@ function AdminLoginPage() {
           sessionStorage.removeItem("adminDepartment");
         }
 
-        // Accounts on a temp password (newly created, reset, or a seeded
-        // default) must set their own password before doing anything else.
+        // accounts on a temp password (new, reset, or seeded) must set their own first
         if (res.data.mustChangePassword === "true") {
           navigate("/admin/change-password?forced=1");
           return;
@@ -103,8 +100,8 @@ function AdminLoginPage() {
           navigate("/admin");
         }
       } else {
-        // login succeeded server-side (cookie was set) but the role is unexpected —
-        // clear the cookie too, not just local state
+        // login succeeded server-side (cookie set) but the role is unexpected — clear the
+        // cookie too, not just local state
         logoutAdmin();
         setError("Unauthorized role.");
       }

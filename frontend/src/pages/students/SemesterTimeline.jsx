@@ -1,20 +1,18 @@
 import { useState } from "react";
 import { formatAcademicYear } from "../../lib/academicYear";
 
-// Shared editable "which academic year did the student study each semester" table,
-// used by both the Progression tab and the Manage-students tab so the view + edit
-// stay identical in both places. Presentational: the parent owns loading the student
-// (name/currentSemester/entrySemester/terms) and the save callback, which PUTs the
-// per-semester override. See docs/adr/backlog-progression.md.
+// Shared editable "which academic year did the student study each semester" table, used by the
+// Progression and Manage-students tabs so view + edit stay identical in both. Presentational: the
+// parent loads the student (name/currentSemester/entrySemester/terms) and owns the save callback,
+// which PUTs the per-semester override. See docs/adr/backlog-progression.md.
 
 const inputClass =
   "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
 
-// One row per semester from the student's entry semester through semester 8 (all
-// editable). A recorded year is prefilled; semesters with no row come through as
-// academicYear === null (blank + editable, shown as a dash). Rows past
-// currentSemester are flagged `future` so they render muted — the student hasn't
-// reached them yet, but the year is still settable (e.g. to correct a year-back).
+// One row per semester, entry through 8, all editable. A recorded year is prefilled; semesters
+// with no row arrive as academicYear === null (blank, editable, shown as a dash). Rows past
+// currentSemester are flagged `future` and render muted — not yet reached, but still settable,
+// e.g. to correct a year-back.
 function buildTimelineRows(student) {
   const floor = Math.max(1, student.entrySemester || 1);
   const bySem = new Map((student.terms || []).map((t) => [t.semester, t.academicYear]));
@@ -29,8 +27,8 @@ function buildTimelineRows(student) {
   return rows;
 }
 
-// The full timeline table. `onSaveYear(semester, yearString)` is called when a row's
-// Save is clicked; the parent parses + persists and feeds back a refreshed student.
+// The full timeline table. `onSaveYear(semester, yearString)` fires on a row's Save; the parent
+// parses, persists, and feeds back a refreshed student.
 export function SemesterTimeline({ student, onSaveYear, busy }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-[var(--stroke)]">

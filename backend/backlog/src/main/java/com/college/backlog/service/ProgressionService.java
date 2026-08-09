@@ -13,12 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Year;
 
 /**
- * Shared write path for student progression — the single place that records
- * "student X studied semester N in academic year Y". Both the Promote Batch
- * flow and the CSV import funnel through {@link #recordProgression} so the
- * write-once + current-semester rules can never diverge between them.
- *
- * See docs/adr/backlog-progression.md.
+ * Single write path for "student X studied semester N in academic year Y". Promote Batch and CSV
+ * import both funnel through {@link #recordProgression}, so the write-once and current-semester
+ * rules can't diverge between them. See docs/adr/backlog-progression.md.
  */
 @Service
 public class ProgressionService {
@@ -35,17 +32,13 @@ public class ProgressionService {
     public enum Outcome { CREATED, SKIPPED_EXISTS }
 
     /**
-     * Stamp the academic year a student studied a semester, write-once.
+     * Stamp the academic year a student studied a semester, write-once: inserts a
+     * (rollNo, semester) row only if absent, so a retake never overwrites the original
+     * "first studied" year, and advances {@code currentSemester} if {@code semester} is higher
+     * (current = highest semester entered).
      *
-     * <ul>
-     *   <li>Inserts a (rollNo, semester) row only if absent — a later retake never
-     *       overwrites the original "first studied" year.</li>
-     *   <li>Advances {@code currentSemester} to {@code semester} if it is higher
-     *       (current semester = highest semester the student has entered).</li>
-     * </ul>
-     *
-     * @throws IllegalArgumentException on invalid input (caller maps to a per-row
-     *         error in bulk flows, or a 400 in single-row flows)
+     * @throws IllegalArgumentException on invalid input — callers map it to a per-row error in
+     *         bulk flows, or a 400 in single-row flows
      */
     @Transactional
     public Outcome recordProgression(String rollNo, int semester, int academicYear) {
@@ -67,10 +60,8 @@ public class ProgressionService {
         return outcome;
     }
 
-    /**
-     * Correct an existing (or missing) progression row — unlike recordProgression
-     * this OVERWRITES the academic year. Audited. Does not touch currentSemester.
-     */
+    /** Correct an existing (or missing) row — unlike recordProgression this OVERWRITES the
+     *  academic year. Audited. Does not touch currentSemester. */
     @Transactional
     public void overrideProgression(String rollNo, int semester, int academicYear, String actor) {
         validate(rollNo, semester, academicYear);
@@ -84,19 +75,16 @@ public class ProgressionService {
     }
 
     /**
-     * Linear-default seed for one student: assume no detention and stamp every
-     * semester from their entry semester through the final programme semester (8)
-     * with the year derived from the admission year, so sem k -> admissionYear +
-     * floor((k - entrySem)/2). For a regular student (entrySem 1) this is
-     * admissionYear + floor((k-1)/2) — e.g. a 2024 intake gets sems 1-2 -> 2024,
-     * 3-4 -> 2025, 5-6 -> 2026, 7-8 -> 2027. A lateral entrant anchors at their entry
-     * year and the semesters below entry are never invented (they never sat them).
-     * Seeds the whole plan up front (not just up to currentSemester) so the timeline
-     * is complete the moment a student is created; currentSemester is left untouched.
-     * Write-once, so any hand-corrected rows (e.g. after a year-back) are preserved.
-     * Sems 9-10 are intentionally left empty (reserved for future extensibility).
-     * (Assumes entry at the start of an academic year, i.e. an odd semester — the
-     * realistic lateral case; anything else is a hand-correct.)
+     * Linear-default seed for one student: assume no detention and stamp every semester from
+     * entry through 8 as {@code sem k -> admissionYear + floor((k - entrySem)/2)} — e.g. a 2024
+     * intake with entry 1 gets 1-2:2024, 3-4:2025, 5-6:2026, 7-8:2027. A lateral entrant anchors
+     * at their entry year; pre-entry semesters are never invented (they never sat them).
+     *
+     * <p>Seeds the whole plan up front, not just to currentSemester, so the timeline is complete
+     * the moment a student is created; currentSemester is untouched. Write-once, so hand-corrected
+     * rows (e.g. after a year-back) survive. Sems 9-10 left empty, reserved for extensibility.
+     * Assumes entry at the start of an academic year (odd semester) — the realistic lateral case;
+     * anything else is a hand-correct.
      *
      * @return number of rows created
      */
@@ -111,8 +99,8 @@ public class ProgressionService {
             throw new IllegalArgumentException("Cannot derive admission year from USN: " + rollNo);
         }
         int entry = Math.max(1, student.getEntrySemester());
-        // one query for the student's existing rows instead of an exists-probe per
-        // semester (each probe is a DB round trip; bulk backfill multiplies them)
+        // one query for existing rows, not an exists-probe round trip per semester
+        // (bulk backfill multiplies them)
         java.util.Set<Integer> recorded = termRepository.findByRollNo(rollNo).stream()
                 .map(StudentSemesterTerm::getSemester)
                 .collect(java.util.stream.Collectors.toSet());
@@ -128,15 +116,13 @@ public class ProgressionService {
     }
 
     /**
-     * Range-check a semester + academic year. Shared by the write path and the CSV
-     * import dry-run preview so the preview flags the same bad rows the apply would
-     * reject (no WOULD_CREATE that then errors on apply).
+     * Range-check a semester + academic year. Shared by the write path and the CSV import dry-run,
+     * so the preview flags the rows apply would reject (no WOULD_CREATE that then errors).
      */
     public void validateSemesterAndYear(int semester, int academicYear) {
-        // Term rows are permitted through semester 10: a student only *studies* to
-        // sem 8, but the schema keeps 9-10 available for future extensibility, so a
-        // recorded term for those is not rejected here. Eligibility/current-semester
-        // are separately capped at 8 (EligibilityService, validateSemesters).
+        // Term rows go to 10: a student only *studies* to 8, but the schema reserves 9-10 for
+        // extensibility, so a term recorded there isn't rejected here. Eligibility and
+        // current-semester are capped at 8 separately (EligibilityService, validateSemesters).
         if (semester < 1 || semester > 10) {
             throw new IllegalArgumentException("Semester must be between 1 and 10.");
         }

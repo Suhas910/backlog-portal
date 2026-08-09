@@ -1,7 +1,6 @@
-// Coverage for the Clone Subjects tab (Manage Subjects → ?tab=clone): preview
-// generates the bumped draft, the grid is editable / rows removable, and apply
-// posts the approved rows. Years are entered in span format and sent as the
-// start-year int; WOULD_SKIP rows (already exist) are excluded from the apply.
+// The Clone Subjects tab (Manage Subjects ?tab=clone): preview generates the bumped draft, the
+// grid is editable with removable rows, and apply posts the approved ones. Years are entered in
+// span format and sent as start-year ints; WOULD_SKIP rows (already existing) are excluded.
 describe("Clone Subjects tab", () => {
   const seed = (win) => {
     win.sessionStorage.setItem("adminRole", "ADMIN");
@@ -62,7 +61,7 @@ describe("Clone Subjects tab", () => {
     // one creatable + one already-existing; only the creatable one is applied
     cy.contains("Create 1 subject(s)").should("be.visible");
 
-    // edit the creatable row's course code suffix (prefix "25" is locked to the year)
+    // edit the creatable row's code suffix — prefix "25" is locked to the year
     cy.get('[data-cy="clone-row-code-4"]').first().clear().type("CSL99");
 
     cy.get('[data-cy="clone-apply"]').click();

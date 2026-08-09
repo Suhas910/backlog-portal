@@ -14,8 +14,8 @@ public interface ExamCycleRepository extends JpaRepository<ExamCycle, Long> {
     Optional<ExamCycle> findByActiveTrue();
     List<ExamCycle> findAllByOrderByCreatedAtDesc();
 
-    // Single bulk UPDATE so closing the open cycle can't lose a write to a
-    // concurrent activation (no read-modify-write over the whole table).
+    // Single bulk UPDATE, so closing the open cycle can't lose a write to a concurrent
+    // activation — no read-modify-write over the table.
     @Modifying
     @Query("UPDATE ExamCycle e SET e.active = false WHERE e.active = true")
     int deactivateAll();

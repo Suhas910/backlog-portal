@@ -10,21 +10,20 @@ import java.util.List;
 @Repository
 public interface SubjectRepository extends JpaRepository<Subject, Long>, JpaSpecificationExecutor<Subject> {
 
-    // Phase 2: subjects are resolved by the academic year a student actually
-    // studied a semester (from their progression), not a client-supplied year.
+    // Subjects resolve by the academic year the student actually studied the semester (from
+    // their progression), never a client-supplied year.
     List<Subject> findByAcademicYearOfferedAndSemester(int academicYearOffered, int semester);
 
-    // Clone source: a department's offerings for a given academic year, optionally
-    // narrowed to specific semesters. Ordered for a stable preview grid.
+    // Clone source: a department's offerings for one academic year, optionally narrowed to
+    // specific semesters. Ordered for a stable preview grid.
     List<Subject> findByDepartment_IdAndAcademicYearOfferedAndSemesterInOrderBySemesterAscSubjectNameAsc(
         Long deptId, int academicYearOffered, Collection<Integer> semesters);
 
-    // Skip-existing guard for cloning (backed by UNIQUE(course_code, academic_year_offered)).
+    // Skip-existing guard for cloning, backed by UNIQUE(course_code, academic_year_offered).
     boolean existsByCourseCodeAndAcademicYearOffered(String courseCode, int academicYearOffered);
 
-    // Department-delete guards: block removing a department still referenced by any
-    // subject, either as the owning department (dept_id) or in the eligibility join
-    // table (subject_eligible_departments) — otherwise the FK would break.
+    // Department-delete guards: block removing a department any subject still references, as
+    // owner (dept_id) or via subject_eligible_departments — the FK would break otherwise.
     boolean existsByDepartment_Id(Long departmentId);
     boolean existsByEligibleDepartments_Id(Long departmentId);
 }

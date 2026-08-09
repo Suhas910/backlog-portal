@@ -71,24 +71,23 @@ public class StudentController {
         return toProfile(currentStudent(authentication));
     }
 
-    // Subjects a student may register for a given backlog semester. The academic
-    // year is NOT supplied by the client: it is resolved from the student's
-    // progression record (the year they first studied that semester), so a
-    // retaken backlog always shows the offering from that original year.
+    // Subjects registerable for a backlog semester. The academic year is NOT client-supplied —
+    // it comes from the progression record (the year they first studied that semester), so a
+    // retake always shows that original year's offering.
     @GetMapping("/subjects")
     public StudentSubjectsResponse subjectsForSemester(@RequestParam int semester,
                                                        Authentication authentication) {
         Student student = currentStudent(authentication);
 
-        // semester must be in the student's eligibility window (defence in depth —
-        // the UI already constrains the dropdown to these)
+        // semester must be in the eligibility window (defence in depth — the UI already
+        // constrains the dropdown)
         if (!eligibilityService.isEligible(student.getCurrentSemester(), student.getEntrySemester(), semester)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "You are not eligible to register backlogs for semester " + semester + ".");
         }
 
-        // fail closed: without a progression record we cannot know which year's
-        // offering applies, so we refuse rather than guess.
+        // fail closed: with no progression record the year's offering is unknown, so refuse
+        // rather than guess
         StudentSemesterTerm term = studentSemesterTermRepository
             .findByRollNoAndSemester(student.getRollNo(), semester)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
@@ -105,11 +104,9 @@ public class StudentController {
         return new StudentSubjectsResponse(semester, academicYear, subjects);
     }
 
-    // A regular subject belongs to the student's own department; an elective is
-    // available if the student's department is in its eligible list. Matching is
-    // on the immutable 2-letter branch code (from the USN / dept_code), never the
-    // human-readable department name — so a department can be renamed without
-    // breaking eligibility.
+    // A regular subject belongs to the student's own department; an elective needs that
+    // department in its eligible list. Matched on the immutable 2-letter branch code (USN /
+    // dept_code), never the display name, so a rename can't break eligibility.
     private boolean branchMatches(Subject subject, String branchCode) {
         if (branchCode == null) {
             return false;
@@ -131,9 +128,8 @@ public class StudentController {
         return toProfile(s);
     }
 
-    // Branch is derived from the USN's 2-letter code (single source of truth),
-    // not read from the stored student row. currentSemester stays as stored
-    // master data and is no longer written during registration.
+    // Branch derives from the USN's 2-letter code (single source of truth), not the stored
+    // student row. currentSemester stays master data and is never written during registration.
     private StudentProfileResponse toProfile(Student s) {
         return new StudentProfileResponse(
             s.getRollNo(), s.getName(), s.getEmail(),
@@ -177,8 +173,8 @@ public class StudentController {
         Registration reg = registrationRepository.findByRegId(regId)
             .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
-        // ownership check: a student may only download their own form.
-        // 404 (not 403) so a probing student cannot confirm that a regId exists.
+        // ownership: a student may only download their own form. 404 not 403, so probing can't
+        // confirm a regId exists.
         if (reg.getStudent() == null
                 || !authentication.getName().equals(reg.getStudent().getRollNo())) {
             throw new ResourceNotFoundException("Registration not found with ID: " + regId);

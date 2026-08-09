@@ -30,15 +30,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Student progression maintenance. Both bulk flows (Promote Batch, CSV import)
- * and single-row corrections live here; all write through {@link ProgressionService}.
+ * Student progression maintenance — bulk flows (promote, CSV import, backfill) and single-row
+ * corrections; all write through {@link ProgressionService}.
  *
- * Scope: ADMIN / PRINCIPAL act on any department; HOD / DEPT_OFFICE are restricted
- * to students of their own department (matched by the USN branch code). PROCTOR
- * may use only the per-student endpoints (view, per-semester override, current-
- * semester correction) and only on students assigned to them; the bulk flows
- * (gaps sweep, promote, CSV import, backfill) are refused for proctors. Enforced
- * here on the server — the UI only mirrors it.
+ * Scope, enforced here on the server (the UI only mirrors it): ADMIN/PRINCIPAL act on any
+ * department; HOD/DEPT_OFFICE are pinned to their own (matched by USN branch code); PROCTOR gets
+ * only the per-student endpoints (view, per-semester override, current-semester) and only for
+ * assigned students — every bulk flow is refused.
  */
 @RestController
 @RequestMapping("/api/admin/progression")
@@ -51,11 +49,9 @@ public class ProgressionController {
     private static final String BULK_REFUSED_FOR_PROCTORS =
         "Bulk progression tools are not available to proctors.";
 
-    // Bulk operations must name an explicit cohort — one department + one admission
-    // year (dept-scoped roles get the department implicitly) — or list specific
-    // USNs. Without this, an unfiltered request degenerates to the whole-roster
-    // pattern ("1MS____%") and walks every student. Applies to the dry-run too:
-    // the preview is the expensive pass, and preview/apply must agree (parity).
+    // Bulk ops must name an explicit cohort (dept + admission year, or a USN list); otherwise the
+    // request degenerates to the whole-roster pattern "1MS____%". Enforced on the dry-run too —
+    // the preview is the expensive pass, and preview/apply must agree.
     private static final int MAX_EXPLICIT_ROLLNOS = 500;
 
     @Autowired private ProgressionService progressionService;
@@ -72,7 +68,7 @@ public class ProgressionController {
     @GetMapping("/{rollNo}")
     public StudentProgressionResponse view(@PathVariable String rollNo, Authentication auth) {
         User actor = requireActor(auth);
-        String roll = studentService.normalizeUsn(rollNo); // uppercase, so a lowercase entry still resolves
+        String roll = studentService.normalizeUsn(rollNo); // uppercase, so lowercase entry resolves
         assertInScope(actor, roll);
         proctorScope.assertSupervises(actor, roll);
         Student student = studentRepository.findByRollNo(roll)
@@ -83,11 +79,9 @@ public class ProgressionController {
     // ---- progression gaps ----
 
     /**
-     * Students missing a term row for one or more semesters in their eligibility
-     * window — i.e. whose academic-year timeline isn't fully set (typically newly
-     * added students). Dept-scoped like the rest of this controller. The eligibility
-     * window already respects entrySemester, so a lateral entrant's pre-entry
-     * semesters are not counted as gaps.
+     * Students missing a term row for any semester in their eligibility window (an incomplete
+     * academic-year timeline). Dept-scoped like the rest of this controller. The window already
+     * respects entrySemester, so a lateral entrant's pre-entry semesters aren't counted as gaps.
      */
     @GetMapping("/gaps")
     public List<StudentGapResponse> gaps(@RequestParam(required = false) Long deptId,
@@ -95,8 +89,8 @@ public class ProgressionController {
                                          Authentication auth) {
         User actor = requireActor(auth);
         proctorScope.rejectProctor(actor, BULK_REFUSED_FOR_PROCTORS);
-        // at least a department, so the sweep (and its unbounded response) stays
-        // one department wide; the admission year remains an optional narrower
+        // at least a department, so the sweep and its unbounded response stay one dept wide;
+        // admission year stays an optional narrowing
         requireDeptScope(actor, deptId);
         List<Student> cohort = resolveCohort(actor, deptId, admissionYear, null);
         Map<String, Set<Integer>> termsByRoll = termsByRoll(cohort);
@@ -129,8 +123,7 @@ public class ProgressionController {
         requireBulkScope(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         Set<String> excluded = req.getExcludeRollNos() == null ? Set.of() : new java.util.HashSet<>(req.getExcludeRollNos());
         List<Student> cohort = resolveCohort(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
-        // dry-run: one batched term lookup for the whole cohort instead of an
-        // exists-probe per student (each probe is a round trip to the DB)
+        // dry-run: one batched term lookup for the cohort, not an exists-probe round trip per student
         Map<String, Set<Integer>> recordedByRoll = req.isDryRun() ? termsByRoll(cohort) : Map.of();
 
         List<ProgressionRowResult> results = new ArrayList<>();
@@ -150,9 +143,8 @@ public class ProgressionController {
             }
             try {
                 if (req.isDryRun()) {
-                    // validate the academic year too, so the preview flags the same
-                    // bad rows the apply (recordProgression) would reject — no
-                    // WOULD_CREATE that then errors on apply (parity with the import path)
+                    // validate the year too, so the preview flags the rows recordProgression would
+                    // reject — no WOULD_CREATE that then errors on apply (parity with import)
                     progressionService.validateSemesterAndYear(req.getTargetSemester(), req.getAcademicYear());
                     boolean exists = recordedByRoll.getOrDefault(roll, Set.of()).contains(req.getTargetSemester());
                     results.add(new ProgressionRowResult(roll, req.getTargetSemester(),
@@ -190,9 +182,8 @@ public class ProgressionController {
                     throw new IllegalArgumentException("Outside your department's scope.");
                 }
                 if (req.isDryRun()) {
-                    // validate without writing: student + semester + academic-year range
-                    // (same checks the apply path runs, so the preview can't say
-                    // WOULD_CREATE for a row that would then error on apply)
+                    // validate without writing (student + semester + year range) — the same checks
+                    // apply runs, so the preview can't say WOULD_CREATE for a row that then errors
                     studentRepository.findByRollNo(roll)
                             .orElseThrow(() -> new IllegalArgumentException("Student not found: " + roll));
                     progressionService.validateSemesterAndYear(row.getSemester(), row.getAcademicYear());
@@ -210,8 +201,8 @@ public class ProgressionController {
                 results.add(new ProgressionRowResult(roll, row.getSemester(), "ERROR", e.getMessage()));
                 errors++;
             } catch (RuntimeException e) {
-                // Defensive: an unexpected per-row failure is reported as an ERROR row, not
-                // allowed to abort the batch or surface as a request-level error.
+                // defensive: an unexpected per-row failure becomes an ERROR row rather than
+                // aborting the batch or surfacing as a request-level error
                 results.add(new ProgressionRowResult(roll, row.getSemester(), "ERROR", "Could not import this row."));
                 errors++;
             }
@@ -227,8 +218,7 @@ public class ProgressionController {
         proctorScope.rejectProctor(actor, BULK_REFUSED_FOR_PROCTORS);
         requireBulkScope(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         List<Student> cohort = resolveCohort(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
-        // dry-run: one batched term lookup for the whole cohort instead of up to
-        // 8 exists-probes per student
+        // dry-run: one batched term lookup for the cohort, not up to 8 exists-probes per student
         Map<String, Set<Integer>> recordedByRoll = req.isDryRun() ? termsByRoll(cohort) : Map.of();
 
         List<ProgressionRowResult> results = new ArrayList<>();
@@ -259,11 +249,10 @@ public class ProgressionController {
     // ---- current / entry semester correction ----
 
     /**
-     * Update just the student's current (and entry) semester from the "View & correct"
-     * screen, returning the refreshed progression view. Changing the current semester
-     * shifts the eligibility window and extends the timeline shown below — hence it lives
-     * next to the per-semester year corrections. Delegates to StudentManagementService so
-     * the 1 ≤ entry ≤ current ≤ 8 validation stays in one place.
+     * Set current (and entry) semester from the "View & correct" screen, returning the refreshed
+     * progression view. Lives next to the per-semester corrections because changing current
+     * semester shifts the eligibility window and extends the timeline below. Delegates to
+     * StudentManagementService, keeping the 1 ≤ entry ≤ current ≤ 8 rule in one place.
      */
     @PutMapping("/{rollNo}/current-semester")
     public StudentProgressionResponse setCurrentSemester(@PathVariable String rollNo,
@@ -312,17 +301,15 @@ public class ProgressionController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
     }
 
-    /**
-     * Bulk promote/backfill must target one explicit cohort: a department (implicit
-     * for dept-scoped roles) AND an admission year — or a bounded list of USNs.
-     */
+    /** Bulk promote/backfill needs an explicit cohort: department (implicit for dept-scoped
+     *  roles) AND admission year, or a bounded USN list. */
     private void requireBulkScope(User actor, Long deptId, Integer admissionYear, List<String> rollNos) {
         if (rollNos != null && !rollNos.isEmpty()) {
             if (rollNos.size() > MAX_EXPLICIT_ROLLNOS) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "At most " + MAX_EXPLICIT_ROLLNOS + " USNs per batch.");
             }
-            return; // an explicitly-listed cohort is bounded by the request
+            return; // an explicit list is already bounded
         }
         boolean missingDept = callerDeptCode(actor) == null && deptId == null;
         boolean missingYear = admissionYear == null;
@@ -368,10 +355,9 @@ public class ProgressionController {
         String code = callerDeptCode(actor);
         if (code == null) return; // ADMIN / PRINCIPAL: unrestricted
         String studentCode = studentDeptCode(rollNo);
-        // A malformed USN yields no branch code — that's a bad/unknown identifier, not a
-        // department-scope violation. Surface it as 404 (not found) rather than 403, so a
-        // typo in the lookup box can't be read by the client as an auth failure that
-        // clears the session and logs the user out.
+        // A malformed USN has no branch code: that's an unknown identifier, not a scope violation.
+        // 404 rather than 403, so a typo in the lookup box isn't read by the client as an auth
+        // failure that clears the session and logs the user out.
         if (studentCode == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + rollNo);
         }
@@ -390,7 +376,7 @@ public class ProgressionController {
                     .collect(Collectors.toList());
         }
 
-        // dept-scoped callers are pinned to their own department, ignoring any requested deptId
+        // dept-scoped callers are pinned to their own dept, ignoring any requested deptId
         String deptCode = callerDeptCode;
         if (deptCode == null && deptId != null) {
             Department dept = departmentRepository.findById(deptId)
@@ -404,11 +390,9 @@ public class ProgressionController {
         return studentRepository.findByRollNoLikeOrderByRollNo(pattern);
     }
 
-    // Count how many rows backfill would create — from the entry semester (not sem 1)
-    // through the final programme semester (8), so a lateral entrant's pre-entry
-    // semesters aren't counted as missing. Reads the batched per-cohort term lookup
-    // (no per-semester queries). Mirrors ProgressionService.backfillLinear's range
-    // so the preview matches the apply.
+    // Rows backfill would create: entry semester (not 1) through 8, so a lateral entrant's
+    // pre-entry semesters aren't counted missing. Reads the batched cohort lookup, no per-semester
+    // queries. Range mirrors ProgressionService.backfillLinear so preview matches apply.
     private int countMissingLinear(Set<Integer> recordedSemesters, int entrySemester) {
         int missing = 0;
         for (int sem = Math.max(1, entrySemester); sem <= 8; sem++) {

@@ -11,9 +11,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Public endpoint so the registration page can tell upfront whether registrations
- * are open. Registrations are accepted only while an exam cycle is active
- * (see RegistrationService#register), so "open" mirrors that single source of truth.
+ * Public endpoint letting the registration page tell upfront whether registrations are open.
+ * They are accepted only while an exam cycle is active (RegistrationService#register), so "open"
+ * mirrors that single source of truth.
  */
 @RestController
 @RequestMapping("/api/registration-status")

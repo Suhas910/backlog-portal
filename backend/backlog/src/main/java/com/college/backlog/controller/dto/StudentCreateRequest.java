@@ -7,11 +7,10 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
 /**
- * Create one student account. The USN (rollNo) is the primary key and the source
- * of branch + admission year. dateOfBirth is the login credential. currentSemester
- * and entrySemester drive the backlog-eligibility window (validated 1 ≤ entry ≤
- * current ≤ 8 server-side). Email is system-managed ({@code <usn>@msrit.edu}) and
- * never supplied by the client; phone is optional.
+ * Create one student account. The USN (rollNo) is the primary key and the source of branch +
+ * admission year; dateOfBirth is the login credential; currentSemester and entrySemester drive the
+ * eligibility window (validated 1 ≤ entry ≤ current ≤ 8 server-side). Email is system-managed
+ * ({@code <usn>@msrit.edu}), never client-supplied; phone is optional.
  */
 public class StudentCreateRequest {
 
@@ -29,7 +28,7 @@ public class StudentCreateRequest {
 
     private int currentSemester;
 
-    // defaults to 1 (normal intake) when omitted by the client
+    // defaults to 1 (normal intake) when the client omits it
     private int entrySemester = 1;
 
     public String getRollNo() { return rollNo; }

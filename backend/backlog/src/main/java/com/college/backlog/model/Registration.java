@@ -20,10 +20,10 @@ public class Registration {
     @JoinColumn(name = "roll_no")
     private Student student;
 
-    // @BatchSize: the paginated admin list fetches only the ManyToOne relations
-    // (student, examCycle) to keep pagination a real SQL LIMIT — a collection
-    // fetch-join would force in-memory paging. The per-row `subjects` are then
-    // lazily loaded during response mapping (OSIV keeps the session open), and
+    // @BatchSize: the paginated admin list fetch-joins only the ManyToOne relations (student,
+    // examCycle), keeping pagination a real SQL LIMIT — a collection fetch-join would force
+    // in-memory paging. `subjects` then loads lazily during mapping, which is why that mapping
+    // must stay inside RegistrationService.listSummaries' transaction (open-in-view is off);
     // BatchSize collapses those N loads into a few IN queries per page.
     @ManyToMany
     @BatchSize(size = 30)
@@ -40,17 +40,16 @@ public class Registration {
     @Column(name = "registered_at")
     private LocalDateTime registeredAt;
 
-    // Stored as the enum name (varchar). A DB CHECK constraint guards the values
-    // at the database level — see db/migrations/2026-06-13-add-enum-check-constraints.sql.
+    // Stored as the enum name (varchar), with a DB CHECK constraint guarding the values.
     @Enumerated(EnumType.STRING)
     private RegistrationStatus status;
 
     @Column(name = "verified_by")
     private String verifiedBy;
 
-    // NOT NULL is enforced at the DB level (folded into the Flyway V1 baseline),
-    // not here — under ddl-auto=validate the mapping must match the schema, so
-    // schema constraints belong in a V__ migration, never in nullable=false.
+    // NOT NULL lives at the DB level (folded into the Flyway V1 baseline), not here: under
+    // ddl-auto=validate the mapping must match the schema, so constraints belong in a V__
+    // migration, never in nullable=false.
     @ManyToOne
     @JoinColumn(name = "exam_cycle_id")
     private ExamCycle examCycle;
@@ -58,8 +57,8 @@ public class Registration {
     @Version
     private Long version;
 
-    // immutable snapshot of the student's details at submission time — keeps each
-    // registration's printed form faithful even after the Student record changes
+    // immutable snapshot at submission time, so the printed form stays faithful even after the
+    // Student record changes
     @Column(name = "snap_name")
     private String snapName;
 
@@ -78,9 +77,8 @@ public class Registration {
     @Column(name = "snap_year_of_joining")
     private Integer snapYearOfJoining;
 
-    // Academic-year offering this registration was made against, captured at
-    // submission. Set only when all selected subjects share one academic year
-    // (the usual single-semester case); null if the submission spans years.
+    // Academic-year offering registered against, captured at submission. Set only when all
+    // subjects share one year (the usual single-semester case); null if the selection spans years.
     @Column(name = "snap_academic_year")
     private Integer snapAcademicYear;
 

@@ -57,11 +57,10 @@ function ResultTable({ result }) {
   );
 }
 
-// Progression tools as a presentational tab inside the Manage Students shell.
-// The shell owns the role guard, the departments fetch, and dept-pin resolution
-// (passed in via props); this component only renders the tools. All dept scope is
-// enforced server-side on /api/admin/progression/**. The internal Find/Bulk toggle
-// is local state (not a URL tab) so it doesn't collide with the shell's ?tab=.
+// Progression tools as a presentational tab in the Manage Students shell. The shell owns the role
+// guard, departments fetch, and dept-pin resolution (passed via props); this only renders the
+// tools. Dept scope is enforced server-side on /api/admin/progression/**. The internal Find/Bulk
+// toggle is local state, not a URL tab, so it can't collide with the shell's ?tab=.
 function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
   // "find" (gaps + per-student correct) vs "bulk" (promote / import / backfill)
   const [tab, setTab] = useState("find");
@@ -121,8 +120,8 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
         setPError("Enter the academic year as a range or start year, e.g. 2025-26.");
         return;
       }
-      // bulk operations target one explicit cohort (dept + admission year) —
-      // mirrors the server-side guard, which rejects an unscoped batch with 400
+      // bulk ops target one explicit cohort (dept + admission year), mirroring the server guard
+      // that rejects an unscoped batch with 400
       const deptId = deptLocked ? pinnedDeptId : pDeptId;
       if (!deptId) {
         setPError("Select a department — a batch targets one department at a time.");
@@ -223,8 +222,8 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
   const loadStudentRoll = useCallback(async (roll) => {
     setSError("");
     setStudent(null);
-    // USNs are stored/validated uppercase; normalize here so a lowercase entry still
-    // resolves (and can't hit the dept-scope 403 path that logs the user out).
+    // USNs are stored and validated uppercase; normalize so a lowercase entry still resolves and
+    // can't hit the dept-scope 403 path that logs the user out
     const r = (roll || "").trim().toUpperCase();
     if (!r) return;
     setSBusy(true);
@@ -250,7 +249,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
 
   const runGaps = useCallback(async () => {
     setGError("");
-    // the gaps sweep needs at least a department (year stays an optional narrower)
+    // the gaps sweep needs at least a department; year stays an optional narrowing
     const deptId = deptLocked ? pinnedDeptId : gDeptId;
     if (!deptId) {
       setGError("Select a department to check for gaps.");
@@ -650,9 +649,8 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
   );
 }
 
-// Defined at module scope (not inside ProgressionTab) so their identity is stable
-// across renders — an inline definition makes every keystroke remount the card
-// subtree and steal focus from the inputs inside it.
+// Module scope, not inside ProgressionTab, so identity is stable across renders — an inline
+// definition remounts the card subtree on every keystroke and steals focus from its inputs.
 function Card({ icon, title, children }) {
   return (
     <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
@@ -685,10 +683,9 @@ function DeptSelect({ deptLocked, pinnedDeptId, departments, value, onChange, da
   );
 }
 
-// Inline editor for the student's current + entry semester, shown above the timeline
-// table so the admin can correct the current semester right where the year-per-semester
-// map is displayed. Keyed on the student's sems in the parent so it re-inits after a save.
-// Changing the current semester widens/narrows the eligibility window and the rows below.
+// Inline editor for current + entry semester, above the timeline table so the admin corrects it
+// where the year-per-semester map is shown. Keyed on the student's sems in the parent so it
+// re-inits after a save. Changing current semester widens/narrows the eligibility window and rows.
 function SemesterEditor({ student, onSave, busy }) {
   const semOptions = [1, 2, 3, 4, 5, 6, 7, 8];
   const [current, setCurrent] = useState(String(student.currentSemester));

@@ -8,11 +8,9 @@ describe("Admin dashboard — filter stale-response race", () => {
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
 
-    // The crux: the initial (unfiltered) registrations request is delayed so it
-    // resolves AFTER the later search request — exactly the out-of-order arrival
-    // that used to clobber the table. The narrow search returns only Alice; the
-    // stale full list returns Alice + Bob. With the request-sequence guard, the
-    // late full-list response must be dropped and the table must show only Alice.
+    // The crux: the initial unfiltered request is delayed so it resolves AFTER the later search
+    // — the out-of-order arrival that used to clobber the table. The search returns only Alice,
+    // the stale full list Alice + Bob; with the sequence guard the late one must be dropped.
     const ALICE = {
       regId: "REG-A",
       rollNo: "1MS22CS001",
@@ -32,9 +30,8 @@ describe("Admin dashboard — filter stale-response race", () => {
       registeredAt: "2026-04-20T10:21:00",
     };
 
-    // Alias the two requests separately so we can deterministically wait for the
-    // SLOW stale one to land before asserting — otherwise the assertion could run
-    // before it arrives and pass for the wrong reason.
+    // Aliased separately so the SLOW stale one can be waited on deterministically — otherwise the
+    // assertion could run before it lands and pass for the wrong reason.
     const pageOf = (rows) => ({
       content: rows,
       totalElements: rows.length,
@@ -63,16 +60,15 @@ describe("Admin dashboard — filter stale-response race", () => {
     cy.get('[data-cy="admin-login-submit"]').click();
     cy.wait("@adminLogin");
 
-    // type a search and Apply — fires the narrow request; the slow initial
-    // request is still in flight and resolves ~1s later
+    // search + Apply fires the narrow request; the slow initial one is still in flight, ~1s out
     cy.get("#search-filter").type("Alice");
     cy.get('[data-cy="admin-filters-apply"]').click();
 
     cy.wait("@searchReg"); // narrow result [Alice] applied
     cy.contains("td", "Alice").should("exist");
 
-    // now wait for the slow stale full-list response to actually arrive. With the
-    // sequence guard it is dropped; without it, it would overwrite the table.
+    // wait for the stale full-list response to actually arrive: the sequence guard drops it,
+    // without which it would overwrite the table
     cy.wait("@initialReg");
     cy.contains("td", "Alice").should("exist");
     cy.contains("td", "Bob").should("not.exist");

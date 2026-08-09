@@ -42,8 +42,8 @@ function AdminPage() {
   // server-side pagination: `page` is 0-based; pageInfo mirrors the Spring Page envelope
   const [page, setPage] = useState(0);
   const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0, number: 0 });
-  // stat-card counts come from the server (summary-counts) so they reflect the whole
-  // filtered set, not just the loaded page
+  // stat-card counts come from the server (summary-counts), so they span the whole filtered set,
+  // not just the loaded page
   const [counts, setCounts] = useState({ total: 0, submitted: 0, verified: 0, rejected: 0 });
   const [verifyingRegId, setVerifyingRegId] = useState("");
   const [rejectingRegId, setRejectingRegId] = useState("");
@@ -57,17 +57,16 @@ function AdminPage() {
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [subjectFilter, setSubjectFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
-  // searchInput is the raw text box value (a DRAFT, per keystroke); nothing
-  // fetches off it — it reaches the server only via appliedFilters on Apply.
+  // raw text-box value, a DRAFT updated per keystroke; nothing fetches off it — it reaches the
+  // server only via appliedFilters on Apply
   const [searchInput, setSearchInput] = useState("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
   const [examCycles, setExamCycles] = useState([]);
   const [cycleFilter, setCycleFilter] = useState("");
 
-  // The above filter states are the DRAFT (what the user is editing). The
-  // registrations fetch keys off appliedFilters instead, so the table only
-  // updates when the user clicks Apply — never mid-edit on a half-built combo.
+  // The states above are the DRAFT being edited; the registrations fetch keys off appliedFilters,
+  // so the table updates only on Apply, never mid-edit on a half-built combo.
   const [appliedFilters, setAppliedFilters] = useState({
     subjectId: "",
     subjectType: "",
@@ -82,37 +81,32 @@ function AdminPage() {
   const [historyEvents, setHistoryEvents] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Monotonic counter shared by every registrations fetch (filter effect AND the
-  // imperative post-action resync). Each call captures the next value and only
-  // applies its response if still the latest — so out-of-order completions from
-  // rapid filter changes are dropped instead of clobbering the table.
+  // Monotonic counter shared by every registrations fetch (the filter effect and the imperative
+  // post-action resync). Each call captures the next value and applies its response only if still
+  // latest, so out-of-order completions from rapid filter changes can't clobber the table.
   const registrationsReqRef = useRef(0);
-  // In-flight controllers: each new fetch aborts its predecessor (whose response
-  // the seq guard would drop anyway), freeing the backend connection early.
+  // In-flight controllers: each fetch aborts its predecessor — whose response the seq guard would
+  // drop anyway — freeing the backend connection early.
   const registrationsAbortRef = useRef(null);
   const countsAbortRef = useRef(null);
 
-  // Subject-dropdown options follow the APPLIED filters (like the table), not the
-  // draft edits — so editing filters fires zero requests until Apply, instead of a
-  // DISTINCT-join query per keystroke/date change. Deps are the four fields the
-  // endpoint accepts (not the whole appliedFilters object), so an Apply that only
-  // changes e.g. the exam cycle doesn't re-fetch identical options. The user's
-  // current selection is never auto-cleared by a narrowed list — applying a
-  // now-unlisted subject just yields no rows.
+  // Subject-dropdown options follow the APPLIED filters like the table, not the draft, so editing
+  // fires zero requests until Apply instead of a DISTINCT-join query per keystroke. Deps are the
+  // four fields the endpoint accepts rather than the whole appliedFilters object, so an Apply that
+  // only changes the exam cycle won't re-fetch identical options. A narrowed list never
+  // auto-clears the current selection — applying a now-unlisted subject just yields no rows.
   useEffect(() => {
     if (!isAdmin || !adminToken) {
       return;
     }
 
-    // ignore guards against a stale response landing after a newer filter change;
-    // the AbortController goes further and cancels the superseded request itself,
-    // so it stops consuming a backend connection instead of running to completion
+    // `ignore` drops a stale response landing after a newer filter change; the AbortController
+    // goes further and cancels the superseded request, freeing its backend connection
     let ignore = false;
     const controller = new AbortController();
-    // NOTE: eslint react-hooks/set-state-in-effect flags this setState. Intended
-    // and correct — a leading loading flag for an API fetch, exactly the
-    // "synchronize with an external system" case the rule carves out. Left as a
-    // knowing lint error (not disabled).
+    // NOTE: react-hooks/set-state-in-effect flags this setState. Intended and correct — a
+    // leading loading flag for an API fetch, exactly the "synchronize with an external system"
+    // case the rule carves out. A knowing lint error, deliberately not disabled.
     setLoadingSubjects(true);
     const subjectParams = new URLSearchParams();
     if (appliedFilters.subjectType) subjectParams.append("subjectType", appliedFilters.subjectType);
@@ -160,8 +154,8 @@ function AdminPage() {
       .then((res) => {
         if (ignore) return;
         setExamCycles(res.data);
-        // default the filter to the active cycle so the list + PDF export both
-        // scope to it; "All Cycles" stays an explicit opt-in.
+        // default to the active cycle so the list and PDF export both scope to it;
+        // "All Cycles" stays an explicit opt-in
         const active = Array.isArray(res.data) ? res.data.find((c) => c.active) : null;
         if (active) {
           // seed both draft and applied so the page auto-loads the active cycle
@@ -180,8 +174,8 @@ function AdminPage() {
     };
   }, [isAdmin, adminToken]);
 
-  // shared filter params (everything except status/page) for both the list and
-  // the counts endpoint, so the cards and the table stay on the same filtered set
+  // shared params (everything but status/page) for the list and counts endpoints, so the cards
+  // and the table stay on the same filtered set
   const appendFilterParams = useCallback((params) => {
     if (appliedFilters.subjectId) params.append("subjectId", appliedFilters.subjectId);
     if (appliedFilters.subjectType) params.append("subjectType", appliedFilters.subjectType);
@@ -193,14 +187,14 @@ function AdminPage() {
 
   const fetchRegistrations = useCallback(() => {
     if (!isAdmin || !adminToken) return Promise.resolve();
-    // tag this request; only the latest one is allowed to apply its result
+    // tag the request; only the latest may apply its result
     const seq = ++registrationsReqRef.current;
     registrationsAbortRef.current?.abort();
     const controller = new AbortController();
     registrationsAbortRef.current = controller;
     const params = new URLSearchParams();
     appendFilterParams(params);
-    // status filtering is now server-side (a page only holds part of the result)
+    // status filtering is server-side — a page only holds part of the result
     if (filter !== "ALL") params.append("status", filter);
     params.append("page", String(page));
     params.append("size", String(PAGE_SIZE));
@@ -223,8 +217,8 @@ function AdminPage() {
       .catch((error) => {
         if (error.code === "ERR_CANCELED") return; // superseded request aborted
         console.error("Failed to fetch dashboard data:", error);
-        // An auth failure invalidates the session regardless of ordering, so the
-        // redirect is not gated on seq; only the success state-write is.
+        // An auth failure kills the session regardless of ordering, so the redirect isn't gated
+        // on seq — only the success state-write is.
         if (error.response?.status === 401 || error.response?.status === 403) {
           clearAdminSession();
           navigate("/admin/login");
@@ -314,11 +308,10 @@ function AdminPage() {
       return next;
     });
 
-  // Verify/reject failures land here. The row is only mutated on success, so
-  // there is nothing to roll back; instead we surface an inline per-row error.
-  // When the server says the row's state moved underneath us (404 gone, 409/410
-  // conflict — e.g. another admin already actioned it or the cycle closed), we
-  // refetch so the table reflects the true server state rather than a stale row.
+  // Verify/reject failures land here. Rows mutate only on success, so there is nothing to roll
+  // back — surface an inline per-row error instead. When the server says the row moved underneath
+  // us (404 gone, 409/410 conflict: another admin actioned it, or the cycle closed), refetch so
+  // the table shows true server state rather than a stale row.
   const handleActionError = async (regId, err, fallback) => {
     console.error(err);
     const status = err.response?.status;
@@ -340,8 +333,8 @@ function AdminPage() {
         { action: "VERIFIED" },
         { headers: getAdminHeaders() },
       );
-      // refetch: with server-side status filtering the row may leave the current
-      // (e.g. SUBMITTED) page, and the stat cards need the fresh counts
+      // refetch: under server-side status filtering the row may leave the current page, and the
+      // stat cards need fresh counts
       await Promise.all([fetchRegistrations(), fetchCounts()]);
     } catch (err) {
       await handleActionError(regId, err, "Failed to verify. Please refresh and try again.");
@@ -386,7 +379,7 @@ function AdminPage() {
 
   const handleExportPdf = () => {
     setIsExporting(true);
-    // export the applied combination (what's shown), not unapplied draft edits
+    // export the applied combination that's on screen, not unapplied draft edits
     const params = new URLSearchParams();
     if (appliedFilters.subjectId) params.append("subjectId", appliedFilters.subjectId);
     if (appliedFilters.subjectType) params.append("subjectType", appliedFilters.subjectType);
@@ -398,11 +391,10 @@ function AdminPage() {
     api
       .get(`/admin/export-pdf?${params.toString()}`, {
         headers: getAdminHeaders(),
-        responseType: "blob", // Important parameter for file downloads
+        responseType: "blob", // required for file downloads
       })
       .then((res) => {
-        // A 200 that isn't a PDF (e.g. an HTML error page) must not be
-        // saved to disk as a .pdf
+        // a 200 that isn't a PDF (e.g. an HTML error page) must not be saved as one
         const contentType = res.headers["content-type"] || "";
         if (!contentType.includes("application/pdf")) {
           throw new Error(`Unexpected export content type: ${contentType}`);
@@ -430,13 +422,12 @@ function AdminPage() {
       });
   };
 
-  // The table shows exactly the current server page — status filtering and paging
-  // are server-side, so no client-side slicing.
+  // The table shows exactly the current server page: filtering and paging are server-side, so
+  // there is no client-side slicing.
   const filtered = registrations;
 
-  // Stat cards come from the server counts endpoint: they span every status of the
-  // filtered set (same filters as the list, minus the status tab), regardless of
-  // which tab/page is open.
+  // Stat cards come from the server counts endpoint and span every status of the filtered set
+  // (the list's filters minus the status tab), whichever tab or page is open.
   const totalCount = counts.total;
   const pendingCount = counts.submitted;
   const verifiedCount = counts.verified;

@@ -40,10 +40,10 @@ public class RegistrationController {
     @Autowired
     private ProctorScopeService proctorScope;
 
-    // Takes the already-loaded caller so verify doesn't fetch the same user row
-    // twice (once for scoping, once for the audit actor role).
+    // Takes the already-loaded caller, so verify doesn't fetch the same row twice — once for
+    // scoping, once for the audit actor role.
     private void checkDeptAccess(User user, Registration reg) {
-        // a proctor's scope is the assigned STUDENT, not the subject's department
+        // a proctor is scoped by assigned STUDENT, not the subject's department
         if (user != null && user.getRole() == UserRole.PROCTOR) {
             proctorScope.assertSupervises(user, reg.getStudent().getRollNo());
             return;
@@ -67,7 +67,7 @@ public class RegistrationController {
     @PreAuthorize("hasRole('STUDENT')")
     public Map<String, String> register(@Valid @RequestBody StudentRegistrationRequest request,
                                         Authentication authentication) {
-        // owner is taken from the authenticated token, never from the request body
+        // owner comes from the authenticated token, never the request body
         Registration reg = registrationService.register(
             authentication.getName(),
             request.getSubjectIds()
@@ -88,13 +88,13 @@ public class RegistrationController {
         Registration reg = registrationRepository.findByRegId(regId)
             .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
 
-        // load the caller once; used for both the scope check and the audit actor role
+        // loaded once, for both the scope check and the audit actor role
         User caller = authentication != null
             ? userRepository.findById(authentication.getName()).orElse(null)
             : null;
         checkDeptAccess(caller, reg);
 
-        // require an explicit, known action — never default a typo to VERIFIED
+        // explicit known action required — never default a typo to VERIFIED
         String requested = body != null ? body.get("action") : null;
         RegistrationStatus action;
         if ("VERIFIED".equals(requested)) {
@@ -107,13 +107,13 @@ public class RegistrationController {
         }
 
         String actor = authentication != null ? authentication.getName() : null;
-        // UserRole is a subset of ActorRole by name, so the mapping is always valid.
+        // UserRole is a by-name subset of ActorRole, so this mapping always resolves
         ActorRole actorRole = (caller != null)
             ? ActorRole.valueOf(caller.getRole().name())
             : ActorRole.ADMIN;
 
-        // status flip + audit event committed atomically; the pending-state check
-        // and the @Version optimistic-lock backstop both run inside that transaction
+        // status flip + audit event commit atomically; the pending-state check and the @Version
+        // optimistic-lock backstop both run inside that transaction
         reg = registrationService.applyVerification(regId, action, actor, actorRole);
 
         return new VerificationResponse(

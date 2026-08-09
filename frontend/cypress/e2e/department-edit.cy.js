@@ -1,6 +1,6 @@
 describe("Department code edit — concurrent-edit conflict detection", () => {
-  // Drop straight onto the page with an admin session in place, so the test
-  // focuses on the save/conflict path rather than re-driving the login UI.
+  // Drop onto the page with an admin session in place, so the test exercises the save/conflict
+  // path rather than re-driving the login UI.
   const authedVisit = (path) => {
     cy.visit(path, {
       onBeforeLoad(win) {
@@ -11,10 +11,9 @@ describe("Department code edit — concurrent-edit conflict detection", () => {
   };
 
   it("resyncs to the server value when a code save hits a 409 conflict", () => {
-    // First load: "CS" at version 0. The conflicting PUT flips the flag, so the
-    // automatic resync afterwards returns the value another admin already saved
-    // ("CX" at version 1). Keying off the PUT — not a call counter — keeps this
-    // robust against however many fetches the page makes (StrictMode etc.).
+    // First load is "CS" at version 0; the conflicting PUT flips the flag, so the automatic
+    // resync returns what another admin already saved ("CX" at version 1). Keyed off the PUT
+    // rather than a call counter, so it survives however many fetches the page makes (StrictMode).
     let conflictHit = false;
     cy.intercept("GET", "/api/admin/departments*", (req) => {
       req.reply({
@@ -52,7 +51,7 @@ describe("Department code edit — concurrent-edit conflict detection", () => {
     cy.wait("@updateConflict");
     cy.wait("@getDepartments"); // automatic resync after the 409
 
-    // conflict surfaced inline, and the field resynced to the other admin's value
+    // conflict surfaced inline, field resynced to the other admin's value
     cy.get('[data-cy="dept-error"]').should("contain", "changed by someone else");
     cy.get('[data-cy="dept-code-input-1"]').should("have.value", "CX");
   });
@@ -88,7 +87,7 @@ describe("Department code edit — concurrent-edit conflict detection", () => {
     }).as("getDepartments");
 
     cy.intercept("PUT", "/api/admin/departments/1", (req) => {
-      // the renamed department reaches the server; the code (identity) is untouched
+      // the rename reaches the server; the code (identity) is untouched
       expect(req.body).to.include({ deptName: "Computer Science & Engineering", code: "CS" });
       req.reply({
         statusCode: 200,
@@ -127,7 +126,7 @@ describe("Department code edit — concurrent-edit conflict detection", () => {
     authedVisit("/admin/departments");
     cy.wait("@getDepartments");
 
-    // first click only arms the confirm; the DELETE fires on the second click
+    // first click only arms the confirm — the DELETE fires on the second
     cy.get('[data-cy="dept-delete-1"]').click();
     cy.get('[data-cy="dept-delete-confirm-1"]').click();
 
@@ -155,7 +154,7 @@ describe("Department code edit — concurrent-edit conflict detection", () => {
 
     cy.wait("@deleteBlocked");
     cy.get('[data-cy="dept-error"]').should("contain", "referenced by existing subjects");
-    // row is still present since the delete was rejected (confirm stays armed)
+    // row still present since the delete was rejected; the confirm stays armed
     cy.get('[data-cy="dept-delete-confirm-1"]').should("exist");
   });
 });

@@ -21,11 +21,9 @@ public class Department {
     @Column(name = "contact_email")
     private String contactEmail;
 
-    // Optimistic-lock version for concurrent-edit conflict detection on the
-    // manage-departments page. The column lives in the Flyway V1 baseline as
-    // `version bigint DEFAULT 0`; @ColumnDefault("0") mirrors that default so the
-    // mapping matches under ddl-auto=validate. Hibernate manages the value —
-    // never set it in code.
+    // Optimistic-lock version for concurrent-edit detection on the manage-departments page. The
+    // column is `version bigint DEFAULT 0` in the Flyway V1 baseline; @ColumnDefault("0") mirrors
+    // that so the mapping matches under ddl-auto=validate. Hibernate owns the value — never set it.
     @Version
     @ColumnDefault("0")
     private Long version;

@@ -1,10 +1,9 @@
 package com.college.backlog.controller.dto;
 
 /**
- * Roster row for the admin Students list. Deliberately omits dateOfBirth — DOB is
- * the student login credential and is never returned by any endpoint (write-only).
- * {@code progressionComplete} is false when the student is missing a term row for
- * any semester in their eligibility window (see the Progression "gaps" view).
+ * Roster row for the admin Students list. Omits dateOfBirth deliberately — it is the student login
+ * credential and write-only, never returned by any endpoint. {@code progressionComplete} is false
+ * when a term row is missing for any semester in the eligibility window (the Progression "gaps" view).
  */
 public class StudentSummaryResponse {
     private final String rollNo;

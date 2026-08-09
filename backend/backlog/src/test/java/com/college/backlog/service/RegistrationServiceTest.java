@@ -27,10 +27,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Focused tests for the "one live pending registration per exam cycle" rule
- * (RegistrationService.MAX_PENDING_PER_CYCLE = 1) and its DB race backstop.
- * Everything upstream of the limit check is stubbed to a valid single-subject
- * submission so the tests exercise only the limit path.
+ * The "one live pending registration per exam cycle" rule (MAX_PENDING_PER_CYCLE = 1) and its DB
+ * race backstop. Everything upstream of the limit check is stubbed to a valid single-subject
+ * submission, so only the limit path is exercised.
  */
 class RegistrationServiceTest {
 
@@ -84,7 +83,7 @@ class RegistrationServiceTest {
 
     @Test
     void secondPendingInSameCycleIsRejectedWith409() {
-        // an existing SUBMITTED registration in this cycle -> at the limit of 1
+        // an existing SUBMITTED row in this cycle -> at the limit of 1
         when(registrationRepository.countByStudent_RollNoAndExamCycle_IdAndStatus(
                 ROLL, 10L, RegistrationStatus.SUBMITTED))
                 .thenReturn(1L);
@@ -100,8 +99,7 @@ class RegistrationServiceTest {
 
     @Test
     void actionedRegistrationsInTheCycleDoNotCountTowardTheLimit() {
-        // VERIFIED/REJECTED rows exist but zero SUBMITTED — the count query is
-        // status-filtered, so it returns 0 and the submission is allowed
+        // VERIFIED/REJECTED rows but no SUBMITTED: the count is status-filtered, returns 0, allowed
         when(registrationRepository.countByStudent_RollNoAndExamCycle_IdAndStatus(
                 ROLL, 10L, RegistrationStatus.SUBMITTED))
                 .thenReturn(0L);
@@ -116,8 +114,8 @@ class RegistrationServiceTest {
 
     @Test
     void concurrentInsertRaceIsMappedTo409ByTheUniqueIndexBackstop() {
-        // count check passes (no SUBMITTED yet) but the DB partial unique index
-        // rejects the concurrent insert -> surfaced as 409, not a 500
+        // count check passes (no SUBMITTED yet) but the partial unique index rejects the
+        // concurrent insert -> 409, not 500
         when(registrationRepository.countByStudent_RollNoAndExamCycle_IdAndStatus(
                 ROLL, 10L, RegistrationStatus.SUBMITTED))
                 .thenReturn(0L);

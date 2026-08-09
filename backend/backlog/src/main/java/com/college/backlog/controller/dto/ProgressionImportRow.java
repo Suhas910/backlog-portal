@@ -1,6 +1,6 @@
 package com.college.backlog.controller.dto;
 
-// One row of a progression CSV import: which academic year a student studied a semester.
+// One row of a progression CSV import: the academic year a student studied a semester.
 public class ProgressionImportRow {
     private String rollNo;
     private int semester;

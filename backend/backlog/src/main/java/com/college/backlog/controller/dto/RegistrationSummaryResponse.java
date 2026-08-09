@@ -27,7 +27,6 @@ public class RegistrationSummaryResponse {
         this.examCycle = examCycle;
     }
 
-    // Getters
     public String getRegId() { return regId; }
     public String getRollNo() { return rollNo; }
     public String getStudentName() { return studentName; }

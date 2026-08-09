@@ -11,9 +11,8 @@ import CloneSubjectsTab from "./CloneSubjectsTab";
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
 const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
 
-// Tab identity → presentational component. The active tab is driven by the
-// ?tab= query param so it survives refresh and is shareable/bookmarkable; the
-// value is whitelisted to these keys (anything else falls back to "manage").
+// Tab identity -> presentational component. The active tab comes from the ?tab= query param, so
+// it survives refresh and is shareable; the value is whitelisted to these keys, else "manage".
 const TABS = [
   { key: "manage", label: "Manage", icon: BookOpen },
   { key: "add", label: "Add", icon: PlusCircle },
@@ -21,11 +20,10 @@ const TABS = [
 ];
 const TAB_KEYS = new Set(TABS.map((t) => t.key));
 
-// The subject catalog lives behind a single route as three tabs (Manage / Add /
-// Clone). This shell owns everything the tabs share — the role guard, the one
-// departments fetch, and the dept-pin resolution — and passes them down so each
-// tab is purely presentational. Auth/dept scope is still enforced server-side on
-// every /api/admin/** call; the role/dept logic here is only UX gating.
+// The subject catalog behind one route as three tabs (Manage / Add / Clone). This shell owns what
+// they share — role guard, the one departments fetch, dept-pin resolution — and passes them down,
+// leaving each tab purely presentational. Auth/dept scope is enforced server-side on every
+// /api/admin/** call; the role/dept logic here is only UX gating.
 function ManageSubjectsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,9 +34,9 @@ function ManageSubjectsPage() {
 
   const [departments, setDepartments] = useState([]);
 
-  // dept-scoped roles are pinned to their own department across every tab. Pure
-  // derivation from (departments, role, dept) — computed during render instead of
-  // stored via an effect, so it resolves on first paint with no cascading render.
+  // Dept-scoped roles are pinned to their own department across every tab: pure derivation from
+  // (departments, role, dept), computed during render rather than stored via an effect, so it
+  // resolves on first paint with no cascading render.
   const pinnedDeptId = useMemo(() => {
     if (!(deptLocked && adminDepartment && departments.length > 0)) return "";
     const mine = departments.find((d) => d.deptName === adminDepartment);

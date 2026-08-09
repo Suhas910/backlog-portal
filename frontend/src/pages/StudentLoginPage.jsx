@@ -18,10 +18,9 @@ function StudentLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Already signed in — skip the form and go to the dashboard. Same shape as
-  // the admin login: the marker is a presence hint, and an expired cookie comes
-  // back here as ?expired=1 with the marker already cleared by the 401
-  // interceptor.
+  // Already signed in — skip the form for the dashboard. Same shape as the admin login: the
+  // marker is a presence hint, and an expired cookie returns as ?expired=1 with the marker
+  // already cleared by the 401 interceptor.
   useEffect(() => {
     if (!sessionExpired && getStudentToken()) {
       navigate("/student", { replace: true });
@@ -46,16 +45,15 @@ function StudentLoginPage() {
         dateOfBirth: dob, // native date input gives ISO yyyy-MM-dd
       });
       if (res.data.rollNo || res.data.name) {
-        // the JWT is now in an httpOnly cookie set by the server; store only a
-        // presence marker + UI state + the refresh schedule
+        // the server set the JWT in an httpOnly cookie; store only a presence marker, UI state,
+        // and the refresh schedule
         sessionStorage.setItem("studentToken", "cookie");
         sessionStorage.setItem("studentRollNo", res.data.rollNo || usn);
         sessionStorage.setItem("studentName", res.data.name || "");
         rememberExpiry("student", res.data.expiresIn);
-        // Always land on the dashboard first — even when the guard bounced the
-        // student here from a deep link like /register. The dashboard is the
-        // home base (profile, status, past registrations); registration is one
-        // click away via its CTA.
+        // Always land on the dashboard, even when the guard bounced the student here from a
+        // deep link like /register: it is the home base (profile, status, past registrations),
+        // and registration is one CTA click away.
         navigate("/student");
       } else {
         setError("Login failed. Please try again.");

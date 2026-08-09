@@ -23,9 +23,9 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * View / edit / delete the subject catalog. Create lives in {@link AdminController}
- * (POST /api/admin/subjects); this adds the read-and-maintain side. Scope: ADMIN /
- * PRINCIPAL act on any department; HOD / DEPT_OFFICE are pinned to their own.
+ * View / edit / delete the subject catalog — the read-and-maintain side; create lives in
+ * {@link AdminController} (POST /api/admin/subjects). ADMIN/PRINCIPAL act on any department,
+ * HOD/DEPT_OFFICE are pinned to their own.
  */
 @RestController
 @RequestMapping("/api/admin/subjects")
@@ -34,8 +34,7 @@ public class SubjectController {
 
     private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
-    // Page-size guards mirror AdminController: a cap so `size` can't be used to pull
-    // the whole (ever-growing) catalog in one request, and a sane default page.
+    // Mirrors AdminController: cap so `size` can't pull the whole catalog in one request.
     private static final int MAX_PAGE_SIZE = 200;
     private static final int DEFAULT_PAGE_SIZE = 25;
 
@@ -43,9 +42,8 @@ public class SubjectController {
     @Autowired private SubjectService subjectService;
     @Autowired private UserRepository userRepository;
 
-    // Returns a Spring Page envelope ({content, totalPages, totalElements, number, ...}).
-    // Previously an unbounded findAll, which timed out the client on an unfiltered
-    // "load everything" once the catalog grew — hence pagination, matching /registrations.
+    // Spring Page envelope ({content, totalPages, totalElements, number, ...}), matching
+    // /registrations. Was an unbounded findAll, which timed out clients once the catalog grew.
     @GetMapping
     public Page<Subject> list(
             @RequestParam Optional<Long> deptId,
@@ -55,7 +53,7 @@ public class SubjectController {
             @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
             Authentication auth) {
         Long callerDeptId = resolveCallerDeptId(auth);
-        // dept-scoped callers are pinned to their own department, ignoring any requested deptId
+        // dept-scoped callers are pinned to their own dept, ignoring any requested deptId
         Long effectiveDeptId = callerDeptId != null ? callerDeptId : deptId.orElse(null);
         SubjectSpecification spec = new SubjectSpecification(
             effectiveDeptId, academicYearOffered.orElse(null), semester.orElse(null));
@@ -81,7 +79,7 @@ public class SubjectController {
         subjectService.deleteSubject(id, resolveCallerDeptId(auth));
     }
 
-    /** Dept id a dept-scoped caller is pinned to, or null for ADMIN/PRINCIPAL (unrestricted). */
+    /** Dept id a caller is pinned to; null for ADMIN/PRINCIPAL (unrestricted). */
     private Long resolveCallerDeptId(Authentication auth) {
         if (auth == null) return null;
         User user = userRepository.findById(auth.getName()).orElse(null);

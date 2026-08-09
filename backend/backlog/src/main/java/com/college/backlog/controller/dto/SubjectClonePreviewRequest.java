@@ -2,8 +2,8 @@ package com.college.backlog.controller.dto;
 
 import java.util.List;
 
-// Request to generate a clone draft: a department's subjects offered in sourceYear,
-// bumped to targetYear. semesters is optional — null/empty means all of 1..8.
+// Generate a clone draft: a department's sourceYear subjects, bumped to targetYear.
+// semesters is optional — null/empty means all of 1..8.
 public class SubjectClonePreviewRequest {
     private Long deptId;
     private int sourceYear;

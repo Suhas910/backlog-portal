@@ -16,13 +16,12 @@ const inputClass =
 
 const PAGE_SIZE = 25;
 
-// Proctor supervision assignments. Two audiences share this tab:
-//   - a PROCTOR claims dept students to themselves (the minimal claim picker is
-//     the only view they get of students outside their own set);
-//   - ADMIN / PRINCIPAL / HOD pick a target proctor first, then manage that
-//     proctor's list (assign / unassign / reassign after a conflict).
-// All scope rules are enforced server-side (/api/admin/proctor/**); this UI
-// only mirrors them.
+// Proctor supervision assignments, shared by two audiences:
+//   - a PROCTOR claims dept students to themselves; the minimal claim picker is their only view
+//     of students outside their own set;
+//   - ADMIN / PRINCIPAL / HOD pick a target proctor first, then manage that proctor's list
+//     (assign / unassign / reassign after a conflict).
+// Scope rules are enforced server-side on /api/admin/proctor/**; this UI only mirrors them.
 function ClaimStudentsTab({ adminRole, adminDepartment }) {
   const isProctor = adminRole === "PROCTOR";
 
@@ -47,10 +46,9 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
   const [assignedBusy, setAssignedBusy] = useState(false);
   const [removingRoll, setRemovingRoll] = useState("");
 
-  // NOTE: eslint react-hooks/set-state-in-effect may flag this — intended and
-  // correct, a fetch-on-mount into an external system (state lands in .then).
-  // Staff callers need the proctor list to pick a target; the server already
-  // limits /admin/users to accounts the caller may manage.
+  // NOTE: react-hooks/set-state-in-effect may flag this — intended and correct, a fetch-on-mount
+  // into an external system (state lands in .then). Staff need the proctor list to pick a target;
+  // the server already limits /admin/users to accounts the caller may manage.
   useEffect(() => {
     if (isProctor) return;
     api
@@ -136,7 +134,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
         headers: getAdminHeaders(),
       });
       setResults(res.data);
-      // refresh both panels so claimed rows flip to "yours" and the list updates
+      // refresh both panels: claimed rows flip to "yours" and the list updates
       await Promise.all([loadClaimable(pageInfo.number), loadAssigned()]);
     } catch (err) {
       setError(err.response?.data?.message || "Could not claim the selected students.");
@@ -327,8 +325,8 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
           <button
             type="button"
             onClick={() => {
-              // a fresh search clears the previous claim summary; the post-claim
-              // table refresh (loadClaimable from claim()) must NOT clear it
+              // a fresh search clears the previous claim summary — but the post-claim table
+              // refresh (loadClaimable from claim()) must NOT
               setResults(null);
               loadClaimable(0);
             }}

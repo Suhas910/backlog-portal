@@ -1,6 +1,5 @@
-// The hero badge mirrors GET /api/registration-status (the active exam cycle).
-// It must never claim registrations are open unless the backend confirms it —
-// the error case falls closed, same as the registration page.
+// The hero badge mirrors GET /api/registration-status (the active exam cycle). It must never claim
+// registrations are open unconfirmed — the error case falls closed, like the registration page.
 
 describe("Home hero cycle badge", () => {
   it("shows the active cycle name when registrations are open", () => {
