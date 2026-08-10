@@ -34,7 +34,7 @@ function DepartmentsPage() {
   const [deletingId, setDeletingId] = useState(null);
 
   const inputClass =
-    "rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]";
+    "rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]";
 
   const loadDepartments = () => {
     setLoading(true);

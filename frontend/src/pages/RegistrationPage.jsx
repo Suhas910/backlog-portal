@@ -330,7 +330,7 @@ function RegistrationPage() {
                 </label>
                 <select
                   id="searchSemester"
-                  className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60"
                   value={searchSemester}
                   onChange={(e) => setSearchSemester(e.target.value)}
                   data-cy="reg-semester"
@@ -397,7 +397,7 @@ function RegistrationPage() {
                           id={`subject-${subject.id}`}
                           checked={isSelected}
                           onChange={() => handleSubjectToggle(subject)}
-                          className="h-4 w-4 accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                          className="h-4 w-4 accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                         />
                         <label
                           htmlFor={`subject-${subject.id}`}

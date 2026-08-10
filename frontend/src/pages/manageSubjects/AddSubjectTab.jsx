@@ -6,7 +6,7 @@ import { formatAcademicYear, buildCourseCode, courseCodeSuffix } from "../../lib
 import CourseCodeField from "../../components/ui/CourseCodeField";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]";
+  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]";
 
 // Add a single subject. Presentational tab: the shell supplies departments and the dept-lock
 // context, this keeps only form state.

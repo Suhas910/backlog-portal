@@ -7,7 +7,7 @@ import { formatAcademicYear } from "../../lib/academicYear";
 // which PUTs the per-semester override. See docs/adr/backlog-progression.md.
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
 
 // One row per semester, entry through 8, all editable. A recorded year is prefilled; semesters
 // with no row arrive as academicYear === null (blank, editable, shown as a dash). Rows past

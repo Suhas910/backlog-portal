@@ -34,6 +34,11 @@
 		     Overriding the property (not the two artifacts) keeps flyway-core and
 		     flyway-database-postgresql in lockstep. -->
 		<flyway.version>11.13.3</flyway.version>
+		<!-- Last of the 7.2.x line. 7.2.6 is what moves BouncyCastle onto the maintained
+		     bc*-jdk18on artifacts (1.75); 7.2.5 was still on bc*-jdk15on 1.70, retired since 2022.
+		     Staying on 7.2.x deliberately — 8.x/9.x are major versions and PdfService has only the
+		     one test guarding it. -->
+		<itext.version>7.2.6</itext.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -106,17 +111,29 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- PDF generation (PdfService is the only consumer). We declare the three modules it
+		     actually imports instead of the itext7-core aggregate pom, which dragged in seven
+		     unused ones (barcodes, font-asian, forms, hyph, pdfa, sign, styled-xml-parser, svg).
+		     kernel still pulls BouncyCastle transitively — 7.2.6 moved that from the retired
+		     bc*-jdk15on 1.70 line to the maintained bc*-jdk18on 1.75, which is the reason for the
+		     bump. Covered by PdfServiceTest, which asserts on extracted text so a version change
+		     is verifiable. -->
 		<dependency>
 			<groupId>com.itextpdf</groupId>
-			<artifactId>itext7-core</artifactId>
-			<version>7.2.5</version>
-			<type>pom</type>
+			<artifactId>kernel</artifactId>
+			<version>${itext.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>layout</artifactId>
+			<version>${itext.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.itextpdf</groupId>
 			<artifactId>io</artifactId>
-			<version>7.2.5</version>
+			<version>${itext.version}</version>
 		</dependency>
 	</dependencies>
 

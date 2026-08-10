@@ -14,7 +14,7 @@ import CourseCodeField from "../../components/ui/CourseCodeField";
 const ALL_SEMS = [1, 2, 3, 4, 5, 6, 7, 8];
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
 
 const STATUS_STYLES = {
   CREATED: "text-[var(--color-primary)]",

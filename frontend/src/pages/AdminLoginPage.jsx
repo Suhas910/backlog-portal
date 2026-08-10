@@ -156,7 +156,7 @@ function AdminLoginPage() {
           <div className="flex flex-col gap-4">
             <button
               onClick={() => handleRoleSelect("Administrator", "ADMIN")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
                 <ShieldCheck size={24} />
@@ -173,7 +173,7 @@ function AdminLoginPage() {
 
             <button
               onClick={() => handleRoleSelect("Principal / Registrar / COE", "PRINCIPAL")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
                 <GraduationCap size={24} />
@@ -190,7 +190,7 @@ function AdminLoginPage() {
 
             <button
               onClick={() => handleRoleSelect("Head of Department (HOD)", "HOD")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
                 <Briefcase size={24} />
@@ -207,7 +207,7 @@ function AdminLoginPage() {
 
             <button
               onClick={() => handleRoleSelect("Department Office", "DEPT_OFFICE")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
                 <Building2 size={24} />
@@ -224,7 +224,7 @@ function AdminLoginPage() {
 
             <button
               onClick={() => handleRoleSelect("Proctor", "PROCTOR")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
               data-cy="role-proctor"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
@@ -253,7 +253,7 @@ function AdminLoginPage() {
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
               data-cy="admin-username"
             />
 
@@ -269,7 +269,7 @@ function AdminLoginPage() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+              className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
               data-cy="admin-password"
             />
 
@@ -285,7 +285,7 @@ function AdminLoginPage() {
                   id="admin-department"
                   value={departmentId}
                   onChange={(e) => setDepartmentId(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                  className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                   data-cy="admin-department"
                 >
                   <option value="">Select department</option>

@@ -75,6 +75,10 @@
   --text-muted: #4a4a4a;
   --stroke: rgba(36, 42, 82, 0.18);
   --shadow-soft: 0 16px 40px rgba(36, 42, 82, 0.14);
+  /* Keyboard focus indicator — the global :focus-visible outline below plus every
+     `ring-[var(--focus-ring)]`. Its own token because the brand maroon it used to be measures 1.92
+     against the dark page, under the 3:1 non-text floor; light is unchanged at 8.90. */
+  --focus-ring: var(--color-primary);
 
   /* Homepage hero + backdrop. These exist because the hero is styled with inline style={{}},
      which outranks every stylesheet rule — so its colors can't be reached by the
@@ -114,6 +118,8 @@
   --text-muted: #b8b8b8;
   --stroke: rgba(255, 255, 255, 0.16);
   --shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.35);
+  /* lavender, 11.12 against the dark page (maroon would be 1.92) */
+  --focus-ring: var(--text-on-dark-secondary);
 
   /* Readable tints for the brand colors, too dark to sit as text on dark surfaces. Only the
      *text* utilities are remapped below; the brand colors stay intact as backgrounds/borders. */
@@ -271,7 +277,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 

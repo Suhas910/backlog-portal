@@ -189,7 +189,7 @@ function StudentDashboardPage() {
                         inputMode="numeric"
                         maxLength={10}
                         placeholder="10 digit number"
-                        className="w-44 rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2 text-sm text-[var(--text-main)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                        className="w-44 rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2 text-sm text-[var(--text-main)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
                         data-cy="phone-input"
                       />
                       <button

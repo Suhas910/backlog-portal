@@ -136,7 +136,7 @@ function ExamCyclePage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. June 2026 Backlog Exams"
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -149,7 +149,7 @@ function ExamCyclePage() {
                 value={examMonthYear}
                 onChange={(e) => setExamMonthYear(e.target.value)}
                 placeholder="e.g. June 2026"
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
               />
             </div>
             <div className="sm:col-span-2">
