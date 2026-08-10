@@ -1,6 +1,9 @@
 # Claude local context
 CLAUDE.local.md
 
+# Claude's own working directory — audits, notes, scratch. Never shared.
+claude-work/
+
 # Claude tooling — local preview/dev server config, not for sharing
 .claude/launch.json
 # Local-only agents and skills (repo-specific, but not checked in by choice)
