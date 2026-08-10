@@ -108,7 +108,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
 
       {createdRollNo && createdComplete && (
         <div
-          className="mb-6 flex items-start gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900"
+          className="mb-6 flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-800"
           role="status"
           data-cy="student-created-complete"
         >
@@ -120,7 +120,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
               the current semester or fix any year on the{" "}
               <Link
                 to="/admin/students?tab=progression"
-                className="font-semibold underline hover:text-emerald-700"
+                className="font-semibold underline hover:text-green-700"
               >
                 Progression page
               </Link>{" "}

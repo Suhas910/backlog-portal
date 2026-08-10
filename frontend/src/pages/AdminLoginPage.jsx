@@ -116,7 +116,7 @@ function AdminLoginPage() {
     <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
       <a
         href="#admin-login-main"
-        className="sr-only left-4 top-4 z-[60] rounded-md bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed"
+        className="sr-only left-4 top-4 z-[60] rounded-md bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-[var(--color-cta-text)] focus:not-sr-only focus:fixed"
       >
         Skip to admin login
       </a>

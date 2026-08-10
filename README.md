@@ -109,7 +109,7 @@ cp .env.example .env
 
 Then edit `.env` and set at minimum:
 
-- `DB_URL`, `DB_USER`, `DB_PASSWORD` — pointing at your own PostgreSQL database (the example uses a Neon cloud DB). The schema and starter data are seeded automatically on first boot via `schema.sql` / `data.sql`.
+- `DB_URL`, `DB_USER`, `DB_PASSWORD` — pointing at your own PostgreSQL database (the example uses a Neon cloud DB). The schema is built on first boot by **Flyway**, which runs the migrations in `src/main/resources/db/migration/` (`V1__baseline.sql` onward); Hibernate only validates the result, it never alters the DB. Against an empty database V1 creates everything. Change the schema by adding the next `V<n>__…sql` migration — never by hand and never via entity annotations.
 - `JWT_SECRET` — a long random base64 string.
 - At least one `ADMIN_PASSWORD_*` — so an admin account is created on first boot (there are no default passwords). Seeded accounts are forced to change their password on first login.
 

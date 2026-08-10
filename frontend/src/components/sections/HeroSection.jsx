@@ -2,11 +2,9 @@ import { useEffect, useState } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../../lib/api";
-import { useTheme } from "../../context/ThemeContext";
 import MagneticCta from "../ui/MagneticCta";
 
 export default function HeroSection() {
-  const { isDark } = useTheme();
   // null = still checking; otherwise { open, cycleName?, examMonthYear? }
   const [regStatus, setRegStatus] = useState(null);
 
@@ -55,27 +53,16 @@ export default function HeroSection() {
                 fontWeight: 600,
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
+                // open/closed is data, not theme — the theme half lives in the tokens
                 background: regStatus.open
-                  ? isDark
-                    ? "rgba(237,20,91,0.15)"
-                    : "rgba(145,25,28,0.08)"
-                  : isDark
-                    ? "rgba(255,255,255,0.08)"
-                    : "rgba(36,42,82,0.06)",
+                  ? "var(--hero-badge-open-bg)"
+                  : "var(--hero-badge-closed-bg)",
                 border: regStatus.open
-                  ? isDark
-                    ? "1px solid rgba(237,20,91,0.4)"
-                    : "1px solid rgba(145,25,28,0.3)"
-                  : isDark
-                    ? "1px solid rgba(255,255,255,0.25)"
-                    : "1px solid rgba(36,42,82,0.25)",
+                  ? "1px solid var(--hero-badge-open-border)"
+                  : "1px solid var(--hero-badge-closed-border)",
                 color: regStatus.open
-                  ? isDark
-                    ? "#f472a0"
-                    : "#91191C"
-                  : isDark
-                    ? "rgba(255,255,255,0.75)"
-                    : "#242A52",
+                  ? "var(--hero-badge-open-text)"
+                  : "var(--hero-badge-closed-text)",
               }}
             >
               {regStatus.open
@@ -90,7 +77,7 @@ export default function HeroSection() {
               fontSize: "clamp(2.5rem, 5vw, 3.75rem)",
               lineHeight: 1.15,
               margin: 0,
-              color: isDark ? "#ffffff" : "#91191C",
+              color: "var(--hero-text)",
             }}
           >
             Register for your backlog exam
@@ -102,7 +89,7 @@ export default function HeroSection() {
               fontSize: "1.05rem",
               lineHeight: 1.65,
               margin: "0 auto",
-              color: isDark ? "#ffffff" : "#91191C",
+              color: "var(--hero-text)",
             }}
           >
             Follow the simple steps below to submit your backlog registration.
@@ -128,14 +115,12 @@ export default function HeroSection() {
                 alignItems: "center",
                 gap: "8px",
                 borderRadius: "9999px",
-                border: isDark
-                  ? "2px solid rgba(255,255,255,0.55)"
-                  : "2px solid #242A52",
+                border: "2px solid var(--hero-btn-border)",
                 padding: "10px 20px",
                 fontSize: "14px",
                 fontWeight: 600,
-                color: isDark ? "#ffffff" : "#242A52",
-                background: isDark ? "rgba(255,255,255,0.06)" : "transparent",
+                color: "var(--hero-btn-text)",
+                background: "var(--hero-btn-bg)",
                 transition: "all 0.2s",
                 textDecoration: "none",
               }}

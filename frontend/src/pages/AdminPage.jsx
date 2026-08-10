@@ -445,7 +445,7 @@ function AdminPage() {
           </p>
           <Link
             to="/admin/login"
-            className="inline-flex items-center justify-center rounded-full bg-[var(--color-cta)] px-5 py-3 text-sm font-semibold text-white"
+            className="inline-flex items-center justify-center rounded-full bg-[var(--color-cta)] px-5 py-3 text-sm font-semibold text-[var(--color-cta-text)]"
           >
             Go to Admin Login
           </Link>
@@ -458,7 +458,7 @@ function AdminPage() {
     <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
       <a
         href="#admin-main"
-        className="sr-only left-4 top-4 z-[60] rounded-md bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed"
+        className="sr-only left-4 top-4 z-[60] rounded-md bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-[var(--color-cta-text)] focus:not-sr-only focus:fixed"
       >
         Skip to admin table
       </a>
@@ -529,7 +529,7 @@ function AdminPage() {
                 await logoutAdmin(); // expire the httpOnly cookie, then clear local state
                 navigate("/admin/login");
               }}
-              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-white"
+              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-[var(--color-cta-text)]"
             >
               <LogOut size={14} /> Logout
             </button>

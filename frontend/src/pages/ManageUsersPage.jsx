@@ -443,7 +443,7 @@ function ManageUsersPage() {
               <button
                 type="button"
                 onClick={copyTemp}
-                className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-cta)] px-3 py-1.5 text-xs font-semibold text-white"
+                className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-cta)] px-3 py-1.5 text-xs font-semibold text-[var(--color-cta-text)]"
               >
                 <Copy size={13} /> {copied ? "Copied" : "Copy"}
               </button>
