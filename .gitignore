@@ -3,6 +3,9 @@ CLAUDE.local.md
 
 # Claude tooling — local preview/dev server config, not for sharing
 .claude/launch.json
+# Local-only agents and skills (repo-specific, but not checked in by choice)
+.claude/agents/
+.claude/skills/
 
 # Backend
 backend/backlog/target/
