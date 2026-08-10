@@ -71,6 +71,29 @@ class ProgressionServiceTest {
     }
 
     @Test
+    void rejectsSemesterAboveEightAndNeverTouchesCurrentSemester() {
+        // 8 is the last semester. recordProgression assigns this value to currentSemester, so
+        // anything above 8 would leave the student with an empty eligibility window.
+        assertThatThrownBy(() -> service.recordProgression("1MS24CS191", 9, 2025))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("between 1 and 8");
+        // rejected before any write: no term row, and currentSemester untouched
+        verify(termRepository, never()).save(any());
+        verify(studentRepository, never()).save(any());
+    }
+
+    @Test
+    void acceptsSemesterEightAsTheLastValidOne() {
+        Student s = student("1MS24CS191", 7);
+        when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
+        when(termRepository.existsByRollNoAndSemester("1MS24CS191", 8)).thenReturn(false);
+
+        assertThat(service.recordProgression("1MS24CS191", 8, 2027))
+                .isEqualTo(ProgressionService.Outcome.CREATED);
+        assertThat(s.getCurrentSemester()).isEqualTo(8);
+    }
+
+    @Test
     void rejectsUnknownStudent() {
         when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.recordProgression("1MS24CS191", 3, 2025))

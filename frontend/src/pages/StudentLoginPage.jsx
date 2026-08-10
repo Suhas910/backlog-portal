@@ -46,7 +46,7 @@ function StudentLoginPage() {
       });
       if (res.data.rollNo || res.data.name) {
         // the server set the JWT in an httpOnly cookie; store only a presence marker, UI state,
-        // and the refresh schedule
+        // and the sign-out deadline
         sessionStorage.setItem("studentToken", "cookie");
         sessionStorage.setItem("studentRollNo", res.data.rollNo || usn);
         sessionStorage.setItem("studentName", res.data.name || "");

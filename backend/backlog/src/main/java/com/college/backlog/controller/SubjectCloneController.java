@@ -9,6 +9,7 @@ import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.UserRepository;
+import com.college.backlog.service.AcademicYears;
 import com.college.backlog.service.SubjectCloneService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.Year;
 import java.util.Set;
 
 /**
@@ -75,9 +75,12 @@ public class SubjectCloneController {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown department."));
     }
 
+    /** Shared range rule; rethrown as a 400 because IllegalArgumentException has no handler. */
     private void validateYear(int year) {
-        if (year < 2000 || year > Year.now().getValue() + 1) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Academic year " + year + " is out of range.");
+        try {
+            AcademicYears.assertInRange(year);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
 }

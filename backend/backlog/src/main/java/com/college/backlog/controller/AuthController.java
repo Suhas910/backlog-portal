@@ -115,35 +115,6 @@ public class AuthController {
         return resp;
     }
 
-    /**
-     * Slide the session: re-mint a fresh-expiry token for an already-authenticated caller.
-     * Requires a still-valid token (the JWT filter must have authenticated the request), so an
-     * active user never hard-expires at the 1h mark while an idle one falls back to re-login.
-     * The account is re-read, so a since-deleted or renamed user cannot refresh.
-     */
-    @PostMapping("/refresh")
-    public Map<String, String> refresh(HttpServletRequest request, HttpServletResponse response,
-                                       Authentication auth) {
-        if (auth == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
-        User user = userRepository.findById(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
-        String currentToken = sessionCookieService.read(request, SessionCookieService.ADMIN_COOKIE);
-        // preserves the original session start and enforces the absolute cap; null means the
-        // session outlived maxSessionMs, so force a fresh login
-        String token = currentToken == null ? null
-                : jwtService.refreshToken(currentToken, user.getUsername(), user.getRole().name());
-        if (token == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Session expired. Please sign in again.");
-        }
-        sessionCookieService.write(response, SessionCookieService.ADMIN_COOKIE, token);
-        Map<String, String> resp = new HashMap<>();
-        resp.put("expiresIn", String.valueOf(jwtService.secondsUntilExpiry(token)));
-        resp.put("role", user.getRole().name());
-        return resp;
-    }
-
     /** Self-service password change for any authenticated admin-type user; requires the current
      *  password. Powers both the forced first-login change (mustChangePassword) and voluntary ones. */
     @PostMapping("/change-password")

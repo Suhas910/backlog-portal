@@ -43,6 +43,38 @@ class SubjectServiceTest {
         return s;
     }
 
+    /** Request that is valid apart from whatever the caller overrides. */
+    private SubjectCreateRequest createRequest(int year, String courseCode) {
+        SubjectCreateRequest req = new SubjectCreateRequest();
+        req.setSubjectName("Data Structures");
+        req.setCourseCode(courseCode);
+        req.setSemester(4);
+        req.setCredits(4);
+        req.setAcademicYearOffered(year);
+        req.setDeptId(1L);
+        return req;
+    }
+
+    @Test
+    void rejectsAnAcademicYearOfZeroEvenWhenTheCourseCodePrefixAgrees() {
+        // The regression: @NotNull on a primitive int is a no-op, so an omitted/zero year used to
+        // persist. "00CS44" satisfies the prefix invariant (floorMod(0,100) == 0), so the prefix
+        // check cannot catch it — the year must be range-checked in its own right.
+        assertThatThrownBy(() -> service.createSubject(createRequest(0, "00CS44")))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("out of range");
+        verify(subjectRepository, never()).save(any());
+    }
+
+    @Test
+    void rejectsAFarFutureAcademicYearEvenWhenTheCourseCodePrefixAgrees() {
+        // Upper bound: "99CS44" matches year 9999, so only the range check rejects this.
+        assertThatThrownBy(() -> service.createSubject(createRequest(9999, "99CS44")))
+            .isInstanceOf(ResponseStatusException.class)
+            .hasMessageContaining("out of range");
+        verify(subjectRepository, never()).save(any());
+    }
+
     @Test
     void rejectsCourseCodeWhosePrefixDoesNotMatchTheYearOnCreate() {
         SubjectCreateRequest req = new SubjectCreateRequest();

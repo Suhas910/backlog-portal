@@ -10,7 +10,11 @@ function ExamCyclePage() {
   const navigate = useNavigate();
   const adminRole = sessionStorage.getItem("adminRole");
   const adminToken = sessionStorage.getItem("adminToken");
-  const isAdmin = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"].includes(adminRole);
+  // ADMIN only: this page is entirely create/activate/deactivate, and those are the college-wide
+  // registration switch — restricted server-side in ExamCycleController. Any other role would see
+  // buttons that 403. (Reading the cycle LIST stays open to every role; that happens on the
+  // dashboard filter, not here.)
+  const isAdmin = adminRole === "ADMIN";
 
   const [cycles, setCycles] = useState([]);
   const [loading, setLoading] = useState(true);

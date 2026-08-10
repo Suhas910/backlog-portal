@@ -476,7 +476,7 @@ function AdminPage() {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            {adminRole !== "PROCTOR" && (
+            {adminRole === "ADMIN" && (
               <Link
                 to="/admin/exam-cycles"
                 className="inline-flex items-center gap-1 rounded-full border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"

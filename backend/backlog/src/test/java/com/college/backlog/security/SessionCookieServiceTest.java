@@ -20,12 +20,12 @@ class SessionCookieServiceTest {
     void studentEndpointsResolveToTheStudentCookieEverythingElseToAdmin() {
         SessionCookieService s = service(true);
         assertThat(s.cookieNameForPath("/api/student/me")).isEqualTo(SessionCookieService.STUDENT_COOKIE);
-        assertThat(s.cookieNameForPath("/api/student/auth/refresh")).isEqualTo(SessionCookieService.STUDENT_COOKIE);
+        assertThat(s.cookieNameForPath("/api/student/auth/logout")).isEqualTo(SessionCookieService.STUDENT_COOKIE);
         assertThat(s.cookieNameForPath("/api/register")).isEqualTo(SessionCookieService.STUDENT_COOKIE);
         // admin-side paths — including the admin-actioned verify under /api/register
         assertThat(s.cookieNameForPath("/api/register/verify/abc")).isEqualTo(SessionCookieService.ADMIN_COOKIE);
         assertThat(s.cookieNameForPath("/api/admin/registrations")).isEqualTo(SessionCookieService.ADMIN_COOKIE);
-        assertThat(s.cookieNameForPath("/api/auth/refresh")).isEqualTo(SessionCookieService.ADMIN_COOKIE);
+        assertThat(s.cookieNameForPath("/api/auth/logout")).isEqualTo(SessionCookieService.ADMIN_COOKIE);
         assertThat(s.cookieNameForPath(null)).isEqualTo(SessionCookieService.ADMIN_COOKIE);
     }
 

@@ -76,7 +76,7 @@ function AdminLoginPage() {
       const validRoles = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"];
       if (validRoles.includes(res.data.role)) {
         // the server set the JWT in an httpOnly cookie; store only a presence marker, UI state,
-        // and the refresh schedule (expiresIn)
+        // and the sign-out deadline (expiresIn)
         sessionStorage.setItem("adminRole", res.data.role);
         sessionStorage.setItem("adminToken", "cookie");
         sessionStorage.setItem("adminUsername", username);

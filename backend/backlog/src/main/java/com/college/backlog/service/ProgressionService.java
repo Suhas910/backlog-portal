@@ -10,8 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Year;
-
 /**
  * Single write path for "student X studied semester N in academic year Y". Promote Batch and CSV
  * import both funnel through {@link #recordProgression}, so the write-once and current-semester
@@ -21,7 +19,6 @@ import java.time.Year;
 public class ProgressionService {
 
     private static final Logger log = LoggerFactory.getLogger(ProgressionService.class);
-    private static final int MIN_ACADEMIC_YEAR = 2000;
 
     @Autowired
     private StudentRepository studentRepository;
@@ -82,7 +79,7 @@ public class ProgressionService {
      *
      * <p>Seeds the whole plan up front, not just to currentSemester, so the timeline is complete
      * the moment a student is created; currentSemester is untouched. Write-once, so hand-corrected
-     * rows (e.g. after a year-back) survive. Sems 9-10 left empty, reserved for extensibility.
+     * rows (e.g. after a year-back) survive. 8 is the last semester, here and everywhere.
      * Assumes entry at the start of an academic year (odd semester) — the realistic lateral case;
      * anything else is a hand-correct.
      *
@@ -120,15 +117,13 @@ public class ProgressionService {
      * so the preview flags the rows apply would reject (no WOULD_CREATE that then errors).
      */
     public void validateSemesterAndYear(int semester, int academicYear) {
-        // Term rows go to 10: a student only *studies* to 8, but the schema reserves 9-10 for
-        // extensibility, so a term recorded there isn't rejected here. Eligibility and
-        // current-semester are capped at 8 separately (EligibilityService, validateSemesters).
-        if (semester < 1 || semester > 10) {
-            throw new IllegalArgumentException("Semester must be between 1 and 10.");
+        // 1..8 is the semester range everywhere: eligibility, current/entry semester, subjects,
+        // clone and here. Keep it that way — recordProgression assigns this value to
+        // currentSemester, so a range wider than eligibility's would empty the student's window.
+        if (semester < 1 || semester > 8) {
+            throw new IllegalArgumentException("Semester must be between 1 and 8.");
         }
-        if (academicYear < MIN_ACADEMIC_YEAR || academicYear > Year.now().getValue() + 1) {
-            throw new IllegalArgumentException("Academic year " + academicYear + " is out of range.");
-        }
+        AcademicYears.assertInRange(academicYear);
     }
 
     private Student validate(String rollNo, int semester, int academicYear) {

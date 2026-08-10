@@ -15,14 +15,21 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/exam-cycles")
-@PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE')")
+// ADMIN-only by DEFAULT, deliberately: an ExamCycle has no department — it is the college-wide
+// registration switch, so activate/deactivate opens or closes registration for every department at
+// once. That is not a departmental power, and it is not a PRINCIPAL/HOD/DEPT_OFFICE one either.
+// The default is the narrow one so a method added later without its own annotation inherits
+// ADMIN-only rather than a wide set — the previous shape was the inverse, which is exactly how
+// DEPT_OFFICE ended up able to close registration college-wide.
+@PreAuthorize("hasRole('ADMIN')")
 public class ExamCycleController {
 
     @Autowired
     private ExamCycleRepository examCycleRepository;
 
-    // Read is open to PROCTOR too — the registrations page's cycle filter needs the list — via
-    // the method-level annotation overriding the class-level one. The writes below stay closed.
+    // The one deliberate widening: every admin role plus PROCTOR needs to READ the list, because
+    // the registrations page's cycle filter is built from it. Reading which cycles exist changes
+    // nothing; only the writes below are restricted.
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public List<ExamCycle> list() {

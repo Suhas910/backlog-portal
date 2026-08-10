@@ -13,17 +13,10 @@ class JwtServiceTest {
     // 48-char secret, comfortably over the 32-byte HS256 floor.
     private static final String SECRET = "test-secret-that-is-definitely-long-enough-1234567890";
 
-    private static final long TWELVE_HOURS = 12L * 60 * 60 * 1000;
-
     private JwtService newService(String secret, long expirationMs) {
-        return newService(secret, expirationMs, TWELVE_HOURS);
-    }
-
-    private JwtService newService(String secret, long expirationMs, long maxSessionMs) {
         JwtService service = new JwtService();
         ReflectionTestUtils.setField(service, "jwtSecret", secret);
         ReflectionTestUtils.setField(service, "jwtExpirationMs", expirationMs);
-        ReflectionTestUtils.setField(service, "maxSessionMs", maxSessionMs);
         ReflectionTestUtils.invokeMethod(service, "init");
         return service;
     }
@@ -79,54 +72,20 @@ class JwtServiceTest {
     }
 
     @Test
-    void tokenCarriesTheSessionStartAuthTime() {
+    void tokenExpiresExactlyOneSessionLengthFromIssue() {
+        // The session cap IS the token expiry — nothing can extend it, so this is the whole
+        // "logged out after 1h" guarantee.
         JwtService service = newService(SECRET, 3_600_000L);
         long before = System.currentTimeMillis();
         String token = service.generateToken("admin", "ADMIN");
         long after = System.currentTimeMillis();
 
-        Long authTime = service.getAuthTimeFromToken(token);
-        assertThat(authTime).isNotNull();
-        assertThat(authTime).isBetween(before, after);
-    }
-
-    @Test
-    void refreshPreservesTheOriginalAuthTimeWhileReissuing() {
-        // session began 2h ago, token still valid (1h expiry from now)
-        JwtService service = newService(SECRET, 3_600_000L, TWELVE_HOURS);
-        long startedAt = System.currentTimeMillis() - (2L * 60 * 60 * 1000);
-        String old = service.generateToken("admin", "ADMIN", startedAt);
-
-        String refreshed = service.refreshToken(old, "admin", "ADMIN");
-
-        assertThat(refreshed).isNotNull();
-        assertThat(service.validateToken(refreshed)).isTrue();
-        // authTime carried through unchanged, so the cap tracks the whole session
-        assertThat(service.getAuthTimeFromToken(refreshed)).isEqualTo(startedAt);
-    }
-
-    @Test
-    void refreshIsRefusedOnceTheAbsoluteCapIsExceeded() {
-        // issuer mints a still-valid token whose session began 2h ago
-        JwtService issuer = newService(SECRET, 3_600_000L, TWELVE_HOURS);
-        long startedAt = System.currentTimeMillis() - (2L * 60 * 60 * 1000);
-        String old = issuer.generateToken("admin", "ADMIN", startedAt);
-
-        // a 1h cap sees that session as too old to slide -> null (=> 401)
-        JwtService cappedAt1h = newService(SECRET, 3_600_000L, 60L * 60 * 1000);
-        assertThat(cappedAt1h.refreshToken(old, "admin", "ADMIN")).isNull();
-    }
-
-    @Test
-    void tokenExpiryNeverOutlivesTheAbsoluteCap() {
-        // 1h token lifetime, but a 1-minute absolute cap and a session that began 30s ago
-        JwtService service = newService(SECRET, 3_600_000L, 60_000L);
-        long startedAt = System.currentTimeMillis() - 30_000L;
-        String token = service.generateToken("admin", "ADMIN", startedAt);
-
+        // JWT exp is a NumericDate in SECONDS, so the minted millis are floored — hence the 1s
+        // slack on the lower bound.
         Date expiry = ReflectionTestUtils.invokeMethod(service, "getExpirationDateFromToken", token);
-        // capped at authTime + 1min (~30s away), far below the 1h token lifetime
-        assertThat(expiry.getTime()).isLessThanOrEqualTo(startedAt + 60_000L + 1_000L);
+        assertThat(expiry.getTime()).isBetween(before + 3_600_000L - 1_000L, after + 3_600_000L);
+        // seconds-to-expiry is what the SPA schedules its sign-out from
+        assertThat(service.secondsUntilExpiry(token)).isBetween(3_590L, 3_600L);
     }
 
     @Test

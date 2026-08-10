@@ -1,10 +1,12 @@
 package com.college.backlog.security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -14,12 +16,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -55,6 +60,25 @@ public class SecurityConfig {
                                 "/api/auth/logout", "/api/student/auth/logout"))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Spring's default entry point is Http403ForbiddenEntryPoint, which would answer an
+                // expired/absent token with 403 — indistinguishable from a real scope denial, and
+                // bodyless under server.error.include-message=never. Split them so the SPA can act:
+                // 401 = no valid session, sign out; 403 = authenticated but denied, show and stay put.
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> writeJsonMessage(
+                                res, HttpServletResponse.SC_UNAUTHORIZED,
+                                "Session expired. Please sign in again."))
+                        // CsrfFilter reuses this handler. A CSRF failure is a broken double-submit
+                        // pair, not a permissions problem, and re-login is the only fix the user
+                        // has — so answer 401 to sign them out, and reserve 403 for real denials.
+                        .accessDeniedHandler((req, res, e) -> {
+                            if (e instanceof CsrfException) {
+                                writeJsonMessage(res, HttpServletResponse.SC_UNAUTHORIZED,
+                                        "Session expired. Please sign in again.");
+                            } else {
+                                writeJsonMessage(res, HttpServletResponse.SC_FORBIDDEN, "Access denied.");
+                            }
+                        }))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(passwordChangeEnforcementFilter, JwtAuthenticationFilter.class)
                 // forces the CsrfToken to render so CookieCsrfTokenRepository writes the cookie
@@ -65,9 +89,6 @@ public class SecurityConfig {
                         // logout only clears the cookie — allowed even with a lapsed session
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/student/auth/logout").permitAll()
-                        // sliding-session refresh: valid token required, admin-scoped
-                        // (the student variant is under /api/student/** below)
-                        .requestMatchers(HttpMethod.POST, "/api/auth/refresh").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR")
                         .requestMatchers(HttpMethod.GET, "/api/departments").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/registration-status").permitAll()
                         .requestMatchers("/api/register/verify/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR")
@@ -78,6 +99,17 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR")
                         .anyRequest().authenticated());
         return http.build();
+    }
+
+    /** Write a {@code {"message": ...}} body directly: filter-level failures never reach
+     *  GlobalExceptionHandler, and sendError() would yield no message at all. Callers pass
+     *  literals, so no JSON escaping is needed. */
+    private static void writeJsonMessage(HttpServletResponse response, int status, String message)
+            throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.getWriter().write("{\"message\":\"" + message + "\"}");
     }
 
     @Bean

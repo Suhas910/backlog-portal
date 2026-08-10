@@ -43,6 +43,16 @@ public class SubjectService {
 
     @Transactional
     public Subject createSubject(SubjectCreateRequest request) {
+        // Authoritative year check — must run BEFORE the prefix check below, which only compares
+        // the code against whatever year was sent and so accepts any absurd year with a matching
+        // prefix (year 0 + "00CS44", year 9999 + "99CS44" both pass it). The DTO's @Min is only a
+        // floor; the upper bound is relative to now and can't be expressed as an annotation.
+        try {
+            AcademicYears.assertInRange(request.getAcademicYearOffered());
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        }
+
         // prefix=year invariant: the code's first two digits are the academic-year start. The UI
         // locks the prefix; this is the server backstop against a crafted request.
         if (!CourseCodes.matchesYear(request.getCourseCode(), request.getAcademicYearOffered())) {

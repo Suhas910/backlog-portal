@@ -14,7 +14,7 @@ const api = axios.create({
 // NOTE: these sessionStorage values are NOT the credential — the real token is in the httpOnly
 // cookie. "adminToken"/"studentToken" hold only a presence marker ("cookie") so the existing
 // "session present?" checks and route guards keep working; the rest is UI state (role/name) and
-// the refresh schedule (expiresAt).
+// the sign-out deadline (expiresAt).
 export function getAdminToken() {
   return sessionStorage.getItem("adminToken"); // presence marker, not the JWT
 }
@@ -101,19 +101,20 @@ api.interceptors.response.use(
       }
       return Promise.reject(error);
     }
-    if (status === 401 || status === 403) {
-      // 401 on an authenticated call = the session lapsed or was invalid; flag it so the login
-      // screen can explain the redirect. 403 is a real authz denial.
-      const expiredSuffix = status === 401 ? "?expired=1" : "";
+    // 401 = no valid session (the fixed 1h window lapsed, or the cookie is gone): sign out. The
+    // server emits it via SecurityConfig's authenticationEntryPoint. 403 is deliberately NOT
+    // handled here — it means "authenticated but denied", so the request rejects through and the
+    // page shows the server's message in place instead of ejecting the user mid-task.
+    if (status === 401) {
       if (isStudentScopedUrl(url)) {
         clearStudentSession();
         if (!window.location.pathname.startsWith("/student/login")) {
-          window.location.assign("/student/login" + expiredSuffix);
+          window.location.assign("/student/login?expired=1");
         }
       } else if (isAdminScopedUrl(url)) {
         clearAdminSession();
         if (!window.location.pathname.startsWith("/admin/login")) {
-          window.location.assign("/admin/login" + expiredSuffix);
+          window.location.assign("/admin/login?expired=1");
         }
       }
     }
