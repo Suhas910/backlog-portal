@@ -6,7 +6,7 @@ import { formatAcademicYear, buildCourseCode, courseCodeSuffix } from "../../lib
 import CourseCodeField from "../../components/ui/CourseCodeField";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]";
+  "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring";
 
 // Add a single subject. Presentational tab: the shell supplies departments and the dept-lock
 // context, this keeps only form state.
@@ -138,12 +138,12 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
 
   return (
     <div
-      className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-8"
+      className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-8"
     >
-      <h1 className="mb-2 text-2xl font-semibold text-[var(--color-secondary)] sm:text-3xl">
+      <h1 className="mb-2 text-2xl font-semibold text-secondary-ink sm:text-3xl">
         Add New Subject
       </h1>
-      <p className="mb-6 text-sm text-[var(--text-main)]">
+      <p className="mb-6 text-sm text-ink">
         Fill in the details below to add a new backlog subject to the system.
       </p>
 
@@ -204,7 +204,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
               inputClassName={inputClass}
               dataCy="course-code-suffix"
             />
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-xs text-ink-muted">
               The first two digits are set from the academic year.
             </p>
           </div>
@@ -271,7 +271,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
               ))}
             </select>
             {deptLocked && adminDepartment && (
-              <p className="mt-1 text-xs text-[var(--text-muted)]">
+              <p className="mt-1 text-xs text-ink-muted">
                 Locked to your department: {adminDepartment}
               </p>
             )}
@@ -294,8 +294,8 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
                 }}
                 className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
                   subjectType === type
-                    ? "border-[var(--color-primary)] bg-[rgba(145,25,28,0.08)] text-[var(--color-primary)]"
-                    : "border-[var(--stroke)] bg-[var(--surface-muted)] text-[var(--text-main)] hover:border-[var(--color-primary)]"
+                    ? "border-primary bg-[rgba(145,25,28,0.08)] text-primary-ink"
+                    : "border-stroke bg-surface-muted text-ink hover:border-primary"
                 }`}
               >
                 {type.charAt(0) + type.slice(1).toLowerCase()}
@@ -310,7 +310,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
             <span className="text-xs font-semibold uppercase tracking-[0.08em]">
               Eligible Departments *
             </span>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-xs text-ink-muted">
               Select which departments' students can register for this elective. The offering department is not included automatically.
             </p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -322,20 +322,20 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
                     key={dept.id}
                     className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
                       checked
-                        ? "border-[var(--color-primary)]/40 bg-[rgba(145,25,28,0.06)]"
-                        : "border-[var(--stroke)] bg-[var(--surface-muted)] hover:border-[var(--color-primary)]/40"
+                        ? "border-primary/40 bg-[rgba(145,25,28,0.06)]"
+                        : "border-stroke bg-surface-muted hover:border-primary/40"
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleEligibleDept(dept.id)}
-                      className="h-4 w-4 accent-[var(--color-primary)]"
+                      className="h-4 w-4 accent-primary"
                     />
-                    <span className="text-sm text-[var(--text-main)]">
+                    <span className="text-sm text-ink">
                       {dept.deptName}
                       {isOfferingDept && (
-                        <span className="ml-1.5 text-xs text-[var(--text-muted)]">
+                        <span className="ml-1.5 text-xs text-ink-muted">
                           (Offering dept)
                         </span>
                       )}
@@ -365,7 +365,7 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
           </p>
         )}
 
-        <div className="border-t border-[var(--stroke)] pt-4">
+        <div className="border-t border-stroke pt-4">
           <MagneticCta
             type="submit"
             disabled={loading}

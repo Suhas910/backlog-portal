@@ -15,7 +15,7 @@ import { formatAcademicYear, parseAcademicYear, courseCodeSuffix } from "../../l
 import CourseCodeField from "../../components/ui/CourseCodeField";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 const PAGE_SIZE = 25;
 
@@ -72,16 +72,16 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
 
   return (
     <>
-      <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-        <h1 className="mb-1 inline-flex items-center gap-2 text-xl font-semibold text-[var(--color-secondary)]">
+      <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">
+        <h1 className="mb-1 inline-flex items-center gap-2 text-xl font-semibold text-secondary-ink">
           <BookOpen size={18} /> Manage subjects
         </h1>
-        <p className="mb-4 text-sm text-[var(--text-muted)]">
+        <p className="mb-4 text-sm text-ink-muted">
           Browse the catalog and fix subjects. The academic year can't be changed (it's the
           year-binding key); the course-code prefix stays locked to it.
         </p>
         {deptLocked && adminDepartment && (
-          <p className="mb-4 text-xs font-semibold text-[var(--color-primary)]">
+          <p className="mb-4 text-xs font-semibold text-primary-ink">
             Scoped to {adminDepartment}
           </p>
         )}
@@ -145,7 +145,7 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
             onClick={() => loadSubjects(0)}
             disabled={busy}
             data-cy="subjects-load"
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
           >
             {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Load subjects
           </button>
@@ -156,7 +156,7 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
         <section className="mt-6 flex flex-col gap-3">
           {subjects.length === 0 ? (
             <p
-              className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+              className="rounded-2xl border border-stroke bg-surface-muted px-4 py-3 text-sm"
               data-cy="subjects-empty"
             >
               No subjects match these filters.
@@ -189,10 +189,10 @@ function Pager({ pageInfo, busy, onGo, noun }) {
   const { number, totalPages, totalElements } = pageInfo;
   return (
     <div
-      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-surface-muted px-4 py-3 text-sm"
       data-cy={`${noun}-pager`}
     >
-      <span className="text-[var(--text-muted)]">
+      <span className="text-ink-muted">
         Page {number + 1} of {totalPages} · {totalElements} {noun}
       </span>
       <div className="flex gap-2">
@@ -201,7 +201,7 @@ function Pager({ pageInfo, busy, onGo, noun }) {
           onClick={() => onGo(number - 1)}
           disabled={busy || number <= 0}
           data-cy={`${noun}-prev`}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary disabled:opacity-40"
         >
           <ChevronLeft size={13} /> Prev
         </button>
@@ -210,7 +210,7 @@ function Pager({ pageInfo, busy, onGo, noun }) {
           onClick={() => onGo(number + 1)}
           disabled={busy || number >= totalPages - 1}
           data-cy={`${noun}-next`}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary disabled:opacity-40"
         >
           Next <ChevronRight size={13} />
         </button>
@@ -292,20 +292,20 @@ function SubjectRow({ subject, departments, onUpdated, onRemoved }) {
   };
 
   const card =
-    "rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft";
+    "rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft";
 
   if (!editing) {
     return (
       <div className={card}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-semibold text-[var(--text-main)]">{subject.subjectName}</p>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="font-semibold text-ink">{subject.subjectName}</p>
+            <p className="text-xs text-ink-muted">
               {subject.courseCode} · Sem {subject.semester} · {subject.credits} credits ·{" "}
               {subject.subjectType} · {formatAcademicYear(subject.academicYearOffered)}
             </p>
             {subject.subjectType === "ELECTIVE" && (subject.eligibleDepartments || []).length > 0 && (
-              <p className="mt-1 text-xs text-[var(--text-muted)]">
+              <p className="mt-1 text-xs text-ink-muted">
                 Eligible: {(subject.eligibleDepartments || []).map((d) => d.deptName).join(", ")}
               </p>
             )}
@@ -315,7 +315,7 @@ function SubjectRow({ subject, departments, onUpdated, onRemoved }) {
               type="button"
               onClick={startEdit}
               data-cy={`subject-edit-${subject.id}`}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)]"
+              className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary"
             >
               <Pencil size={13} /> Edit
             </button>
@@ -324,7 +324,7 @@ function SubjectRow({ subject, departments, onUpdated, onRemoved }) {
               onClick={remove}
               disabled={busy}
               data-cy={`subject-delete-${subject.id}`}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
+              className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
             >
               {busy ? <LoaderCircle size={13} className="animate-spin" /> : <Trash2 size={13} />} Delete
             </button>
@@ -386,7 +386,7 @@ function SubjectRow({ subject, departments, onUpdated, onRemoved }) {
           <label className="text-xs font-semibold uppercase tracking-[0.08em]">
             Academic year (locked)
           </label>
-          <div className="flex h-[42px] items-center rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3.5 text-sm text-[var(--text-muted)]">
+          <div className="flex h-[42px] items-center rounded-xl border border-stroke bg-surface-muted px-3.5 text-sm text-ink-muted">
             {formatAcademicYear(subject.academicYearOffered)}
           </div>
         </div>
@@ -409,7 +409,7 @@ function SubjectRow({ subject, departments, onUpdated, onRemoved }) {
                   type="checkbox"
                   checked={eligible.includes(d.id)}
                   onChange={() => toggleEligible(d.id)}
-                  className="h-4 w-4 accent-[var(--color-primary)]"
+                  className="h-4 w-4 accent-primary"
                 />
                 {d.deptName}
               </label>
@@ -430,14 +430,14 @@ function SubjectRow({ subject, departments, onUpdated, onRemoved }) {
           onClick={save}
           disabled={busy}
           data-cy="subject-save"
-          className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {busy ? <LoaderCircle size={14} className="animate-spin" /> : <Check size={14} />} Save
         </button>
         <button
           type="button"
           onClick={() => setEditing(false)}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)]"
+          className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-2 text-sm font-semibold transition-colors hover:border-primary"
         >
           <X size={14} /> Cancel
         </button>

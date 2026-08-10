@@ -4,12 +4,12 @@ import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 const STATUS_STYLES = {
-  CREATED: "text-[var(--color-primary)]",
-  WOULD_CREATE: "text-[var(--color-primary)]",
-  SKIPPED_EXISTS: "text-[var(--text-muted)]",
+  CREATED: "text-primary-ink",
+  WOULD_CREATE: "text-primary-ink",
+  SKIPPED_EXISTS: "text-ink-muted",
   ERROR: "text-red-600",
 };
 
@@ -43,13 +43,13 @@ function ResultTable({ result }) {
   if (!result) return null;
   return (
     <div className="mt-4" data-cy="students-import-result">
-      <p className="mb-2 text-sm font-medium text-[var(--text-main)]">
+      <p className="mb-2 text-sm font-medium text-ink">
         {result.dryRun ? "Preview" : "Imported"} — {result.created} created, {result.skipped} skipped,{" "}
         {result.errors} error(s)
       </p>
-      <div className="max-h-72 overflow-auto rounded-xl border border-[var(--stroke)]">
+      <div className="max-h-72 overflow-auto rounded-xl border border-stroke">
         <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <thead className="sticky top-0 bg-surface-muted text-xs uppercase tracking-[0.08em] text-ink-muted">
             <tr>
               <th className="px-3 py-2">USN</th>
               <th className="px-3 py-2">Sem</th>
@@ -59,11 +59,11 @@ function ResultTable({ result }) {
           </thead>
           <tbody>
             {result.results.map((r, i) => (
-              <tr key={`${r.rollNo}-${i}`} className="border-t border-[var(--stroke)]">
+              <tr key={`${r.rollNo}-${i}`} className="border-t border-stroke">
                 <td className="px-3 py-2 font-mono text-xs">{r.rollNo}</td>
                 <td className="px-3 py-2">{r.semester ?? "—"}</td>
                 <td className={`px-3 py-2 font-semibold ${STATUS_STYLES[r.status] || ""}`}>{r.status}</td>
-                <td className="px-3 py-2 text-[var(--text-muted)]">{r.message || ""}</td>
+                <td className="px-3 py-2 text-ink-muted">{r.message || ""}</td>
               </tr>
             ))}
           </tbody>
@@ -126,11 +126,11 @@ function ImportStudentsTab() {
   };
 
   return (
-    <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-      <h2 className="mb-1 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+    <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">
+      <h2 className="mb-1 inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink">
         <UploadCloud size={18} /> Import students (CSV)
       </h2>
-      <p className="mb-3 text-sm text-[var(--text-muted)]">
+      <p className="mb-3 text-sm text-ink-muted">
         One row per line: <code>{HEADER}</code>. Date of birth is <code>yyyy-MM-dd</code>. Phone is
         optional; email is assigned automatically as <code>usn@msrit.edu</code>. Leave the two semester
         columns blank to use the batch defaults below. Existing USNs are skipped, so it's safe to re-run.
@@ -171,7 +171,7 @@ function ImportStudentsTab() {
         <button
           type="button"
           onClick={downloadTemplate}
-          className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)]"
+          className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-3 py-2 text-sm font-semibold transition-colors hover:border-primary"
           data-cy="students-import-template"
         >
           <Download size={15} /> Template
@@ -198,7 +198,7 @@ function ImportStudentsTab() {
           onClick={() => run(true)}
           disabled={busy}
           data-cy="students-import-preview"
-          className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
         >
           {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Preview
         </button>

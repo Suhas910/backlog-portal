@@ -19,7 +19,7 @@ import { parseAcademicYear } from "../../lib/academicYear";
 import { SemesterTimeline } from "./SemesterTimeline";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 const PAGE_SIZE = 25;
 
@@ -80,9 +80,9 @@ function StudentsManageTab({ departments, adminRole, adminDepartment, deptLocked
 
   return (
     <>
-      <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
+      <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">
         {deptLocked && adminDepartment && (
-          <p className="mb-4 text-xs font-semibold text-[var(--color-primary)]">
+          <p className="mb-4 text-xs font-semibold text-primary-ink">
             Scoped to {adminDepartment}
           </p>
         )}
@@ -156,7 +156,7 @@ function StudentsManageTab({ departments, adminRole, adminDepartment, deptLocked
             onClick={() => load(0)}
             disabled={busy}
             data-cy="students-load"
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
           >
             {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Load students
           </button>
@@ -167,7 +167,7 @@ function StudentsManageTab({ departments, adminRole, adminDepartment, deptLocked
         <section className="mt-6 flex flex-col gap-3">
           {students.length === 0 ? (
             <p
-              className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+              className="rounded-2xl border border-stroke bg-surface-muted px-4 py-3 text-sm"
               data-cy="students-empty"
             >
               No students match these filters.
@@ -200,10 +200,10 @@ function Pager({ pageInfo, busy, onGo, noun }) {
   const { number, totalPages, totalElements } = pageInfo;
   return (
     <div
-      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-surface-muted px-4 py-3 text-sm"
       data-cy={`${noun}-pager`}
     >
-      <span className="text-[var(--text-muted)]">
+      <span className="text-ink-muted">
         Page {number + 1} of {totalPages} · {totalElements} {noun}
       </span>
       <div className="flex gap-2">
@@ -212,7 +212,7 @@ function Pager({ pageInfo, busy, onGo, noun }) {
           onClick={() => onGo(number - 1)}
           disabled={busy || number <= 0}
           data-cy={`${noun}-prev`}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary disabled:opacity-40"
         >
           <ChevronLeft size={13} /> Prev
         </button>
@@ -221,7 +221,7 @@ function Pager({ pageInfo, busy, onGo, noun }) {
           onClick={() => onGo(number + 1)}
           disabled={busy || number >= totalPages - 1}
           data-cy={`${noun}-next`}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+          className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary disabled:opacity-40"
         >
           Next <ChevronRight size={13} />
         </button>
@@ -335,7 +335,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
     }
   };
 
-  const card = "rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft";
+  const card = "rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft";
   const semOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 
   if (mode === "view") {
@@ -343,11 +343,11 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
       <div className={card}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-semibold text-[var(--text-main)]">
+            <p className="font-semibold text-ink">
               {student.name}{" "}
-              <span className="font-mono text-xs text-[var(--text-muted)]">{student.rollNo}</span>
+              <span className="font-mono text-xs text-ink-muted">{student.rollNo}</span>
             </p>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className="text-xs text-ink-muted">
               {student.branch || "—"} · Sem {student.currentSemester}
               {student.entrySemester > 1 ? ` · entry sem ${student.entrySemester}` : ""}
               {student.email ? ` · ${student.email}` : ""}
@@ -372,7 +372,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
                   <AlertTriangle size={12} /> Progression incomplete
                 </Link>
               ))}
-            {notice && <p className="mt-1.5 text-xs font-semibold text-[var(--color-primary)]">{notice}</p>}
+            {notice && <p className="mt-1.5 text-xs font-semibold text-primary-ink">{notice}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -382,8 +382,8 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
               aria-expanded={showSems}
               className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 showSems
-                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-                  : "border-[var(--stroke)] hover:border-[var(--color-primary)]"
+                  ? "border-primary text-primary-ink"
+                  : "border-stroke hover:border-primary"
               }`}
             >
               <CalendarClock size={13} /> Semesters
@@ -392,7 +392,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
               type="button"
               onClick={startEdit}
               data-cy={`student-edit-${student.rollNo}`}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)]"
+              className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary"
             >
               <Pencil size={13} /> Edit
             </button>
@@ -405,7 +405,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
                 setMode("dob");
               }}
               data-cy={`student-dob-${student.rollNo}`}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)]"
+              className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary"
             >
               <KeyRound size={13} /> Reset DOB
             </button>
@@ -414,7 +414,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
               onClick={remove}
               disabled={busy}
               data-cy={`student-delete-${student.rollNo}`}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
+              className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
             >
               {busy ? (
                 <LoaderCircle size={13} className="animate-spin" />
@@ -443,7 +443,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
         <p className="mb-2 text-sm font-semibold">
           Reset date of birth — {student.name} ({student.rollNo})
         </p>
-        <p className="mb-3 text-xs text-[var(--text-muted)]">
+        <p className="mb-3 text-xs text-ink-muted">
           This is the student's login credential. The current value is never shown.
         </p>
         <div className="flex flex-wrap items-center gap-2">
@@ -459,14 +459,14 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
             onClick={saveDob}
             disabled={busy}
             data-cy={`student-dob-save-${student.rollNo}`}
-            className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {busy ? <LoaderCircle size={14} className="animate-spin" /> : <Check size={14} />} Save
           </button>
           <button
             type="button"
             onClick={() => setMode("view")}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)]"
+            className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-2 text-sm font-semibold transition-colors hover:border-primary"
           >
             <X size={14} /> Cancel
           </button>
@@ -485,7 +485,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
     <div className={card}>
       <p className="mb-3 text-sm font-semibold">
         Edit {student.rollNo}{" "}
-        <span className="text-xs font-normal text-[var(--text-muted)]">
+        <span className="text-xs font-normal text-ink-muted">
           (USN and DOB aren't editable here)
         </span>
       </p>
@@ -496,7 +496,7 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
         </div>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-[0.08em]">
-            Email <span className="font-normal normal-case text-[var(--text-muted)]">(auto, from USN)</span>
+            Email <span className="font-normal normal-case text-ink-muted">(auto, from USN)</span>
           </label>
           <input className={inputClass} value={email} readOnly tabIndex={-1} />
         </div>
@@ -564,14 +564,14 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
           onClick={save}
           disabled={busy}
           data-cy="student-save"
-          className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {busy ? <LoaderCircle size={14} className="animate-spin" /> : <Check size={14} />} Save
         </button>
         <button
           type="button"
           onClick={() => setMode("view")}
-          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)]"
+          className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-2 text-sm font-semibold transition-colors hover:border-primary"
         >
           <X size={14} /> Cancel
         </button>
@@ -635,13 +635,13 @@ function StudentSemesters({ rollNo }) {
   };
 
   return (
-    <div className="mt-3 border-t border-[var(--stroke)] pt-3" data-cy={`student-sems-panel-${rollNo}`}>
-      <p className="mb-2 text-xs text-[var(--text-muted)]">
+    <div className="mt-3 border-t border-stroke pt-3" data-cy={`student-sems-panel-${rollNo}`}>
+      <p className="mb-2 text-xs text-ink-muted">
         Academic year the student studied each semester (entry through 8). Blank rows aren't set yet;
         semesters past the current one are muted but still editable.
       </p>
       {busy && !data ? (
-        <p className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)]">
+        <p className="inline-flex items-center gap-2 text-sm text-ink-muted">
           <LoaderCircle size={15} className="animate-spin" /> Loading semesters…
         </p>
       ) : data ? (

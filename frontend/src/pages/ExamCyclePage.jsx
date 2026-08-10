@@ -98,9 +98,9 @@ function ExamCyclePage() {
   if (!isAdmin || !adminToken) return null;
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-3xl pb-24 md:pb-0">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-4 text-white shadow-soft sm:px-6">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary px-4 py-4 text-white shadow-soft sm:px-6">
           <div>
             <BrandIdentity compact />
             <p className="mt-2 inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
@@ -121,8 +121,8 @@ function ExamCyclePage() {
           </p>
         )}
 
-        <section className="mb-6 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft">
-          <h3 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+        <section className="mb-6 rounded-2xl border border-stroke bg-surface-1 p-5 shadow-soft">
+          <h3 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink">
             <PlusCircle size={18} /> New Exam Cycle
           </h3>
           <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -136,7 +136,7 @@ function ExamCyclePage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. June 2026 Backlog Exams"
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -149,7 +149,7 @@ function ExamCyclePage() {
                 value={examMonthYear}
                 onChange={(e) => setExamMonthYear(e.target.value)}
                 placeholder="e.g. June 2026"
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring"
               />
             </div>
             <div className="sm:col-span-2">
@@ -161,8 +161,8 @@ function ExamCyclePage() {
           </form>
         </section>
 
-        <section className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft">
-          <h3 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+        <section className="rounded-2xl border border-stroke bg-surface-1 p-5 shadow-soft">
+          <h3 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink">
             <CalendarRange size={18} /> Exam Cycles
           </h3>
           {loading ? (
@@ -170,7 +170,7 @@ function ExamCyclePage() {
               <LoaderCircle size={16} className="animate-spin" /> Loading...
             </p>
           ) : cycles.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">
+            <p className="text-sm text-ink-muted">
               No exam cycles yet. Create one above — registrations stay closed until a cycle is active.
             </p>
           ) : (
@@ -178,24 +178,24 @@ function ExamCyclePage() {
               {cycles.map((c) => (
                 <li
                   key={c.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stroke bg-surface-muted px-4 py-3"
                 >
                   <div>
-                    <p className="font-semibold text-[var(--text-main)]">
+                    <p className="font-semibold text-ink">
                       {c.name}
                       {c.active && (
-                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[rgba(145,25,28,0.1)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--color-primary)]">
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[rgba(145,25,28,0.1)] px-2.5 py-0.5 text-[11px] font-semibold text-primary-ink">
                           <CheckCircle2 size={12} /> Active
                         </span>
                       )}
                     </p>
                     {c.examMonthYear && (
-                      <p className="text-xs text-[var(--text-muted)]">{c.examMonthYear}</p>
+                      <p className="text-xs text-ink-muted">{c.examMonthYear}</p>
                     )}
                   </div>
                   {c.active ? (
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-semibold text-[var(--color-primary)]">Accepting registrations</span>
+                      <span className="text-xs font-semibold text-primary-ink">Accepting registrations</span>
                       <button
                         type="button"
                         onClick={() => handleEnd(c.id)}
@@ -216,7 +216,7 @@ function ExamCyclePage() {
                       type="button"
                       onClick={() => handleActivate(c.id)}
                       disabled={activatingId === c.id}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-secondary)] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary disabled:opacity-50"
                       data-cy="cycle-activate"
                     >
                       {activatingId === c.id ? (

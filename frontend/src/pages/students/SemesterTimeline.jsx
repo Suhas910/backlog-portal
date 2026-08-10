@@ -7,7 +7,7 @@ import { formatAcademicYear } from "../../lib/academicYear";
 // which PUTs the per-semester override. See docs/adr/backlog-progression.md.
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 // One row per semester, entry through 8, all editable. A recorded year is prefilled; semesters
 // with no row arrive as academicYear === null (blank, editable, shown as a dash). Rows past
@@ -31,9 +31,9 @@ function buildTimelineRows(student) {
 // parses, persists, and feeds back a refreshed student.
 export function SemesterTimeline({ student, onSaveYear, busy }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-[var(--stroke)]">
+    <div className="overflow-x-auto rounded-xl border border-stroke">
       <table className="w-full text-left text-sm">
-        <thead className="bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+        <thead className="bg-surface-muted text-xs uppercase tracking-[0.08em] text-ink-muted">
           <tr>
             <th className="px-3 py-2">Semester</th>
             <th className="px-3 py-2">Academic year</th>
@@ -62,17 +62,17 @@ function TermRow({ semester, academicYear, future, onSave, busy }) {
   const original = isMissing ? "" : formatAcademicYear(academicYear);
   const [year, setYear] = useState(original);
   return (
-    <tr className="border-t border-[var(--stroke)]">
-      <td className={`px-3 py-2 ${future ? "text-[var(--text-muted)]" : ""}`}>
+    <tr className="border-t border-stroke">
+      <td className={`px-3 py-2 ${future ? "text-ink-muted" : ""}`}>
         Semester {semester}
         {future && (
-          <span className="ml-2 text-xs font-normal text-[var(--text-muted)]">(not yet reached)</span>
+          <span className="ml-2 text-xs font-normal text-ink-muted">(not yet reached)</span>
         )}
       </td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-2">
           {isMissing && (
-            <span className="text-[var(--text-muted)]" aria-hidden="true" data-cy={`prog-term-dash-${semester}`}>
+            <span className="text-ink-muted" aria-hidden="true" data-cy={`prog-term-dash-${semester}`}>
               —
             </span>
           )}
@@ -97,7 +97,7 @@ function TermRow({ semester, academicYear, future, onSave, busy }) {
           onClick={() => onSave(semester, year)}
           disabled={busy || !year.trim() || year === original}
           data-cy={`prog-term-save-${semester}`}
-          className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-50"
+          className="rounded-md border border-stroke bg-surface-1 px-3 py-1 text-xs font-semibold transition-colors hover:border-primary disabled:opacity-50"
         >
           Save
         </button>

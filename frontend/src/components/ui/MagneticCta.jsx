@@ -8,7 +8,7 @@
 // invisible except for the ring-offset gap. Don't reintroduce a local ring here.
 const BASE = [
   "inline-flex items-center justify-center rounded-full px-5 py-3",
-  "bg-[var(--color-cta)] text-[var(--color-cta-text)] text-sm font-semibold",
+  "bg-cta text-cta-text text-sm font-semibold",
   "shadow-soft transition-[box-shadow,transform] duration-200",
   "hover:shadow-[0_10px_30px_var(--color-cta-glow)]",
   // press feedback (formerly framer-motion whileTap={{ scale: 0.98 }})

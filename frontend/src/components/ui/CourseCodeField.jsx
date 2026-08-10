@@ -19,7 +19,7 @@ function CourseCodeField({
   return (
     <div className="flex items-stretch">
       <span
-        className="inline-flex select-none items-center rounded-l-xl border border-r-0 border-[var(--stroke)] bg-[var(--surface-muted)] px-3 text-sm font-semibold text-[var(--text-muted)]"
+        className="inline-flex select-none items-center rounded-l-xl border border-r-0 border-stroke bg-surface-muted px-3 text-sm font-semibold text-ink-muted"
         title="Set automatically from the academic year"
       >
         {prefix || "YY"}

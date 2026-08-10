@@ -77,9 +77,9 @@ function StudentsPage() {
   const shared = { departments, adminRole, adminDepartment, deptLocked, pinnedDeptId };
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-5xl pb-24 md:pb-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <Link
             to="/admin"
@@ -90,10 +90,10 @@ function StudentsPage() {
         </header>
 
         <div className="mb-3">
-          <h1 className="inline-flex items-center gap-2 text-2xl font-semibold text-[var(--color-secondary)] sm:text-3xl">
+          <h1 className="inline-flex items-center gap-2 text-2xl font-semibold text-secondary-ink sm:text-3xl">
             <GraduationCap size={26} /> {adminRole === "PROCTOR" ? "My Students" : "Students"}
           </h1>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
+          <p className="mt-1 text-sm text-ink-muted">
             {adminRole === "PROCTOR"
               ? "Manage the students under your supervision — details, semester timeline, and DOB resets — and claim new ones from your department."
               : "Create and manage student accounts, then set their academic-year progression in the Progression tab so their backlogs resolve to the right year."}
@@ -115,8 +115,8 @@ function StudentsPage() {
                 data-cy={`tab-${t.key}`}
                 className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
                   on
-                    ? "border-[var(--color-primary)] bg-[rgba(145,25,28,0.08)] text-[var(--color-primary)]"
-                    : "border-[var(--stroke)] bg-[var(--surface-muted)] text-[var(--text-main)] hover:border-[var(--color-primary)]"
+                    ? "border-primary bg-[rgba(145,25,28,0.08)] text-primary-ink"
+                    : "border-stroke bg-surface-muted text-ink hover:border-primary"
                 }`}
               >
                 <Icon size={15} /> {t.label}

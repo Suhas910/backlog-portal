@@ -18,7 +18,7 @@ export default function StickyNav() {
 
   return (
     <header
-      className={`sticky top-0 z-50 border-b border-white/10 bg-[var(--color-secondary)]/95 backdrop-blur transition-all duration-300 ${
+      className={`sticky top-0 z-50 border-b border-white/10 bg-secondary/95 backdrop-blur transition-all duration-300 ${
         scrolled ? "py-2" : "py-3"
       }`}
     >

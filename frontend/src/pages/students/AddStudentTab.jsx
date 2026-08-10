@@ -5,7 +5,7 @@ import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 const USN_RE = /^1MS\d{2}[A-Za-z]{2}\d{3}$/;
 
@@ -96,10 +96,10 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
 
   return (
     <div
-      className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-8"
+      className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-8"
     >
-      <h2 className="mb-2 text-xl font-semibold text-[var(--color-secondary)]">Add a student</h2>
-      <p className="mb-6 text-sm text-[var(--text-muted)]">
+      <h2 className="mb-2 text-xl font-semibold text-secondary-ink">Add a student</h2>
+      <p className="mb-6 text-sm text-ink-muted">
         The USN sets the branch and admission year, and the email is assigned automatically
         (usn@msrit.edu). Date of birth is the student's login credential. All eight semesters' academic
         years are seeded automatically from the USN on create.
@@ -202,7 +202,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
           </div>
           <div className="flex flex-col gap-1.5">
             <label htmlFor="dob" className="text-xs font-semibold uppercase tracking-[0.08em]">
-              Date of birth * <span className="text-[var(--text-muted)]">(login credential)</span>
+              Date of birth * <span className="text-ink-muted">(login credential)</span>
             </label>
             <input
               id="dob"
@@ -261,7 +261,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
             </div>
           </div>
         </div>
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="text-xs text-ink-muted">
           Entry semester is 1 for a normal intake, or the semester a lateral-entry/migrant student
           joined at (e.g. 3 for a 2nd-year transfer). It raises their backlog-eligibility floor.
         </p>
@@ -276,7 +276,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
           </p>
         )}
 
-        <div className="border-t border-[var(--stroke)] pt-4">
+        <div className="border-t border-stroke pt-4">
           <MagneticCta
             type="submit"
             disabled={loading}

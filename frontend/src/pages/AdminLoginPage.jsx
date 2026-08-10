@@ -113,29 +113,29 @@ function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-10 sm:px-6 lg:px-8">
       <a
         href="#admin-login-main"
-        className="sr-only left-4 top-4 z-[60] rounded-md bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-[var(--color-cta-text)] focus:not-sr-only focus:fixed"
+        className="sr-only left-4 top-4 z-[60] rounded-md bg-cta px-4 py-2 text-sm font-semibold text-cta-text focus:not-sr-only focus:fixed"
       >
         Skip to admin login
       </a>
 
       <div
         id="admin-login-main"
-        className="mx-auto w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
+        className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
       >
         <div className="mb-6 text-left">
-          <div className="mb-4 flex items-center rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-3 text-white shadow-soft">
+          <div className="mb-4 flex items-center rounded-2xl border border-stroke bg-secondary px-4 py-3 text-white shadow-soft">
             <BrandIdentity compact />
           </div>
-          <p className="mb-2 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
+          <p className="mb-2 inline-flex rounded-full border border-primary/30 bg-surface-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary-ink">
             Restricted Access
           </p>
-          <h1 className="admin-login-heading text-3xl font-semibold text-[var(--color-secondary)]">
+          <h1 className="admin-login-heading text-3xl font-semibold text-secondary-ink">
             {step === 1 ? "Select Designation" : "Staff Login"}
           </h1>
-          <p className="mt-2 text-sm text-[var(--text-main)]">
+          <p className="mt-2 text-sm text-ink">
             {step === 1
               ? "Please select your designation to continue."
               : `Sign in as ${roleTitle} to manage registrations.`}
@@ -156,16 +156,16 @@ function AdminLoginPage() {
           <div className="flex flex-col gap-4">
             <button
               onClick={() => handleRoleSelect("Administrator", "ADMIN")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
                 <ShieldCheck size={24} />
               </div>
               <div>
-                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-secondary-ink">
                   Administrator
                 </h3>
-                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                <p className="mt-0.5 text-xs text-ink">
                   Full system access
                 </p>
               </div>
@@ -173,16 +173,16 @@ function AdminLoginPage() {
 
             <button
               onClick={() => handleRoleSelect("Principal / Registrar / COE", "PRINCIPAL")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
                 <GraduationCap size={24} />
               </div>
               <div>
-                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-secondary-ink">
                   Principal / Registrar / COE
                 </h3>
-                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                <p className="mt-0.5 text-xs text-ink">
                   High-level overview and final approvals
                 </p>
               </div>
@@ -190,16 +190,16 @@ function AdminLoginPage() {
 
             <button
               onClick={() => handleRoleSelect("Head of Department (HOD)", "HOD")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
                 <Briefcase size={24} />
               </div>
               <div>
-                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-secondary-ink">
                   Head of Department (HOD)
                 </h3>
-                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                <p className="mt-0.5 text-xs text-ink">
                   Department level verification and tracking
                 </p>
               </div>
@@ -207,16 +207,16 @@ function AdminLoginPage() {
 
             <button
               onClick={() => handleRoleSelect("Department Office", "DEPT_OFFICE")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
                 <Building2 size={24} />
               </div>
               <div>
-                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-secondary-ink">
                   Department Office
                 </h3>
-                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                <p className="mt-0.5 text-xs text-ink">
                   Manage physical form submissions
                 </p>
               </div>
@@ -224,17 +224,17 @@ function AdminLoginPage() {
 
             <button
               onClick={() => handleRoleSelect("Proctor", "PROCTOR")}
-              className="flex items-center gap-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 text-left transition-all duration-200 hover:border-[var(--color-primary)] hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               data-cy="role-proctor"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--surface-1)] text-[var(--color-primary)] shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
                 <UserCheck size={24} />
               </div>
               <div>
-                <h3 className="admin-login-heading font-semibold text-[var(--color-secondary)]">
+                <h3 className="admin-login-heading font-semibold text-secondary-ink">
                   Proctor
                 </h3>
-                <p className="mt-0.5 text-xs text-[var(--text-main)]">
+                <p className="mt-0.5 text-xs text-ink">
                   Supervise and manage your assigned students
                 </p>
               </div>
@@ -244,7 +244,7 @@ function AdminLoginPage() {
           <div className="space-y-4">
             <label
               htmlFor="admin-username"
-              className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+              className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-ink"
             >
               Username
             </label>
@@ -253,13 +253,13 @@ function AdminLoginPage() {
               placeholder="Username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              className="w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring"
               data-cy="admin-username"
             />
 
             <label
               htmlFor="admin-password"
-              className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+              className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-ink"
             >
               Password
             </label>
@@ -269,7 +269,7 @@ function AdminLoginPage() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+              className="w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring"
               data-cy="admin-password"
             />
 
@@ -277,7 +277,7 @@ function AdminLoginPage() {
               <>
                 <label
                   htmlFor="admin-department"
-                  className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+                  className="block text-left text-xs font-semibold uppercase tracking-[0.08em] text-ink"
                 >
                   Department
                 </label>
@@ -285,7 +285,7 @@ function AdminLoginPage() {
                   id="admin-department"
                   value={departmentId}
                   onChange={(e) => setDepartmentId(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  className="w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
                   data-cy="admin-department"
                 >
                   <option value="">Select department</option>
@@ -333,7 +333,7 @@ function AdminLoginPage() {
                 setSelectedRole("");
                 setError("");
               }}
-              className="mt-4 flex w-full items-center justify-center gap-2 text-sm font-medium text-[var(--text-main)] hover:text-[var(--color-primary)]"
+              className="mt-4 flex w-full items-center justify-center gap-2 text-sm font-medium text-ink hover:text-primary-ink"
             >
               <ArrowLeft size={14} /> Back to role selection
             </button>
@@ -343,7 +343,7 @@ function AdminLoginPage() {
         <div className="mt-4 text-center">
           <Link
             to="/"
-            className="login-back-link inline-flex items-center gap-1 text-sm font-medium text-[var(--color-secondary)] underline-offset-4 hover:underline"
+            className="login-back-link inline-flex items-center gap-1 text-sm font-medium text-secondary-ink underline-offset-4 hover:underline"
           >
             <ArrowLeft size={14} /> Back to home
           </Link>

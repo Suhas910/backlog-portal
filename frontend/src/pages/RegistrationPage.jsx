@@ -171,7 +171,7 @@ function RegistrationPage() {
   // ---- gated render states ----
   if (regStatus === null || profile === null) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--surface-1)] px-4 text-[var(--text-muted)]">
+      <div className="flex min-h-screen items-center justify-center bg-surface-1 px-4 text-ink-muted">
         <p className="inline-flex items-center gap-2 text-sm">
           <LoaderCircle size={18} className="animate-spin" /> Loading...
         </p>
@@ -182,7 +182,7 @@ function RegistrationPage() {
   if (regStatus.open === false) {
     return (
       <CenteredCard icon={<CalendarX size={24} />} title="Registration Closed">
-        <p className="mb-6 text-[var(--text-main)]">
+        <p className="mb-6 text-ink">
           Backlog registration is not open right now. There is no active exam cycle accepting
           submissions. Please check back when your department announces the next registration window.
         </p>
@@ -195,7 +195,7 @@ function RegistrationPage() {
   if (!profile.phone) {
     return (
       <CenteredCard icon={<Phone size={24} />} title="Add your phone number">
-        <p className="mb-6 text-[var(--text-main)]">
+        <p className="mb-6 text-ink">
           You need a phone number on your profile before you can register for backlog exams. Please
           add it in your dashboard and come back.
         </p>
@@ -212,10 +212,10 @@ function RegistrationPage() {
         eyebrow="Submission Complete"
         title="Registration Submitted"
       >
-        <p className="mb-2 text-[var(--text-main)]">
+        <p className="mb-2 text-ink">
           Your registration ID is: <strong>{regId}</strong>
         </p>
-        <p className="mb-6 text-[var(--text-main)]">
+        <p className="mb-6 text-ink">
           Please download your form, print it, and get it signed by your Proctor and HOD.
         </p>
         <div className="flex flex-wrap gap-3">
@@ -225,7 +225,7 @@ function RegistrationPage() {
           </MagneticCta>
           <Link
             to="/student"
-            className="inline-flex items-center justify-center rounded-full border border-[var(--stroke)] bg-[var(--surface-1)] px-5 py-3 text-sm font-semibold text-[var(--color-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+            className="inline-flex items-center justify-center rounded-full border border-stroke bg-surface-1 px-5 py-3 text-sm font-semibold text-secondary-ink transition-colors hover:border-primary hover:text-primary-ink"
           >
             <ArrowLeft size={16} /> Back to Dashboard
           </Link>
@@ -236,9 +236,9 @@ function RegistrationPage() {
 
   // ---- main subject-selection form ----
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] text-[var(--text-main)]">
+    <div className="min-h-screen bg-surface-1 text-ink">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 pb-24 sm:px-6 lg:px-8 md:pb-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <Link
             to="/student"
@@ -250,12 +250,12 @@ function RegistrationPage() {
         </header>
 
         <div
-          className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-8"
+          className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-8"
         >
           {/* locked identity summary */}
           <section className="mb-6">
-            <h2 className="mb-3 text-xl font-semibold text-[var(--text-main)]">Registering as</h2>
-            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 sm:grid-cols-2">
+            <h2 className="mb-3 text-xl font-semibold text-ink">Registering as</h2>
+            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-stroke bg-surface-muted p-4 sm:grid-cols-2">
               <LockedField label="Name" value={profile.name} />
               <LockedField label="USN" value={profile.rollNo} />
               <LockedField label="Email" value={profile.email} />
@@ -271,10 +271,10 @@ function RegistrationPage() {
             ) : null}
           </section>
 
-          <section className="mb-6 border-t border-[var(--stroke)] pt-6">
-            <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">Selected Subjects</h2>
+          <section className="mb-6 border-t border-stroke pt-6">
+            <h2 className="mb-4 text-xl font-semibold text-ink">Selected Subjects</h2>
             {selectedSubjects.length === 0 ? (
-              <p className="mb-6 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+              <p className="mb-6 rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm">
                 No subjects selected yet. Please search and add subjects below.
               </p>
             ) : (
@@ -282,13 +282,13 @@ function RegistrationPage() {
                 {selectedSubjects.map((subject) => (
                   <div
                     key={`sel-${subject.id}`}
-                    className="flex items-center justify-between rounded-xl border border-[var(--color-primary)]/30 bg-[rgba(145,25,28,0.08)] p-3 shadow-sm"
+                    className="flex items-center justify-between rounded-xl border border-primary/30 bg-[rgba(145,25,28,0.08)] p-3 shadow-sm"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-[var(--text-main)] sm:text-base">
+                      <p className="text-sm font-semibold text-ink sm:text-base">
                         {subject.subjectName}
                       </p>
-                      <p className="text-xs text-[var(--text-main)] sm:text-sm">
+                      <p className="text-xs text-ink sm:text-sm">
                         <span className="font-mono">{subject.courseCode}</span> •{" "}
                         {subject.department?.deptName} • Sem {subject.semester || searchSemester} •{" "}
                         {subject.credits} {subject.credits === 1 ? "credit" : "credits"}
@@ -297,7 +297,7 @@ function RegistrationPage() {
                     <button
                       type="button"
                       onClick={() => handleSubjectToggle(subject)}
-                      className="ml-3 shrink-0 rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                      className="ml-3 shrink-0 rounded-md border border-stroke bg-surface-1 px-2 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
                     >
                       Remove
                     </button>
@@ -307,30 +307,30 @@ function RegistrationPage() {
             )}
 
             {selectedSubjects.length > 0 && (
-              <div className="mb-6 flex items-center justify-between rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
-                <span className="font-semibold text-[var(--text-main)]">
+              <div className="mb-6 flex items-center justify-between rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm">
+                <span className="font-semibold text-ink">
                   {selectedSubjects.length}{" "}
                   {selectedSubjects.length === 1 ? "subject" : "subjects"} selected
                 </span>
-                <span className="font-semibold text-[var(--text-main)]">
+                <span className="font-semibold text-ink">
                   Total credits:{" "}
                   {selectedSubjects.reduce((sum, s) => sum + (s.credits || 0), 0)}
                 </span>
               </div>
             )}
 
-            <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">Search Backlog Subjects</h2>
+            <h2 className="mb-4 text-xl font-semibold text-ink">Search Backlog Subjects</h2>
             <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="searchSemester"
-                  className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+                  className="text-xs font-semibold uppercase tracking-[0.08em] text-ink"
                 >
                   Semester
                 </label>
                 <select
                   id="searchSemester"
-                  className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
                   value={searchSemester}
                   onChange={(e) => setSearchSemester(e.target.value)}
                   data-cy="reg-semester"
@@ -350,22 +350,22 @@ function RegistrationPage() {
                 ) : null}
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]">
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink">
                   Academic Year
                 </span>
-                <div className="flex h-[42px] items-center rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3.5 text-sm text-[var(--text-main)]">
+                <div className="flex h-[42px] items-center rounded-xl border border-stroke bg-surface-muted px-3.5 text-sm text-ink">
                   {resolvedAcademicYear
                     ? formatAcademicYear(resolvedAcademicYear)
                     : "Set automatically from your record"}
                 </div>
-                <p className="text-xs text-[var(--text-muted)]">
+                <p className="text-xs text-ink-muted">
                   Resolved from the year you studied this semester.
                 </p>
               </div>
             </div>
 
             {loadingSubjects ? (
-              <p className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+              <p className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm">
                 <LoaderCircle size={16} className="animate-spin" /> Loading subjects...
               </p>
             ) : subjectsError ? (
@@ -373,7 +373,7 @@ function RegistrationPage() {
                 {subjectsError}
               </p>
             ) : subjects.length === 0 ? (
-              <p className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+              <p className="rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm">
                 {searchSemester
                   ? "No subjects found for the selected semester."
                   : "Select a semester to find subjects."}
@@ -387,8 +387,8 @@ function RegistrationPage() {
                       key={subject.id}
                       className={`rounded-xl border p-3 transition-transform duration-200 motion-safe:hover:translate-y-[-2px] ${
                         isSelected
-                          ? "border-[var(--color-primary)]/45 bg-[rgba(145,25,28,0.08)] opacity-60"
-                          : "border-[var(--stroke)] bg-[var(--surface-muted)]"
+                          ? "border-primary/45 bg-[rgba(145,25,28,0.08)] opacity-60"
+                          : "border-stroke bg-surface-muted"
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -397,21 +397,21 @@ function RegistrationPage() {
                           id={`subject-${subject.id}`}
                           checked={isSelected}
                           onChange={() => handleSubjectToggle(subject)}
-                          className="h-4 w-4 accent-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                          className="h-4 w-4 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                         />
                         <label
                           htmlFor={`subject-${subject.id}`}
-                          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-[var(--text-main)] sm:text-base"
+                          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-ink sm:text-base"
                         >
                           <span className="flex min-w-0 flex-col">
                             <span className="truncate">{subject.subjectName}</span>
-                            <span className="font-mono text-xs text-[var(--text-muted)]">
+                            <span className="font-mono text-xs text-ink-muted">
                               {subject.courseCode}
                             </span>
                           </span>
-                          <span className="shrink-0 text-right text-xs text-[var(--text-main)] sm:text-sm">
+                          <span className="shrink-0 text-right text-xs text-ink sm:text-sm">
                             {subject.department?.deptName}
-                            <span className="block text-[var(--text-muted)]">
+                            <span className="block text-ink-muted">
                               {subject.credits} {subject.credits === 1 ? "credit" : "credits"}
                             </span>
                           </span>
@@ -463,19 +463,19 @@ function RegistrationPage() {
 function LockedField({ label, value }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">
         {label}
       </span>
-      <span className="text-sm font-medium text-[var(--text-main)]">{value || "—"}</span>
+      <span className="text-sm font-medium text-ink">{value || "—"}</span>
     </div>
   );
 }
 
 function CenteredCard({ icon, eyebrow, title, children }) {
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto mb-6 w-full max-w-2xl">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <Link
             to="/student"
@@ -487,19 +487,19 @@ function CenteredCard({ icon, eyebrow, title, children }) {
         </header>
       </div>
       <div
-        className="mx-auto w-full max-w-2xl rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft sm:p-8"
+        className="mx-auto w-full max-w-2xl rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft sm:p-8"
       >
         {eyebrow ? (
-          <p className="mb-2 inline-flex rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
+          <p className="mb-2 inline-flex rounded-full border border-primary/30 bg-surface-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary-ink">
             {eyebrow}
           </p>
         ) : null}
         {icon ? (
-          <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--color-primary)]">
+          <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-surface-muted text-primary-ink">
             {icon}
           </span>
         ) : null}
-        <h2 className="mb-3 text-3xl font-semibold text-[var(--color-secondary)]">{title}</h2>
+        <h2 className="mb-3 text-3xl font-semibold text-secondary-ink">{title}</h2>
         {children}
       </div>
     </div>
@@ -510,7 +510,7 @@ function BackLink({ to, label }) {
   return (
     <Link
       to={to}
-      className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--stroke)] bg-[var(--surface-1)] px-5 py-3 text-sm font-semibold text-[var(--color-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+      className="inline-flex items-center justify-center gap-2 rounded-full border border-stroke bg-surface-1 px-5 py-3 text-sm font-semibold text-secondary-ink transition-colors hover:border-primary hover:text-primary-ink"
     >
       <ArrowLeft size={16} /> {label}
     </Link>

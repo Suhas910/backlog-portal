@@ -13,13 +13,13 @@ import { parseAcademicYear } from "../../lib/academicYear";
 import { SemesterTimeline } from "./SemesterTimeline";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 const STATUS_STYLES = {
-  CREATED: "text-[var(--color-primary)]",
-  WOULD_CREATE: "text-[var(--color-primary)]",
-  SKIPPED_EXISTS: "text-[var(--text-muted)]",
-  WOULD_SKIP: "text-[var(--text-muted)]",
+  CREATED: "text-primary-ink",
+  WOULD_CREATE: "text-primary-ink",
+  SKIPPED_EXISTS: "text-ink-muted",
+  WOULD_SKIP: "text-ink-muted",
   ERROR: "text-red-600",
 };
 
@@ -27,13 +27,13 @@ function ResultTable({ result }) {
   if (!result) return null;
   return (
     <div className="mt-4">
-      <p className="mb-2 text-sm font-medium text-[var(--text-main)]">
+      <p className="mb-2 text-sm font-medium text-ink">
         {result.dryRun ? "Preview" : "Applied"} — {result.created} created, {result.skipped} skipped,{" "}
         {result.errors} error(s)
       </p>
-      <div className="max-h-72 overflow-auto rounded-xl border border-[var(--stroke)]">
+      <div className="max-h-72 overflow-auto rounded-xl border border-stroke">
         <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+          <thead className="sticky top-0 bg-surface-muted text-xs uppercase tracking-[0.08em] text-ink-muted">
             <tr>
               <th className="px-3 py-2">USN</th>
               <th className="px-3 py-2">Sem</th>
@@ -43,11 +43,11 @@ function ResultTable({ result }) {
           </thead>
           <tbody>
             {result.results.map((r, i) => (
-              <tr key={`${r.rollNo}-${r.semester}-${i}`} className="border-t border-[var(--stroke)]">
+              <tr key={`${r.rollNo}-${r.semester}-${i}`} className="border-t border-stroke">
                 <td className="px-3 py-2 font-mono text-xs">{r.rollNo}</td>
                 <td className="px-3 py-2">{r.semester ?? "—"}</td>
                 <td className={`px-3 py-2 font-semibold ${STATUS_STYLES[r.status] || ""}`}>{r.status}</td>
-                <td className="px-3 py-2 text-[var(--text-muted)]">{r.message || ""}</td>
+                <td className="px-3 py-2 text-ink-muted">{r.message || ""}</td>
               </tr>
             ))}
           </tbody>
@@ -316,13 +316,13 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
 
   return (
     <div>
-      <p className="mb-4 text-sm text-[var(--text-muted)]">
+      <p className="mb-4 text-sm text-ink-muted">
         Record which academic year each student studied a semester. This drives which subject set
         their backlogs resolve to.
         {deptLocked && adminDepartment ? ` Scoped to ${adminDepartment}.` : ""}
       </p>
 
-      <div className="mb-5 inline-flex rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-1 shadow-soft">
+      <div className="mb-5 inline-flex rounded-2xl border border-stroke bg-surface-1 p-1 shadow-soft">
         {[
           { key: "find", label: "Find & correct" },
           { key: "bulk", label: "Bulk tools" },
@@ -334,8 +334,8 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
             data-cy={`prog-tab-${t.key}`}
             className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
               tab === t.key
-                ? "bg-[var(--color-primary)] text-white"
-                : "text-[var(--color-secondary)] hover:bg-[var(--surface-muted)]"
+                ? "bg-primary text-white"
+                : "text-secondary-ink hover:bg-surface-muted"
             }`}
           >
             {t.label}
@@ -414,7 +414,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                   onClick={() => runPromote(true)}
                   disabled={pBusy}
                   data-cy="prog-promote-preview"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
                 >
                   {pBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Preview
                 </button>
@@ -427,7 +427,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
 
             {/* CSV import */}
             <Card icon={<UploadCloud size={18} />} title="Import progression (CSV)">
-              <p className="mb-2 text-xs text-[var(--text-muted)]">
+              <p className="mb-2 text-xs text-ink-muted">
                 One row per line: <code>USN,semester,academicYear</code> (academic year as
                 <code> 2024-25</code> or just <code>2024</code>). Existing rows are kept
                 (write-once) — use the correction tool below to change one.
@@ -446,7 +446,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                   onClick={() => runImport(true)}
                   disabled={iBusy}
                   data-cy="prog-import-preview"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
                 >
                   {iBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Preview
                 </button>
@@ -459,7 +459,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
 
             {/* Backfill */}
             <Card icon={<Wand2 size={18} />} title="Backfill history (linear default)">
-              <p className="mb-3 text-xs text-[var(--text-muted)]">
+              <p className="mb-3 text-xs text-ink-muted">
                 Seeds every semester from each student's entry semester through semester 8,
                 assuming no detention (sem k → admission year + ⌊(k−entry)/2⌋). Write-once, so
                 hand-corrected rows are kept.
@@ -496,7 +496,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                   type="button"
                   onClick={() => runBackfill(true)}
                   disabled={bBusy}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
                 >
                   {bBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Preview
                 </button>
@@ -513,7 +513,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
           <>
             {/* Progression gaps */}
             <Card icon={<AlertTriangle size={18} />} title="Find students missing progression">
-              <p className="mb-3 text-xs text-[var(--text-muted)]">
+              <p className="mb-3 text-xs text-ink-muted">
                 Students with no academic-year row for one or more semesters in their eligibility
                 window — typically newly added students. Pick one to set its timeline below.
               </p>
@@ -549,7 +549,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                   onClick={runGaps}
                   disabled={gBusy}
                   data-cy="prog-gaps-find"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
                 >
                   {gBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Find gaps
                 </button>
@@ -558,15 +558,15 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                 <div className="mt-4">
                   {gaps.length === 0 ? (
                     <p
-                      className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+                      className="rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm"
                       data-cy="prog-gaps-empty"
                     >
                       No students are missing progression for this selection.
                     </p>
                   ) : (
-                    <div className="max-h-72 overflow-auto rounded-xl border border-[var(--stroke)]">
+                    <div className="max-h-72 overflow-auto rounded-xl border border-stroke">
                       <table className="w-full text-left text-sm">
-                        <thead className="sticky top-0 bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                        <thead className="sticky top-0 bg-surface-muted text-xs uppercase tracking-[0.08em] text-ink-muted">
                           <tr>
                             <th className="px-3 py-2">USN</th>
                             <th className="px-3 py-2">Name</th>
@@ -576,7 +576,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                         </thead>
                         <tbody>
                           {gaps.map((g) => (
-                            <tr key={g.rollNo} className="border-t border-[var(--stroke)]">
+                            <tr key={g.rollNo} className="border-t border-stroke">
                               <td className="px-3 py-2 font-mono text-xs">{g.rollNo}</td>
                               <td className="px-3 py-2">{g.name}</td>
                               <td className="px-3 py-2">{g.missingSemesters.join(", ")}</td>
@@ -585,7 +585,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                                   type="button"
                                   onClick={() => fixGap(g.rollNo)}
                                   data-cy={`prog-gaps-fix-${g.rollNo}`}
-                                  className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1 text-xs font-semibold transition-colors hover:border-[var(--color-primary)]"
+                                  className="rounded-md border border-stroke bg-surface-1 px-3 py-1 text-xs font-semibold transition-colors hover:border-primary"
                                 >
                                   Fix
                                 </button>
@@ -615,7 +615,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                   onClick={loadStudent}
                   disabled={sBusy}
                   data-cy="prog-lookup-load"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
                 >
                   {sBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />} Load
                 </button>
@@ -625,7 +625,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                 <div className="mt-4">
                   <p className="mb-3 text-sm">
                     <span className="font-semibold">{student.name}</span>{" "}
-                    <span className="font-mono text-xs text-[var(--text-muted)]">{student.rollNo}</span>
+                    <span className="font-mono text-xs text-ink-muted">{student.rollNo}</span>
                   </p>
                   <SemesterEditor
                     key={`${student.rollNo}-${student.currentSemester}-${student.entrySemester}`}
@@ -633,7 +633,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                     onSave={saveSemesters}
                     busy={sBusy}
                   />
-                  <p className="mb-3 mt-4 text-xs text-[var(--text-muted)]">
+                  <p className="mb-3 mt-4 text-xs text-ink-muted">
                     Every semester from entry through semester 8 is listed below — all are editable.
                     Rows showing a dash have no academic year recorded yet; semesters past the current
                     one are muted (not yet reached) but can still be set.
@@ -653,8 +653,8 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
 // definition remounts the card subtree on every keystroke and steals focus from its inputs.
 function Card({ icon, title, children }) {
   return (
-    <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-      <h2 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+    <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">
+      <h2 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink">
         {icon} {title}
       </h2>
       {children}
@@ -696,7 +696,7 @@ function SemesterEditor({ student, onSave, busy }) {
   const invalid = Number(entry) > Number(current);
 
   return (
-    <div className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-3">
+    <div className="rounded-xl border border-stroke bg-surface-muted p-3">
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-[0.08em]">Current semester</label>
@@ -733,7 +733,7 @@ function SemesterEditor({ student, onSave, busy }) {
           onClick={() => onSave(Number(current), Number(entry))}
           disabled={busy || !changed || invalid}
           data-cy="prog-current-sem-save"
-          className="rounded-md border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-2 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-50"
+          className="rounded-md border border-stroke bg-surface-1 px-3 py-2 text-xs font-semibold transition-colors hover:border-primary disabled:opacity-50"
         >
           Save semester
         </button>

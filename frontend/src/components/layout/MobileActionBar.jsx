@@ -10,8 +10,8 @@ const links = [
 function linkClasses(active) {
   const base = "flex min-w-[74px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold";
   const theme = active
-    ? "bg-[var(--color-primary)] text-white"
-    : "text-[var(--color-secondary)] hover:bg-[var(--surface-muted)]";
+    ? "bg-primary text-white"
+    : "text-secondary-ink hover:bg-surface-muted";
 
   return `${base} ${theme}`;
 }
@@ -22,7 +22,7 @@ export default function MobileActionBar() {
   return (
     <nav
       aria-label="Mobile quick navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--stroke)] bg-[var(--surface-1)]/95 p-2 backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-stroke bg-surface-1/95 p-2 backdrop-blur md:hidden"
     >
       <ul className="mx-auto flex max-w-md items-center justify-around">
         {links.map((item) => {

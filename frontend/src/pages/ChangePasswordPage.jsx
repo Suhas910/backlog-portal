@@ -54,22 +54,22 @@ function ChangePasswordPage() {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]";
+    "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring";
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-10 sm:px-6 lg:px-8">
       <div
-        className="mx-auto w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
+        className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
       >
         <div className="mb-6 text-left">
           <BrandIdentity compact onSurface />
-          <p className="mb-2 mt-4 inline-flex items-center gap-1.5 rounded-full border border-[var(--color-primary)]/30 bg-[var(--surface-muted)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-primary)]">
+          <p className="mb-2 mt-4 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-surface-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary-ink">
             <KeyRound size={12} /> Change Password
           </p>
-          <h1 className="text-3xl font-semibold text-[var(--color-secondary)]">
+          <h1 className="text-3xl font-semibold text-secondary-ink">
             {forced ? "Set a New Password" : "Change Password"}
           </h1>
-          <p className="mt-2 text-sm text-[var(--text-main)]">
+          <p className="mt-2 text-sm text-ink">
             {forced
               ? "You're using a temporary password. Choose a new password to continue."
               : "Update the password for your account."}
@@ -80,7 +80,7 @@ function ChangePasswordPage() {
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="current-password"
-              className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+              className="text-xs font-semibold uppercase tracking-[0.08em] text-ink"
             >
               {forced ? "Temporary Password" : "Current Password"}
             </label>
@@ -98,7 +98,7 @@ function ChangePasswordPage() {
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="new-password"
-              className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+              className="text-xs font-semibold uppercase tracking-[0.08em] text-ink"
             >
               New Password
             </label>
@@ -116,7 +116,7 @@ function ChangePasswordPage() {
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="confirm-password"
-              className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-main)]"
+              className="text-xs font-semibold uppercase tracking-[0.08em] text-ink"
             >
               Confirm New Password
             </label>
@@ -159,7 +159,7 @@ function ChangePasswordPage() {
           <div className="mt-4 text-center">
             <Link
               to="/admin"
-              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-secondary)] underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 text-sm font-medium text-secondary-ink underline-offset-4 hover:underline"
             >
               <ArrowLeft size={14} /> Back to dashboard
             </Link>

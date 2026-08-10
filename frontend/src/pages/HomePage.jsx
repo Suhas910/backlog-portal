@@ -47,11 +47,11 @@ function FixedBackdrop() {
 
 function HomePage() {
   return (
-    <div className="min-h-screen text-[var(--text-main)]">
+    <div className="min-h-screen text-ink">
       <FixedBackdrop />
       <a
         href="#main-content"
-        className="sr-only left-4 top-4 z-[60] rounded-md bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-[var(--color-cta-text)] focus:not-sr-only focus:fixed"
+        className="sr-only left-4 top-4 z-[60] rounded-md bg-cta px-4 py-2 text-sm font-semibold text-cta-text focus:not-sr-only focus:fixed"
       >
         Skip to main content
       </a>
@@ -62,8 +62,8 @@ function HomePage() {
         <ProcessSection />
       </main>
 
-      <footer className="relative z-10 border-t border-[var(--stroke)] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-sm text-[var(--text-main)]">
+      <footer className="relative z-10 border-t border-stroke px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 text-sm text-ink">
           <p className="font-bold">Ramaiah Institute of Technology</p>
         </div>
       </footer>

@@ -12,7 +12,7 @@ import {
 import api, { getAdminHeaders } from "../../lib/api";
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
 
 const PAGE_SIZE = 25;
 
@@ -161,11 +161,11 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
   return (
     <div className="flex flex-col gap-6">
       {/* ---- current assignments ---- */}
-      <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+      <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-secondary-ink">
           <Users size={18} /> {isProctor ? "Students under your supervision" : "Assigned students"}
         </h2>
-        <p className="mb-4 text-xs text-[var(--text-muted)]">
+        <p className="mb-4 text-xs text-ink-muted">
           {isProctor
             ? "Removing a student only ends your supervision — it never deletes their account."
             : "Pick a proctor to view and manage their assigned students."}
@@ -195,7 +195,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
               ))}
             </select>
             {proctors.length === 0 && (
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-xs text-ink-muted">
                 No proctor accounts yet — create one under Manage Users.
               </p>
             )}
@@ -207,7 +207,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
           onClick={loadAssigned}
           disabled={assignedBusy || !targetChosen}
           data-cy="assigned-load"
-          className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
         >
           {assignedBusy ? <LoaderCircle size={15} className="animate-spin" /> : <Users size={15} />}
           Load assigned students
@@ -217,16 +217,16 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
           <div className="mt-4">
             {assigned.length === 0 ? (
               <p
-                className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+                className="rounded-2xl border border-stroke bg-surface-muted px-4 py-3 text-sm"
                 data-cy="assigned-empty"
               >
                 No students assigned yet — use the picker below to claim some.
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-[var(--stroke)]">
+              <div className="overflow-x-auto rounded-2xl border border-stroke">
                 <table className="min-w-full border-collapse text-left text-sm" data-cy="assigned-list">
                   <thead>
-                    <tr className="bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em]">
+                    <tr className="bg-surface-muted text-xs uppercase tracking-[0.08em]">
                       <th className="px-4 py-3">USN</th>
                       <th className="px-4 py-3">Name</th>
                       <th className="px-4 py-3">Sem</th>
@@ -236,11 +236,11 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
                   </thead>
                   <tbody>
                     {assigned.map((s) => (
-                      <tr key={s.rollNo} className="border-t border-[var(--stroke)]">
+                      <tr key={s.rollNo} className="border-t border-stroke">
                         <td className="px-4 py-2.5 font-mono text-xs">{s.rollNo}</td>
                         <td className="px-4 py-2.5">{s.name || "—"}</td>
                         <td className="px-4 py-2.5">{s.currentSemester || "—"}</td>
-                        <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">
+                        <td className="px-4 py-2.5 text-xs text-ink-muted">
                           {s.assignedBy || "—"}
                         </td>
                         <td className="px-4 py-2.5 text-right">
@@ -249,7 +249,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
                             onClick={() => removeAssignment(s.rollNo)}
                             disabled={removingRoll === s.rollNo}
                             data-cy={`assigned-remove-${s.rollNo}`}
-                            className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
+                            className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-60"
                           >
                             {removingRoll === s.rollNo ? (
                               <LoaderCircle size={13} className="animate-spin" />
@@ -270,11 +270,11 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
       </section>
 
       {/* ---- claim picker ---- */}
-      <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+      <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">
+        <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-secondary-ink">
           <UserCheck size={18} /> Claim students
         </h2>
-        <p className="mb-4 text-xs text-[var(--text-muted)]">
+        <p className="mb-4 text-xs text-ink-muted">
           Find existing students of {isProctor ? `your department${adminDepartment ? ` (${adminDepartment})` : ""}` : "the proctor's department"} by
           admission year and semester, then claim the selection. A student can have only one
           proctor — already-supervised students can't be selected.
@@ -332,7 +332,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
             }}
             disabled={busy || !targetChosen}
             data-cy="claim-load"
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary disabled:opacity-60"
           >
             {busy ? <LoaderCircle size={15} className="animate-spin" /> : <Search size={15} />}
             Find students
@@ -342,7 +342,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
             onClick={claim}
             disabled={busy || selected.size === 0}
             data-cy="claim-submit"
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             <Check size={15} /> Claim selected ({selected.size})
           </button>
@@ -356,7 +356,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
 
         {results && (
           <div
-            className="mt-4 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+            className="mt-4 rounded-2xl border border-stroke bg-surface-muted px-4 py-3 text-sm"
             data-cy="claim-results"
           >
             <p className="font-semibold">
@@ -376,17 +376,17 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
           <div className="mt-4">
             {rows.length === 0 ? (
               <p
-                className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm"
+                className="rounded-2xl border border-stroke bg-surface-muted px-4 py-3 text-sm"
                 data-cy="claim-empty"
               >
                 No students match these filters.
               </p>
             ) : (
               <>
-                <div className="overflow-x-auto rounded-2xl border border-[var(--stroke)]">
+                <div className="overflow-x-auto rounded-2xl border border-stroke">
                   <table className="min-w-full border-collapse text-left text-sm">
                     <thead>
-                      <tr className="bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em]">
+                      <tr className="bg-surface-muted text-xs uppercase tracking-[0.08em]">
                         <th className="px-4 py-3" />
                         <th className="px-4 py-3">USN</th>
                         <th className="px-4 py-3">Name</th>
@@ -398,7 +398,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
                       {rows.map((s) => {
                         const claimable = !s.proctored;
                         return (
-                          <tr key={s.rollNo} className="border-t border-[var(--stroke)]">
+                          <tr key={s.rollNo} className="border-t border-stroke">
                             <td className="px-4 py-2.5">
                               <input
                                 type="checkbox"
@@ -414,15 +414,15 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
                             <td className="px-4 py-2.5">{s.currentSemester}</td>
                             <td className="px-4 py-2.5">
                               {s.mine ? (
-                                <span className="rounded-full bg-[rgba(145,25,28,0.08)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]">
+                                <span className="rounded-full bg-[rgba(145,25,28,0.08)] px-2.5 py-0.5 text-xs font-semibold text-primary-ink">
                                   {isProctor ? "Yours" : "This proctor's"}
                                 </span>
                               ) : s.proctored ? (
-                                <span className="rounded-full bg-[var(--surface-muted)] px-2.5 py-0.5 text-xs font-semibold text-[var(--text-muted)]">
+                                <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-semibold text-ink-muted">
                                   Has a proctor
                                 </span>
                               ) : (
-                                <span className="text-xs text-[var(--text-muted)]">Unassigned</span>
+                                <span className="text-xs text-ink-muted">Unassigned</span>
                               )}
                             </td>
                           </tr>
@@ -432,8 +432,8 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
                   </table>
                 </div>
                 {pageInfo.totalPages > 1 && (
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
-                    <span className="text-[var(--text-muted)]">
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-surface-muted px-4 py-3 text-sm">
+                    <span className="text-ink-muted">
                       Page {pageInfo.number + 1} of {pageInfo.totalPages} · {pageInfo.totalElements} students
                     </span>
                     <div className="flex gap-2">
@@ -442,7 +442,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
                         onClick={() => loadClaimable(pageInfo.number - 1)}
                         disabled={busy || pageInfo.number <= 0}
                         data-cy="claim-prev"
-                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+                        className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary disabled:opacity-40"
                       >
                         <ChevronLeft size={13} /> Prev
                       </button>
@@ -451,7 +451,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
                         onClick={() => loadClaimable(pageInfo.number + 1)}
                         disabled={busy || pageInfo.number >= pageInfo.totalPages - 1}
                         data-cy="claim-next"
-                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-1.5 text-xs font-semibold transition-colors hover:border-[var(--color-primary)] disabled:opacity-40"
+                        className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-1.5 text-xs font-semibold transition-colors hover:border-primary disabled:opacity-40"
                       >
                         Next <ChevronRight size={13} />
                       </button>

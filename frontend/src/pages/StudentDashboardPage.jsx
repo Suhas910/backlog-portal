@@ -19,9 +19,9 @@ import { savePdfBlob } from "../lib/downloadPdf";
 
 function statusBadgeClass(status) {
   if (status === "VERIFIED")
-    return "border-[var(--color-primary)]/30 bg-[rgba(145,25,28,0.08)] text-[var(--color-primary)]";
+    return "border-primary/30 bg-[rgba(145,25,28,0.08)] text-primary-ink";
   if (status === "REJECTED") return "border-red-200 bg-red-50 text-red-600";
-  return "border-[var(--stroke)] bg-[var(--surface-muted)] text-[var(--text-main)]";
+  return "border-stroke bg-surface-muted text-ink";
 }
 
 function StudentDashboardPage() {
@@ -122,9 +122,9 @@ function StudentDashboardPage() {
     : "";
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-4xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -145,7 +145,7 @@ function StudentDashboardPage() {
         </header>
 
         {loading ? (
-          <p className="inline-flex items-center gap-2 text-sm text-[var(--text-muted)]">
+          <p className="inline-flex items-center gap-2 text-sm text-ink-muted">
             <LoaderCircle size={18} className="animate-spin" /> Loading your dashboard...
           </p>
         ) : error ? (
@@ -159,12 +159,12 @@ function StudentDashboardPage() {
           <>
             {/* Profile */}
             <section
-              className="mb-6 rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6"
+              className="mb-6 rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6"
             >
-              <h1 className="mb-1 text-2xl font-semibold text-[var(--color-secondary)]">
+              <h1 className="mb-1 text-2xl font-semibold text-secondary-ink">
                 {profile?.name || "Student"}
               </h1>
-              <p className="mb-4 text-sm text-[var(--text-muted)]">{profile?.rollNo}</p>
+              <p className="mb-4 text-sm text-ink-muted">{profile?.rollNo}</p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Email" value={profile?.email} />
@@ -176,7 +176,7 @@ function StudentDashboardPage() {
 
                 {/* Phone — the only editable field */}
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                  <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">
                     Phone
                   </span>
                   {editingPhone ? (
@@ -189,14 +189,14 @@ function StudentDashboardPage() {
                         inputMode="numeric"
                         maxLength={10}
                         placeholder="10 digit number"
-                        className="w-44 rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2 text-sm text-[var(--text-main)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                        className="w-44 rounded-xl border border-stroke bg-surface-1 px-3.5 py-2 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                         data-cy="phone-input"
                       />
                       <button
                         type="button"
                         onClick={savePhone}
                         disabled={savingPhone}
-                        className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-primary)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
                         data-cy="phone-save"
                       >
                         {savingPhone ? (
@@ -209,7 +209,7 @@ function StudentDashboardPage() {
                       <button
                         type="button"
                         onClick={() => setEditingPhone(false)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-3 py-2 text-sm font-semibold text-[var(--text-main)]"
+                        className="inline-flex items-center gap-1 rounded-lg border border-stroke px-3 py-2 text-sm font-semibold text-ink"
                       >
                         <X size={14} /> Cancel
                       </button>
@@ -218,7 +218,7 @@ function StudentDashboardPage() {
                     <div className="flex items-center gap-3">
                       <span
                         className={`inline-flex items-center gap-1.5 text-sm ${
-                          profile?.phone ? "text-[var(--text-main)]" : "text-[var(--text-muted)]"
+                          profile?.phone ? "text-ink" : "text-ink-muted"
                         }`}
                         data-cy="phone-value"
                       >
@@ -227,7 +227,7 @@ function StudentDashboardPage() {
                       <button
                         type="button"
                         onClick={startEditPhone}
-                        className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--color-primary)] hover:underline"
+                        className="inline-flex items-center gap-1 text-sm font-semibold text-primary-ink hover:underline"
                         data-cy="phone-edit"
                       >
                         <Pencil size={13} /> {profile?.phone ? "Edit" : "Add phone"}
@@ -237,14 +237,14 @@ function StudentDashboardPage() {
                   {phoneError ? (
                     <p className="text-xs text-red-600">{phoneError}</p>
                   ) : !profile?.phone ? (
-                    <p className="text-xs text-[var(--text-muted)]">
+                    <p className="text-xs text-ink-muted">
                       Add your phone number before registering for backlog exams.
                     </p>
                   ) : null}
                 </div>
               </div>
 
-              <div className="mt-6 border-t border-[var(--stroke)] pt-5">
+              <div className="mt-6 border-t border-stroke pt-5">
                 <MagneticCta
                   onClick={() => navigate("/register")}
                   className="gap-2 rounded-xl"
@@ -257,13 +257,13 @@ function StudentDashboardPage() {
 
             {/* Submissions */}
             <section
-              className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6"
+              className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6"
             >
-              <h2 className="mb-4 text-xl font-semibold text-[var(--text-main)]">
+              <h2 className="mb-4 text-xl font-semibold text-ink">
                 Your Submissions
               </h2>
               {registrations.length === 0 ? (
-                <p className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--text-main)]">
+                <p className="rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm text-ink">
                   You have no registrations yet.
                 </p>
               ) : (
@@ -271,7 +271,7 @@ function StudentDashboardPage() {
                   {registrations.map((reg) => (
                     <li
                       key={reg.regId}
-                      className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-muted)] p-4 sm:flex-row sm:items-start"
+                      className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-stroke bg-surface-muted p-4 sm:flex-row sm:items-start"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex items-center gap-2">
@@ -283,13 +283,13 @@ function StudentDashboardPage() {
                             {reg.status}
                           </span>
                           {reg.examCycle ? (
-                            <span className="text-xs text-[var(--text-muted)]">{reg.examCycle}</span>
+                            <span className="text-xs text-ink-muted">{reg.examCycle}</span>
                           ) : null}
                         </div>
-                        <p className="text-sm break-words text-[var(--text-main)]">
+                        <p className="text-sm break-words text-ink">
                           {(reg.subjects || []).join(", ") || "No subjects"}
                         </p>
-                        <p className="text-xs text-[var(--text-muted)]">
+                        <p className="text-xs text-ink-muted">
                           {reg.registeredAt ? new Date(reg.registeredAt).toLocaleString() : ""}
                         </p>
                       </div>
@@ -297,7 +297,7 @@ function StudentDashboardPage() {
                         type="button"
                         onClick={() => downloadPdf(reg.regId)}
                         disabled={downloadingId === reg.regId}
-                        className="inline-flex shrink-0 items-center gap-2 self-stretch justify-center rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-4 py-2 text-sm font-semibold text-[var(--color-secondary)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-60 sm:self-start sm:justify-start"
+                        className="inline-flex shrink-0 items-center gap-2 self-stretch justify-center rounded-xl border border-stroke bg-surface-1 px-4 py-2 text-sm font-semibold text-secondary-ink transition-colors hover:border-primary hover:text-primary-ink disabled:opacity-60 sm:self-start sm:justify-start"
                         data-cy="download-pdf"
                       >
                         {downloadingId === reg.regId ? (
@@ -322,10 +322,10 @@ function StudentDashboardPage() {
 function Field({ label, value }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">
         {label}
       </span>
-      <span className="text-sm text-[var(--text-main)]">{value || "—"}</span>
+      <span className="text-sm text-ink">{value || "—"}</span>
     </div>
   );
 }

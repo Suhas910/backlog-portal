@@ -435,17 +435,17 @@ function AdminPage() {
 
   if (!isAdmin || !adminToken) {
     return (
-      <div className="min-h-screen bg-[var(--surface-1)] px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto w-full max-w-2xl rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-8 text-center shadow-soft">
-          <h1 className="mb-2 text-3xl font-semibold text-[var(--color-secondary)]">
+      <div className="min-h-screen bg-surface-1 px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto w-full max-w-2xl rounded-3xl border border-stroke bg-surface-1 p-8 text-center shadow-soft">
+          <h1 className="mb-2 text-3xl font-semibold text-secondary-ink">
             Access Denied
           </h1>
-          <p className="mb-5 text-[var(--text-main)]">
+          <p className="mb-5 text-ink">
             You must login as an admin to view this page.
           </p>
           <Link
             to="/admin/login"
-            className="inline-flex items-center justify-center rounded-full bg-[var(--color-cta)] px-5 py-3 text-sm font-semibold text-[var(--color-cta-text)]"
+            className="inline-flex items-center justify-center rounded-full bg-cta px-5 py-3 text-sm font-semibold text-cta-text"
           >
             Go to Admin Login
           </Link>
@@ -455,16 +455,16 @@ function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
       <a
         href="#admin-main"
-        className="sr-only left-4 top-4 z-[60] rounded-md bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-[var(--color-cta-text)] focus:not-sr-only focus:fixed"
+        className="sr-only left-4 top-4 z-[60] rounded-md bg-cta px-4 py-2 text-sm font-semibold text-cta-text focus:not-sr-only focus:fixed"
       >
         Skip to admin table
       </a>
 
       <div id="admin-main" className="mx-auto w-full max-w-7xl pb-24 md:pb-0">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-4 text-white shadow-soft sm:px-6">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary px-4 py-4 text-white shadow-soft sm:px-6">
           <div>
             <BrandIdentity compact />
             {adminDepartment && (
@@ -529,7 +529,7 @@ function AdminPage() {
                 await logoutAdmin(); // expire the httpOnly cookie, then clear local state
                 navigate("/admin/login");
               }}
-              className="inline-flex items-center gap-1 rounded-full bg-[var(--color-cta)] px-4 py-2 text-sm font-semibold text-[var(--color-cta-text)]"
+              className="inline-flex items-center gap-1 rounded-full bg-cta px-4 py-2 text-sm font-semibold text-cta-text"
             >
               <LogOut size={14} /> Logout
             </button>
@@ -537,32 +537,32 @@ function AdminPage() {
         </header>
 
         <section className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
-            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
+          <div className="rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
+            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-ink">
               <Users size={13} /> Total
             </p>
-            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">
+            <p className="mt-1 text-3xl font-semibold text-secondary-ink">
               {totalCount}
             </p>
           </div>
-          <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
-            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
+          <div className="rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
+            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-ink">
               <CircleDashed size={13} /> Pending
             </p>
-            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">
+            <p className="mt-1 text-3xl font-semibold text-secondary-ink">
               {pendingCount}
             </p>
           </div>
-          <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
-            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
+          <div className="rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
+            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-ink">
               <Shield size={13} /> Verified
             </p>
-            <p className="mt-1 text-3xl font-semibold text-[var(--color-secondary)]">
+            <p className="mt-1 text-3xl font-semibold text-secondary-ink">
               {verifiedCount}
             </p>
           </div>
-          <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
-            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text-main)]">
+          <div className="rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
+            <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.1em] text-ink">
               <XCircle size={13} /> Rejected
             </p>
             <p className="mt-1 text-3xl font-semibold text-red-600">
@@ -571,8 +571,8 @@ function AdminPage() {
           </div>
         </section>
 
-        <section className="mb-6 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft">
-          <h3 className="mb-3 text-lg font-semibold text-[var(--color-secondary)]">
+        <section className="mb-6 rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
+          <h3 className="mb-3 text-lg font-semibold text-secondary-ink">
             Filters
           </h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -588,7 +588,7 @@ function AdminPage() {
                 id="cycle-filter"
                 value={cycleFilter}
                 onChange={(e) => setCycleFilter(e.target.value)}
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
               >
                 <option value="">All Cycles</option>
                 {examCycles.map((c) => (
@@ -615,7 +615,7 @@ function AdminPage() {
                   setTypeFilter(e.target.value);
                   setSubjectFilter("");
                 }}
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
               >
                 <option value="">All Types</option>
                 <option value="REGULAR">Regular</option>
@@ -644,7 +644,7 @@ function AdminPage() {
                     if (subject) setTypeFilter(subject.subjectType);
                   }
                 }}
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
                 disabled={loadingSubjects}
               >
                 <option value="">
@@ -672,7 +672,7 @@ function AdminPage() {
                 placeholder="Enter USN or name..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring"
               />
             </div>
 
@@ -689,7 +689,7 @@ function AdminPage() {
                 type="date"
                 value={startDateFilter}
                 onChange={(e) => setStartDateFilter(e.target.value)}
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -704,12 +704,12 @@ function AdminPage() {
                 type="date"
                 value={endDateFilter}
                 onChange={(e) => setEndDateFilter(e.target.value)}
-                className="rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
               />
             </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--stroke)] pt-4">
+          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-stroke pt-4">
             <MagneticCta
               type="button"
               onClick={applyFilters}
@@ -722,7 +722,7 @@ function AdminPage() {
               type="button"
               onClick={clearFilters}
               data-cy="admin-filters-clear"
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-2 text-sm font-semibold transition-colors hover:border-[var(--color-primary)]"
+              className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-2 text-sm font-semibold transition-colors hover:border-primary"
             >
               <X size={15} /> Clear all filters
             </button>
@@ -737,7 +737,7 @@ function AdminPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-4 shadow-soft sm:p-6">
+        <section className="rounded-3xl border border-stroke bg-surface-1 p-4 shadow-soft sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap gap-2">
               {["ALL", "SUBMITTED", "VERIFIED", "REJECTED"].map((f) => (
@@ -748,10 +748,10 @@ function AdminPage() {
                     setPage(0); // switching status tab restarts at the first page
                     setFilter(f);
                   }}
-                  className={`rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.06em] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)] ${
+                  className={`rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.06em] transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 ${
                     filter === f
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
-                      : "border-[var(--stroke)] bg-[var(--surface-1)] text-[var(--color-secondary)]"
+                      ? "border-primary bg-primary text-white"
+                      : "border-stroke bg-surface-1 text-secondary-ink"
                   }`}
                   data-cy={`admin-filter-${f.toLowerCase()}`}
                 >
@@ -764,7 +764,7 @@ function AdminPage() {
               type="button"
               onClick={handleExportPdf}
               disabled={isExporting}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-secondary)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-secondary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary disabled:opacity-50"
             >
               {isExporting ? (
                 <LoaderCircle size={14} className="animate-spin" />
@@ -776,15 +776,15 @@ function AdminPage() {
           </div>
 
           {loading ? (
-            <p className="inline-flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
+            <p className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm">
               <LoaderCircle size={16} className="animate-spin" /> Loading
               registrations...
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-[var(--stroke)]">
+            <div className="overflow-x-auto rounded-2xl border border-stroke">
               <table className="min-w-full border-collapse text-left text-sm">
                 <thead>
-                  <tr className="bg-[var(--surface-muted)] text-xs uppercase tracking-[0.08em] text-[var(--text-main)]">
+                  <tr className="bg-surface-muted text-xs uppercase tracking-[0.08em] text-ink">
                     <th className="px-4 py-3">USN</th>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Sem</th>
@@ -801,22 +801,22 @@ function AdminPage() {
                   {filtered.map((reg) => (
                     <tr
                       key={reg.regId}
-                      className="border-t border-[var(--stroke)] align-top"
+                      className="border-t border-stroke align-top"
                     >
-                      <td className="px-4 py-3 text-[var(--text-main)]">
+                      <td className="px-4 py-3 text-ink">
                         {reg.rollNo}
                       </td>
-                      <td className="px-4 py-3 text-[var(--text-main)]">
+                      <td className="px-4 py-3 text-ink">
                         {reg.studentName}
                       </td>
                       <td className="px-4 py-3">{reg.semester}</td>
                       <td className="px-4 py-3">
                         {reg.examCycle ? (
-                          <span className="text-xs text-[var(--text-main)]">
+                          <span className="text-xs text-ink">
                             {reg.examCycle}
                           </span>
                         ) : (
-                          <span className="text-xs text-[var(--text-muted)]">—</span>
+                          <span className="text-xs text-ink-muted">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">{reg.subjects.join(", ")}</td>
@@ -824,10 +824,10 @@ function AdminPage() {
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${
                             reg.status === "VERIFIED"
-                              ? "bg-[rgba(145,25,28,0.1)] text-[var(--color-primary)]"
+                              ? "bg-[rgba(145,25,28,0.1)] text-primary-ink"
                               : reg.status === "REJECTED"
                                 ? "bg-red-50 text-red-600"
-                                : "bg-[var(--surface-muted)] text-[var(--color-secondary)]"
+                                : "bg-surface-muted text-secondary-ink"
                           }`}
                         >
                           {reg.status}
@@ -838,11 +838,11 @@ function AdminPage() {
                       </td>
                       <td className="px-4 py-3">
                         {reg.verifiedBy ? (
-                          <span className="text-xs text-[var(--text-main)]">
+                          <span className="text-xs text-ink">
                             {reg.verifiedBy}
                           </span>
                         ) : (
-                          <span className="text-xs text-[var(--text-muted)]">—</span>
+                          <span className="text-xs text-ink-muted">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -854,7 +854,7 @@ function AdminPage() {
                                 onClick={() => handleVerify(reg.regId)}
                                 disabled={verifyingRegId === reg.regId || rejectingRegId === reg.regId}
                                 data-cy="admin-verify"
-                                className="inline-flex w-15 items-center justify-center gap-1 rounded-lg bg-[var(--color-primary)] py-1 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
+                                className="inline-flex w-15 items-center justify-center gap-1 rounded-lg bg-primary py-1 text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-50"
                               >
                                 {verifyingRegId === reg.regId ? (
                                   <LoaderCircle size={13} className="animate-spin" />
@@ -910,14 +910,14 @@ function AdminPage() {
                                   onClick={() => setConfirmRejectVerifiedId("")}
                                   disabled={rejectingRegId === reg.regId}
                                   data-cy="admin-reject-verified-cancel"
-                                  className="inline-flex w-14 items-center justify-center rounded-lg border border-[var(--stroke)] py-1.5 text-xs font-semibold text-[var(--text-main)] transition-colors hover:bg-[var(--surface-muted)] disabled:opacity-50"
+                                  className="inline-flex w-14 items-center justify-center rounded-lg border border-stroke py-1.5 text-xs font-semibold text-ink transition-colors hover:bg-surface-muted disabled:opacity-50"
                                 >
                                   Cancel
                                 </button>
                               </div>
                             ) : (
                               <div className="flex flex-col items-start gap-1">
-                                <span className="text-sm font-semibold text-[var(--color-primary)]">
+                                <span className="text-sm font-semibold text-primary-ink">
                                   Verified
                                 </span>
                                 {adminRole !== "PRINCIPAL" ? (
@@ -950,7 +950,7 @@ function AdminPage() {
                             Rejected
                           </span>
                         ) : (
-                          <span className="text-sm font-semibold text-[var(--text-muted)]">
+                          <span className="text-sm font-semibold text-ink-muted">
                             Pending Verification
                           </span>
                         )}
@@ -959,7 +959,7 @@ function AdminPage() {
                         <button
                           type="button"
                           onClick={() => openHistory(reg.regId)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-secondary)] transition-colors hover:bg-[var(--surface-muted)]"
+                          className="inline-flex items-center gap-1 rounded-lg border border-stroke bg-surface-1 px-3 py-1.5 text-xs font-semibold text-secondary-ink transition-colors hover:bg-surface-muted"
                         >
                           <History size={14} /> View
                         </button>
@@ -974,7 +974,7 @@ function AdminPage() {
           {!loading && pageInfo.totalPages > 1 && (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <p
-                className="text-xs text-[var(--text-muted)]"
+                className="text-xs text-ink-muted"
                 data-cy="admin-page-info"
               >
                 Page {pageInfo.number + 1} of {pageInfo.totalPages} ·{" "}
@@ -986,7 +986,7 @@ function AdminPage() {
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
                   disabled={page <= 0}
                   data-cy="admin-page-prev"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-secondary)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-lg border border-stroke bg-surface-1 px-3 py-1.5 text-xs font-semibold text-secondary-ink transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <ArrowLeft size={14} /> Prev
                 </button>
@@ -995,7 +995,7 @@ function AdminPage() {
                   onClick={() => setPage((p) => Math.min(pageInfo.totalPages - 1, p + 1))}
                   disabled={page >= pageInfo.totalPages - 1}
                   data-cy="admin-page-next"
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--color-secondary)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-lg border border-stroke bg-surface-1 px-3 py-1.5 text-xs font-semibold text-secondary-ink transition-colors hover:bg-surface-muted disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next <ArrowLeft size={14} className="rotate-180" />
                 </button>
@@ -1011,17 +1011,17 @@ function AdminPage() {
           onClick={() => setHistoryRegId("")}
         >
           <div
-            className="w-full max-w-lg rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft"
+            className="w-full max-w-lg rounded-2xl border border-stroke bg-surface-1 p-6 shadow-soft"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+              <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink">
                 <History size={18} /> Registration History
               </h3>
               <button
                 type="button"
                 onClick={() => setHistoryRegId("")}
-                className="rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-muted)]"
+                className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-muted"
                 aria-label="Close history"
               >
                 <X size={18} />
@@ -1029,11 +1029,11 @@ function AdminPage() {
             </div>
 
             {historyLoading ? (
-              <p className="inline-flex items-center gap-2 text-sm text-[var(--text-main)]">
+              <p className="inline-flex items-center gap-2 text-sm text-ink">
                 <LoaderCircle size={16} className="animate-spin" /> Loading history...
               </p>
             ) : historyEvents.length === 0 ? (
-              <p className="text-sm text-[var(--text-muted)]">
+              <p className="text-sm text-ink-muted">
                 No history recorded for this registration.
               </p>
             ) : (
@@ -1041,34 +1041,34 @@ function AdminPage() {
                 {historyEvents.map((ev, i) => (
                   <li
                     key={i}
-                    className="flex items-start gap-3 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3 py-2.5"
+                    className="flex items-start gap-3 rounded-xl border border-stroke bg-surface-muted px-3 py-2.5"
                   >
                     <span
                       className={`mt-0.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
                         ev.action === "VERIFIED"
-                          ? "bg-[rgba(145,25,28,0.1)] text-[var(--color-primary)]"
+                          ? "bg-[rgba(145,25,28,0.1)] text-primary-ink"
                           : ev.action === "REJECTED"
                             ? "bg-red-50 text-red-600"
-                            : "bg-[var(--surface-1)] text-[var(--color-secondary)]"
+                            : "bg-surface-1 text-secondary-ink"
                       }`}
                     >
                       {ev.action}
                     </span>
                     <div className="text-sm">
-                      <p className="text-[var(--text-main)]">
+                      <p className="text-ink">
                         {ev.actor || "unknown"}
-                        <span className="text-[var(--text-muted)]">
+                        <span className="text-ink-muted">
                           {" "}
                           ({ev.actorRole})
                         </span>
                       </p>
-                      <p className="text-xs text-[var(--text-muted)]">
+                      <p className="text-xs text-ink-muted">
                         {ev.timestamp
                           ? new Date(ev.timestamp).toLocaleString()
                           : ""}
                       </p>
                       {ev.note && (
-                        <p className="mt-1 text-xs text-[var(--text-main)]">
+                        <p className="mt-1 text-xs text-ink">
                           {ev.note}
                         </p>
                       )}

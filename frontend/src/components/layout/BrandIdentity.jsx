@@ -14,7 +14,7 @@ export default function BrandIdentity({ compact = false, wordmarkClassName = "",
         <p
           className={`${compact ? "text-base" : "text-lg sm:text-xl"} font-extrabold tracking-[0.06em] ${
             onSurface
-              ? "text-[var(--color-secondary)]"
+              ? "text-secondary-ink"
               : "text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.35)]"
           }`}
           style={{ fontFamily: '"Sora", "Inter", sans-serif' }}

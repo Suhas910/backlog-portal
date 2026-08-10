@@ -34,7 +34,7 @@ function DepartmentsPage() {
   const [deletingId, setDeletingId] = useState(null);
 
   const inputClass =
-    "rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]";
+    "rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus-ring";
 
   const loadDepartments = () => {
     setLoading(true);
@@ -180,9 +180,9 @@ function DepartmentsPage() {
   if (!isAdmin || !adminToken) return null;
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-3xl pb-24 md:pb-0">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] px-4 py-4 text-white shadow-soft sm:px-6">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary px-4 py-4 text-white shadow-soft sm:px-6">
           <div>
             <BrandIdentity compact />
             <p className="mt-2 inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
@@ -212,11 +212,11 @@ function DepartmentsPage() {
           </p>
         )}
 
-        <section className="mb-6 rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft">
-          <h3 className="mb-1 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+        <section className="mb-6 rounded-2xl border border-stroke bg-surface-1 p-5 shadow-soft">
+          <h3 className="mb-1 inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink">
             <PlusCircle size={18} /> New Department
           </h3>
-          <p className="mb-4 text-xs text-[var(--text-muted)]">
+          <p className="mb-4 text-xs text-ink-muted">
             The 2-letter code must match the branch segment of the USN (e.g. "CS" in 1MS22CS001).
           </p>
           <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -269,8 +269,8 @@ function DepartmentsPage() {
           </form>
         </section>
 
-        <section className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft">
-          <h3 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+        <section className="rounded-2xl border border-stroke bg-surface-1 p-5 shadow-soft">
+          <h3 className="mb-4 inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink">
             <Building2 size={18} /> Departments
           </h3>
           {loading ? (
@@ -278,13 +278,13 @@ function DepartmentsPage() {
               <LoaderCircle size={16} className="animate-spin" /> Loading...
             </p>
           ) : departments.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">No departments yet. Add one above.</p>
+            <p className="text-sm text-ink-muted">No departments yet. Add one above.</p>
           ) : (
             <ul className="space-y-3">
               {departments.map((d) => (
                 <li
                   key={d.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-4 py-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stroke bg-surface-muted px-4 py-3"
                 >
                   <div className="min-w-0">
                     <input
@@ -339,7 +339,7 @@ function DepartmentsPage() {
                           (codeEdits[d.id] || "") === (d.code || "") &&
                           (emailEdits[d.id] || "") === (d.contactEmail || ""))
                       }
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-secondary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--color-primary)] disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary disabled:opacity-50"
                     >
                       {savingId === d.id ? (
                         <LoaderCircle size={14} className="animate-spin" />
@@ -369,7 +369,7 @@ function DepartmentsPage() {
                           data-cy={`dept-delete-cancel-${d.id}`}
                           onClick={() => setConfirmDeleteId(null)}
                           disabled={deletingId === d.id}
-                          className="inline-flex items-center rounded-lg border border-[var(--stroke)] px-3 py-2 text-xs font-semibold text-[var(--text-main)] transition-colors hover:bg-[var(--surface-1)] disabled:opacity-50"
+                          className="inline-flex items-center rounded-lg border border-stroke px-3 py-2 text-xs font-semibold text-ink transition-colors hover:bg-surface-1 disabled:opacity-50"
                         >
                           Cancel
                         </button>

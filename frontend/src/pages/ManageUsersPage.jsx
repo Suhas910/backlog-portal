@@ -180,12 +180,12 @@ function ManageUsersPage() {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-[var(--stroke)] bg-[var(--surface-1)] px-3.5 py-2.5 text-sm text-[var(--text-main)] outline-none transition-colors duration-200 placeholder:text-[var(--text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]";
+    "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring";
 
   return (
-    <div className="min-h-screen bg-[var(--surface-1)] px-4 py-8 text-[var(--text-main)] sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-5xl pb-24 md:pb-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--stroke)] bg-[var(--color-secondary)] p-4 text-white shadow-soft sm:px-6">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <div className="flex gap-2">
             <Link
@@ -208,10 +208,10 @@ function ManageUsersPage() {
           className="space-y-6"
         >
           <div>
-            <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-[var(--color-secondary)] sm:text-3xl">
+            <h1 className="mb-1 flex items-center gap-2 text-2xl font-semibold text-secondary-ink sm:text-3xl">
               <Users size={26} /> Users
             </h1>
-            <p className="text-sm text-[var(--text-main)]">
+            <p className="text-sm text-ink">
               Create, reset, and remove staff accounts you're authorised to
               manage.
             </p>
@@ -227,8 +227,8 @@ function ManageUsersPage() {
           )}
 
           {/* Create user */}
-          <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[var(--color-secondary)]">
+          <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-secondary-ink">
               <UserPlus size={18} /> Create New User
             </h2>
             <form
@@ -317,25 +317,25 @@ function ManageUsersPage() {
           </section>
 
           {/* User list */}
-          <section className="rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-5 shadow-soft sm:p-6">
-            <h2 className="mb-4 text-lg font-semibold text-[var(--color-secondary)]">
+          <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">
+            <h2 className="mb-4 text-lg font-semibold text-secondary-ink">
               Existing Users
             </h2>
 
             {loading ? (
-              <div className="flex items-center gap-2 py-8 text-sm text-[var(--text-muted)]">
+              <div className="flex items-center gap-2 py-8 text-sm text-ink-muted">
                 <LoaderCircle size={16} className="animate-spin" /> Loading
                 users…
               </div>
             ) : users.length === 0 ? (
-              <p className="py-8 text-center text-sm text-[var(--text-muted)]">
+              <p className="py-8 text-center text-sm text-ink-muted">
                 No users you can manage yet.
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--stroke)] text-left text-xs uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    <tr className="border-b border-stroke text-left text-xs uppercase tracking-[0.08em] text-ink-muted">
                       <th className="py-2.5 pr-4 font-semibold">Username</th>
                       <th className="py-2.5 pr-4 font-semibold">Role</th>
                       <th className="py-2.5 pr-4 font-semibold">Department</th>
@@ -351,17 +351,17 @@ function ManageUsersPage() {
                       return (
                         <tr
                           key={u.username}
-                          className="border-b border-[var(--stroke)] last:border-0"
+                          className="border-b border-stroke last:border-0"
                         >
-                          <td className="py-3 pr-4 font-medium text-[var(--text-main)]">
+                          <td className="py-3 pr-4 font-medium text-ink">
                             {u.username}
                           </td>
                           <td className="py-3 pr-4">
-                            <span className="inline-flex rounded-full bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-medium">
+                            <span className="inline-flex rounded-full bg-surface-muted px-2.5 py-1 text-xs font-medium">
                               {ROLE_LABELS[u.role] || u.role}
                             </span>
                           </td>
-                          <td className="py-3 pr-4 text-[var(--text-muted)]">
+                          <td className="py-3 pr-4 text-ink-muted">
                             {u.departmentName || "—"}
                           </td>
                           <td className="py-3 pr-4">
@@ -370,7 +370,7 @@ function ManageUsersPage() {
                                 Pending first login
                               </span>
                             ) : (
-                              <span className="inline-flex rounded-full bg-[rgba(145,25,28,0.08)] px-2.5 py-1 text-xs font-medium text-[var(--color-primary)]">
+                              <span className="inline-flex rounded-full bg-[rgba(145,25,28,0.08)] px-2.5 py-1 text-xs font-medium text-primary-ink">
                                 Active
                               </span>
                             )}
@@ -381,7 +381,7 @@ function ManageUsersPage() {
                                 type="button"
                                 onClick={() => handleReset(u.username)}
                                 disabled={busy}
-                                className="inline-flex items-center gap-1 rounded-lg border border-[var(--stroke)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-main)] transition-colors hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] disabled:opacity-50"
+                                className="inline-flex items-center gap-1 rounded-lg border border-stroke px-2.5 py-1.5 text-xs font-semibold text-ink transition-colors hover:border-primary hover:text-primary-ink disabled:opacity-50"
                               >
                                 {busy ? (
                                   <LoaderCircle size={13} className="animate-spin" />
@@ -415,35 +415,35 @@ function ManageUsersPage() {
       {tempCredential && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div
-            className="w-full max-w-md rounded-3xl border border-[var(--stroke)] bg-[var(--surface-1)] p-6 shadow-soft"
+            className="w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft"
           >
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
+              <h3 className="text-lg font-semibold text-secondary-ink">
                 {tempCredential.label}
               </h3>
               <button
                 type="button"
                 onClick={() => setTempCredential(null)}
                 aria-label="Close"
-                className="rounded-full p-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+                className="rounded-full p-1 text-ink-muted hover:bg-surface-muted"
               >
                 <X size={18} />
               </button>
             </div>
-            <p className="mb-4 text-sm text-[var(--text-main)]">
+            <p className="mb-4 text-sm text-ink">
               Share this one-time password with{" "}
               <strong>{tempCredential.username}</strong>. It is shown{" "}
               <strong>only once</strong> and cannot be retrieved again. They'll
               be asked to set their own password on first login.
             </p>
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--stroke)] bg-[var(--surface-muted)] px-3.5 py-3">
-              <code className="flex-1 select-all font-mono text-base tracking-wide text-[var(--text-main)]">
+            <div className="flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-3.5 py-3">
+              <code className="flex-1 select-all font-mono text-base tracking-wide text-ink">
                 {tempCredential.tempPassword}
               </code>
               <button
                 type="button"
                 onClick={copyTemp}
-                className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-cta)] px-3 py-1.5 text-xs font-semibold text-[var(--color-cta-text)]"
+                className="inline-flex items-center gap-1 rounded-lg bg-cta px-3 py-1.5 text-xs font-semibold text-cta-text"
               >
                 <Copy size={13} /> {copied ? "Copied" : "Copy"}
               </button>
