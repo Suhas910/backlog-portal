@@ -70,17 +70,24 @@ public class PdfService {
     }
 
     // ---- admin summary export ----
-    // Writes straight to the caller's stream (the HTTP response) rather than buffering the whole
-    // PDF in a byte[], so a large cycle streams out with bounded memory. Runs synchronously on the
-    // request thread; the rows arrive fully fetched (findAll(spec, Sort) entity-graphs `subjects`),
-    // so nothing here lazy-loads — required, since open-in-view is off.
-    public void generateRegistrationsSummaryPdf(List<Registration> registrations, java.io.OutputStream out) throws Exception {
-        PdfWriter writer = new PdfWriter(out);
+    // Returns the finished bytes rather than writing to the response stream: the caller must be
+    // able to fail with an error status, and once PDF headers are committed a mid-generation throw
+    // appends the error JSON into the file. Summary rows are small, and generatePdf above already
+    // buffers the same way. Runs synchronously on the request thread; the rows arrive fully fetched
+    // (findAll(spec, Sort) entity-graphs `subjects`), so nothing here lazy-loads — required, since
+    // open-in-view is off.
+    //
+    // `context` is an ordered label -> value record of what the report covers (cycle, department,
+    // semester, status, row count). Printed under the title: without it two exports of different
+    // filters are indistinguishable on paper, and these get signed and filed.
+    public byte[] generateRegistrationsSummaryPdf(List<Registration> registrations,
+                                                  java.util.Map<String, String> context) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PdfWriter writer = new PdfWriter(baos);
         PdfDocument pdfDoc = new PdfDocument(writer);
 
-        // doc.close() still flushes+closes `out` (and the pdfDoc/writer it owns) — unchanged contract;
-        // t-w-r only adds the failure path: close() runs on a throw, and its own failure is suppressed
-        // so the original error wins. Only `doc` is a resource — listing all three double-closes `out`.
+        // doc.close() still flushes+closes the writer/pdfDoc it owns; t-w-r only adds the failure
+        // path: close() runs on a throw and its own failure is suppressed, so the original wins.
         try (Document doc = new Document(pdfDoc, PageSize.A4.rotate())) { // landscape fits the columns
             doc.setMargins(25f, 25f, 25f, 25f);
 
@@ -90,13 +97,17 @@ public class PdfService {
             Paragraph title = new Paragraph("Registrations Summary Report")
                     .setFont(bold).setFontSize(14f)
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(15f);
+                    .setMarginBottom(6f);
             doc.add(title);
+            addSummaryContext(doc, regular, bold, context);
 
-            float[] columnWidths = { 4f, 13f, 20f, 6f, 42f, 15f };
+            float[] columnWidths = { 4f, 13f, 19f, 5f, 34f, 10f, 12f };
             Table table = new Table(UnitValue.createPercentArray(columnWidths)).useAllAvailableWidth();
 
-            String[] headers = { "Sl.", "USN", "Name", "Sem", "Subjects", "Date" };
+            // Status is always printed, even when the whole report is one status: a selection can
+            // mix statuses, and an exam list that silently contains unverified students is worse
+            // than a redundant column.
+            String[] headers = { "Sl.", "USN", "Name", "Sem", "Subjects", "Status", "Date" };
             for (String h : headers) {
                 table.addHeaderCell(new Cell().add(new Paragraph(h).setFont(bold).setFontSize(9f))
                         .setBackgroundColor(new DeviceRgb(230, 230, 230))
@@ -120,12 +131,37 @@ public class PdfService {
                         : "";
                 table.addCell(dataCell(subjectsStr, regular));
 
+                table.addCell(dataCellCentre(
+                        reg.getStatus() != null ? reg.getStatus().name() : "", regular));
+
                 String dateStr = reg.getRegisteredAt() != null ? reg.getRegisteredAt().format(dtf) : "";
                 table.addCell(dataCellCentre(dateStr, regular));
             }
 
             doc.add(table);
         }
+        return baos.toByteArray();
+    }
+
+    /** Label: value line under the title, saying exactly which rows the report covers. */
+    private void addSummaryContext(Document doc, PdfFont regular, PdfFont bold,
+                                   java.util.Map<String, String> context) {
+        if (context == null || context.isEmpty()) {
+            return;
+        }
+        Paragraph line = new Paragraph().setFontSize(8.5f)
+                .setTextAlignment(TextAlignment.CENTER)
+                .setMarginBottom(12f);
+        boolean first = true;
+        for (java.util.Map.Entry<String, String> e : context.entrySet()) {
+            if (!first) {
+                line.add(new Text("   |   ").setFont(regular));
+            }
+            line.add(new Text(e.getKey() + ": ").setFont(bold));
+            line.add(new Text(String.valueOf(e.getValue())).setFont(regular));
+            first = false;
+        }
+        doc.add(line);
     }
 
     // ---- 1. header ----

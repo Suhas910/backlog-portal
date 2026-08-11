@@ -7,6 +7,7 @@ describe("Admin dashboard — filter stale-response race", () => {
 
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
 
     // The crux: the initial unfiltered request is delayed so it resolves AFTER the later search
     // — the out-of-order arrival that used to clobber the table. The search returns only Alice,

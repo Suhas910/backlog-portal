@@ -36,6 +36,7 @@ describe("Proctor role", () => {
       body: { total: 0, submitted: 0, verified: 0, rejected: 0 },
     });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/exam-cycles", { statusCode: 200, body: [] });
 
     cy.visit("/admin", { onBeforeLoad: seedProctor });

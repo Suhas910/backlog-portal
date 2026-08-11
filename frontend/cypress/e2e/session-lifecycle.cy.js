@@ -24,6 +24,7 @@ describe("Session lifecycle — expiry, warning banner, 401 vs 403", () => {
     });
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
   };
 
   it("shows no warning banner with a full hour left", () => {

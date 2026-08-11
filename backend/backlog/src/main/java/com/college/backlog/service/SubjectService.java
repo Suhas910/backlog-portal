@@ -21,9 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Service
@@ -151,7 +150,18 @@ public class SubjectService {
         subjectRepository.delete(subject);
     }
 
-    public List<Subject> findDistinctSubjectsByRegistrationFilters(Long departmentId, String subjectType, String searchQuery, LocalDate startDate, LocalDate endDate) {
+    /**
+     * Options for the admin list's subject dropdown: the distinct subjects actually registered for
+     * under the caller's other filters. Mirrors RegistrationSpecification's predicates — keep the
+     * two in step, or the dropdown offers a subject that yields no rows.
+     *
+     * @param studentRollNos proctor scope; null = unrestricted. An EMPTY set means "assigned to
+     *     nobody" and callers must short-circuit — an empty IN list is not valid SQL, and omitting
+     *     the predicate would leak every department's subjects to a proctor.
+     */
+    public List<Subject> findDistinctSubjectsByRegistrationFilters(
+            Long departmentId, String subjectType, String searchQuery, Integer semester,
+            Collection<String> studentRollNos) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Subject> query = cb.createQuery(Subject.class);
         Root<Registration> registrationRoot = query.from(Registration.class);
@@ -160,6 +170,9 @@ public class SubjectService {
         query.select(subjectJoin).distinct(true);
 
         List<Predicate> predicates = new ArrayList<>();
+        boolean needsStudent = (searchQuery != null && !searchQuery.isBlank()) || semester != null;
+        Join<Registration, Student> studentJoin =
+                needsStudent ? registrationRoot.join("student") : null;
 
         if (departmentId != null) {
             Predicate offeredBy = cb.equal(subjectJoin.join("department", JoinType.LEFT).get("id"), departmentId);
@@ -173,18 +186,21 @@ public class SubjectService {
         }
 
         if (searchQuery != null && !searchQuery.isBlank()) {
-            Join<Registration, Student> studentJoin = registrationRoot.join("student");
             Predicate namePredicate = cb.like(cb.lower(studentJoin.get("name")), "%" + searchQuery.toLowerCase() + "%");
             Predicate usnPredicate = cb.like(cb.lower(studentJoin.get("rollNo")), "%" + searchQuery.toLowerCase() + "%");
             predicates.add(cb.or(namePredicate, usnPredicate));
         }
 
-        if (startDate != null) {
-            predicates.add(cb.greaterThanOrEqualTo(registrationRoot.get("registeredAt"), startDate.atStartOfDay()));
+        if (semester != null) {
+            // same COALESCE as RegistrationSpecification — match the displayed semester, not the
+            // raw snapshot column
+            predicates.add(cb.equal(
+                    cb.coalesce(registrationRoot.get("snapSemester"), studentJoin.get("currentSemester")),
+                    semester));
         }
 
-        if (endDate != null) {
-            predicates.add(cb.lessThanOrEqualTo(registrationRoot.get("registeredAt"), endDate.atTime(LocalTime.MAX)));
+        if (studentRollNos != null && !studentRollNos.isEmpty()) {
+            predicates.add(registrationRoot.get("student").get("rollNo").in(studentRollNos));
         }
 
         if (!predicates.isEmpty()) {

@@ -91,6 +91,7 @@ describe("Mobile viewport (375x812)", () => {
     });
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
 
     cy.visit("/admin/login");
     cy.contains("Principal / Registrar / COE").click();

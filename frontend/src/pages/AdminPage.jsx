@@ -25,6 +25,15 @@ import api, { getAdminHeaders, clearAdminSession, logoutAdmin } from "../lib/api
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 const PAGE_SIZE = 25;
+// 1..8 is the programme, matching Semesters.java on the server
+const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+
+/** The subject dropdown's single value split into the two params the API takes. */
+function splitSubjectToken(token) {
+  if (!token) return {};
+  if (token.startsWith("type:")) return { subjectType: token.slice(5) };
+  return { subjectId: token };
+}
 
 function AdminPage() {
   const adminRole = sessionStorage.getItem("adminRole") || "";
@@ -34,6 +43,12 @@ function AdminPage() {
     adminRole,
   );
   const adminToken = sessionStorage.getItem("adminToken");
+  // Dept-pinned roles can't widen scope, so a department filter would be a no-op control for them
+  // (the server ignores the param for anyone with a pin).
+  const canFilterByDepartment = adminRole === "ADMIN" || adminRole === "PRINCIPAL";
+  // A proctor sees a few dozen students in one department; subject/semester/department narrowing
+  // is noise at that size.
+  const isProctor = adminRole === "PROCTOR";
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState(
@@ -51,28 +66,35 @@ function AdminPage() {
   const [confirmRejectVerifiedId, setConfirmRejectVerifiedId] = useState("");
   const [rowErrors, setRowErrors] = useState({});
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+
+  // rows ticked for export, by regId. Kept across pages so a selection can span them; cleared
+  // whenever the filters change, since the ticked rows may no longer be in the result set.
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   // Filter states
   const [allSubjects, setAllSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
+  // One control for both subject axes: "" = all, "type:REGULAR"/"type:ELECTIVE" = a whole type,
+  // otherwise a subject id. subjectId already determines subjectType, so two controls meant
+  // keeping them in sync by hand — the dropdown carries the distinction instead.
   const [subjectFilter, setSubjectFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [semesterFilter, setSemesterFilter] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+  const [departments, setDepartments] = useState([]);
   // raw text-box value, a DRAFT updated per keystroke; nothing fetches off it — it reaches the
   // server only via appliedFilters on Apply
   const [searchInput, setSearchInput] = useState("");
-  const [startDateFilter, setStartDateFilter] = useState("");
-  const [endDateFilter, setEndDateFilter] = useState("");
   const [examCycles, setExamCycles] = useState([]);
   const [cycleFilter, setCycleFilter] = useState("");
 
   // The states above are the DRAFT being edited; the registrations fetch keys off appliedFilters,
   // so the table updates only on Apply, never mid-edit on a half-built combo.
   const [appliedFilters, setAppliedFilters] = useState({
-    subjectId: "",
-    subjectType: "",
+    subject: "",
     searchQuery: "",
-    startDate: "",
-    endDate: "",
+    semester: "",
+    departmentId: "",
     examCycleId: "",
   });
 
@@ -109,10 +131,9 @@ function AdminPage() {
     // case the rule carves out. A knowing lint error, deliberately not disabled.
     setLoadingSubjects(true);
     const subjectParams = new URLSearchParams();
-    if (appliedFilters.subjectType) subjectParams.append("subjectType", appliedFilters.subjectType);
     if (appliedFilters.searchQuery) subjectParams.append("searchQuery", appliedFilters.searchQuery);
-    if (appliedFilters.startDate) subjectParams.append("startDate", appliedFilters.startDate);
-    if (appliedFilters.endDate) subjectParams.append("endDate", appliedFilters.endDate);
+    if (appliedFilters.semester) subjectParams.append("semester", appliedFilters.semester);
+    if (appliedFilters.departmentId) subjectParams.append("departmentId", appliedFilters.departmentId);
 
     api
       .get(`/admin/subjects-for-filter?${subjectParams.toString()}`, {
@@ -139,11 +160,33 @@ function AdminPage() {
   }, [
     isAdmin,
     adminToken,
-    appliedFilters.subjectType,
     appliedFilters.searchQuery,
-    appliedFilters.startDate,
-    appliedFilters.endDate,
+    appliedFilters.semester,
+    appliedFilters.departmentId,
   ]);
+
+  // Department options for the ADMIN/PRINCIPAL department filter. Everyone else is dept-pinned,
+  // so there is nothing to choose and nothing to fetch.
+  useEffect(() => {
+    if (!isAdmin || !adminToken || !canFilterByDepartment) return;
+    let ignore = false;
+    const controller = new AbortController();
+    api
+      .get("/admin/departments", { headers: getAdminHeaders(), signal: controller.signal })
+      .then((res) => {
+        if (!ignore) setDepartments(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch((err) => {
+        if (ignore || err.code === "ERR_CANCELED") return;
+        // an empty dropdown reads as "no departments exist" — say what actually happened
+        console.error("Failed to fetch departments for filter", err);
+        setDepartments([]);
+      });
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [isAdmin, adminToken, canFilterByDepartment]);
 
   useEffect(() => {
     if (!isAdmin || !adminToken) return;
@@ -177,11 +220,12 @@ function AdminPage() {
   // shared params (everything but status/page) for the list and counts endpoints, so the cards
   // and the table stay on the same filtered set
   const appendFilterParams = useCallback((params) => {
-    if (appliedFilters.subjectId) params.append("subjectId", appliedFilters.subjectId);
-    if (appliedFilters.subjectType) params.append("subjectType", appliedFilters.subjectType);
+    const { subjectId, subjectType } = splitSubjectToken(appliedFilters.subject);
+    if (subjectId) params.append("subjectId", subjectId);
+    if (subjectType) params.append("subjectType", subjectType);
     if (appliedFilters.searchQuery) params.append("searchQuery", appliedFilters.searchQuery);
-    if (appliedFilters.startDate) params.append("startDate", appliedFilters.startDate);
-    if (appliedFilters.endDate) params.append("endDate", appliedFilters.endDate);
+    if (appliedFilters.semester) params.append("semester", appliedFilters.semester);
+    if (appliedFilters.departmentId) params.append("departmentId", appliedFilters.departmentId);
     if (appliedFilters.examCycleId) params.append("examCycleId", appliedFilters.examCycleId);
   }, [appliedFilters]);
 
@@ -264,11 +308,10 @@ function AdminPage() {
 
   // ---- filter apply / clear (draft -> applied) ----
   const draftFilters = {
-    subjectId: subjectFilter,
-    subjectType: typeFilter,
+    subject: subjectFilter,
     searchQuery: searchInput,
-    startDate: startDateFilter,
-    endDate: endDateFilter,
+    semester: semesterFilter,
+    departmentId: deptFilter,
     examCycleId: cycleFilter,
   };
   const filtersDirty =
@@ -276,6 +319,7 @@ function AdminPage() {
 
   const applyFilters = () => {
     setPage(0); // a new filter set always starts from the first page
+    setSelectedIds(new Set()); // ticked rows may not survive the new filters
     setAppliedFilters(draftFilters);
   };
 
@@ -284,18 +328,17 @@ function AdminPage() {
     const activeId = examCycles.find((c) => c.active)?.id;
     const cyc = activeId != null ? String(activeId) : "";
     setSubjectFilter("");
-    setTypeFilter("");
     setSearchInput("");
-    setStartDateFilter("");
-    setEndDateFilter("");
+    setSemesterFilter("");
+    setDeptFilter("");
     setCycleFilter(cyc);
     setPage(0);
+    setSelectedIds(new Set());
     setAppliedFilters({
-      subjectId: "",
-      subjectType: "",
+      subject: "",
       searchQuery: "",
-      startDate: "",
-      endDate: "",
+      semester: "",
+      departmentId: "",
       examCycleId: cyc,
     });
   };
@@ -377,19 +420,35 @@ function AdminPage() {
     }
   };
 
+  // What the export covers. Ticked rows win outright; otherwise it mirrors exactly what the table
+  // is showing — including the cycle and the status tab, which the old GET silently narrowed to
+  // "the active cycle, verified only" no matter what was on screen.
+  const buildExportBody = () => {
+    if (selectedIds.size > 0) {
+      return { regIds: [...selectedIds] };
+    }
+    const body = {};
+    const { subjectId, subjectType } = splitSubjectToken(appliedFilters.subject);
+    if (subjectId) body.subjectId = Number(subjectId);
+    if (subjectType) body.subjectType = subjectType;
+    if (appliedFilters.searchQuery) body.searchQuery = appliedFilters.searchQuery;
+    if (appliedFilters.semester) body.semester = Number(appliedFilters.semester);
+    if (appliedFilters.departmentId) body.departmentId = Number(appliedFilters.departmentId);
+    if (appliedFilters.examCycleId) {
+      body.examCycleId = Number(appliedFilters.examCycleId);
+    } else {
+      body.allCycles = true; // the table is showing every cycle; the PDF must too
+    }
+    body.status = filter; // "ALL" included — the server maps it to every status
+    return body;
+  };
+
   const handleExportPdf = () => {
     setIsExporting(true);
-    // export the applied combination that's on screen, not unapplied draft edits
-    const params = new URLSearchParams();
-    if (appliedFilters.subjectId) params.append("subjectId", appliedFilters.subjectId);
-    if (appliedFilters.subjectType) params.append("subjectType", appliedFilters.subjectType);
-    if (appliedFilters.searchQuery) params.append("searchQuery", appliedFilters.searchQuery);
-    if (appliedFilters.startDate) params.append("startDate", appliedFilters.startDate);
-    if (appliedFilters.endDate) params.append("endDate", appliedFilters.endDate);
-    if (appliedFilters.examCycleId) params.append("examCycleId", appliedFilters.examCycleId);
+    setExportError("");
 
     api
-      .get(`/admin/export-pdf?${params.toString()}`, {
+      .post("/admin/export-pdf", buildExportBody(), {
         headers: getAdminHeaders(),
         responseType: "blob", // required for file downloads
       })
@@ -413,9 +472,22 @@ function AdminPage() {
         link.parentNode.removeChild(link);
         window.URL.revokeObjectURL(url);
       })
-      .catch((err) => {
+      .catch(async (err) => {
         console.error("Failed to export PDF", err);
-        alert("Failed to export PDF. Please try again.");
+        // responseType blob means an error body arrives as a Blob, not parsed JSON — read it,
+        // or the server's reason (e.g. "No exam cycle is active") is thrown away and every
+        // failure looks identical.
+        let message = "Failed to export PDF. Please try again.";
+        const body = err.response?.data;
+        if (body instanceof Blob) {
+          try {
+            const parsed = JSON.parse(await body.text());
+            if (parsed?.message) message = parsed.message;
+          } catch {
+            // non-JSON body: keep the generic message
+          }
+        }
+        setExportError(message);
       })
       .finally(() => {
         setIsExporting(false);
@@ -425,6 +497,31 @@ function AdminPage() {
   // The table shows exactly the current server page: filtering and paging are server-side, so
   // there is no client-side slicing.
   const filtered = registrations;
+
+  // dropdown groups — the type distinction lives in the option list, not in a second control
+  const regularSubjects = allSubjects.filter((s) => s.subjectType === "REGULAR");
+  const electiveSubjects = allSubjects.filter((s) => s.subjectType === "ELECTIVE");
+
+  // ---- export selection ----
+  const pageIds = filtered.map((r) => r.regId);
+  const allOnPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+
+  const toggleRow = (regId) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(regId)) next.add(regId);
+      return next;
+    });
+
+  // Adds or removes only THIS page's rows, leaving a selection made on other pages intact —
+  // otherwise paging away would silently discard it.
+  const togglePage = () =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      pageIds.forEach((id) => (allOnPageSelected ? next.delete(id) : next.add(id)));
+      return next;
+    });
 
   // Stat cards come from the server counts endpoint and span every status of the filtered set
   // (the list's filters minus the status tab), whichever tab or page is open.
@@ -575,7 +672,7 @@ function AdminPage() {
           <h3 className="mb-3 text-lg font-semibold text-secondary-ink">
             Filters
           </h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {/* Exam Cycle Filter */}
             <div className="flex flex-col gap-1.5">
               <label
@@ -600,63 +697,98 @@ function AdminPage() {
               </select>
             </div>
 
-            {/* Subject Type Filter */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="type-filter"
-                className="text-xs font-semibold uppercase tracking-[0.08em]"
-              >
-                Subject Type
-              </label>
-              <select
-                id="type-filter"
-                value={typeFilter}
-                onChange={(e) => {
-                  setTypeFilter(e.target.value);
-                  setSubjectFilter("");
-                }}
-                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
-              >
-                <option value="">All Types</option>
-                <option value="REGULAR">Regular</option>
-                <option value="ELECTIVE">Elective</option>
-              </select>
-            </div>
+            {/* Department Filter — ADMIN/PRINCIPAL only; every other role is pinned server-side */}
+            {canFilterByDepartment && (
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="dept-filter"
+                  className="text-xs font-semibold uppercase tracking-[0.08em]"
+                >
+                  Department
+                </label>
+                <select
+                  id="dept-filter"
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                  className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.deptName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            {/* Subject Filter */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="subject-filter"
-                className="text-xs font-semibold uppercase tracking-[0.08em]"
-              >
-                Filter by Subject
-              </label>
-              <select
-                id="subject-filter"
-                value={subjectFilter}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  setSubjectFilter(id);
-                  if (id) {
-                    const subject = allSubjects.find(
-                      (s) => String(s.id) === id,
-                    );
-                    if (subject) setTypeFilter(subject.subjectType);
-                  }
-                }}
-                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
-                disabled={loadingSubjects}
-              >
-                <option value="">
-                  {loadingSubjects ? "Loading..." : "All Subjects"}
-                </option>
-                {allSubjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.subjectName} ({s.courseCode})
+            {/* Semester Filter */}
+            {!isProctor && (
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="semester-filter"
+                  className="text-xs font-semibold uppercase tracking-[0.08em]"
+                >
+                  Semester
+                </label>
+                <select
+                  id="semester-filter"
+                  value={semesterFilter}
+                  onChange={(e) => setSemesterFilter(e.target.value)}
+                  className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <option value="">All Semesters</option>
+                  {SEMESTERS.map((s) => (
+                    <option key={s} value={s}>
+                      Semester {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Subject Filter — carries the type distinction, so there is no separate type control */}
+            {!isProctor && (
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="subject-filter"
+                  className="text-xs font-semibold uppercase tracking-[0.08em]"
+                >
+                  Subject
+                </label>
+                <select
+                  id="subject-filter"
+                  value={subjectFilter}
+                  onChange={(e) => setSubjectFilter(e.target.value)}
+                  className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  disabled={loadingSubjects}
+                >
+                  <option value="">
+                    {loadingSubjects ? "Loading..." : "All Subjects"}
                   </option>
-                ))}
-              </select>
-            </div>
+                  <option value="type:REGULAR">All Regular subjects</option>
+                  <option value="type:ELECTIVE">All Elective subjects</option>
+                  {regularSubjects.length > 0 && (
+                    <optgroup label="Regular">
+                      {regularSubjects.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.subjectName} ({s.courseCode})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {electiveSubjects.length > 0 && (
+                    <optgroup label="Elective">
+                      {electiveSubjects.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.subjectName} ({s.courseCode})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+            )}
 
             {/* Search Filter */}
             <div className="flex flex-col gap-1.5">
@@ -673,38 +805,6 @@ function AdminPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring"
-              />
-            </div>
-
-            {/* Date Filters */}
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="start-date-filter"
-                className="text-xs font-semibold uppercase tracking-[0.08em]"
-              >
-                Start Date
-              </label>
-              <input
-                id="start-date-filter"
-                type="date"
-                value={startDateFilter}
-                onChange={(e) => setStartDateFilter(e.target.value)}
-                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="end-date-filter"
-                className="text-xs font-semibold uppercase tracking-[0.08em]"
-              >
-                End Date
-              </label>
-              <input
-                id="end-date-filter"
-                type="date"
-                value={endDateFilter}
-                onChange={(e) => setEndDateFilter(e.target.value)}
-                className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-focus-ring"
               />
             </div>
           </div>
@@ -760,20 +860,56 @@ function AdminPage() {
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={handleExportPdf}
-              disabled={isExporting}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-secondary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary disabled:opacity-50"
-            >
-              {isExporting ? (
-                <LoaderCircle size={14} className="animate-spin" />
-              ) : (
-                <Download size={14} />
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  data-cy="admin-selection-clear"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-stroke bg-surface-muted px-3 py-2 text-xs font-semibold text-secondary-ink transition-colors hover:border-primary"
+                >
+                  <X size={13} /> Clear {selectedIds.size} selected
+                </button>
               )}
-              Export PDF
-            </button>
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                disabled={isExporting}
+                data-cy="admin-export-pdf"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-secondary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-primary disabled:opacity-50"
+              >
+                {isExporting ? (
+                  <LoaderCircle size={14} className="animate-spin" />
+                ) : (
+                  <Download size={14} />
+                )}
+                {selectedIds.size > 0
+                  ? `Export ${selectedIds.size} selected`
+                  : "Export PDF"}
+              </button>
+            </div>
           </div>
+
+          {/* Say what the button will actually produce — the set is not always what's on screen */}
+          <p className="mb-3 text-xs text-ink-muted" data-cy="admin-export-scope">
+            {selectedIds.size > 0
+              ? `Exporting the ${selectedIds.size} ticked ${
+                  selectedIds.size === 1 ? "row" : "rows"
+                }, ignoring the filters.`
+              : `Exporting every ${
+                  filter === "ALL" ? "" : `${filter.toLowerCase()} `
+                }registration matching the current filters.`}
+          </p>
+
+          {exportError && (
+            <p
+              className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+              role="alert"
+              data-cy="admin-export-error"
+            >
+              {exportError}
+            </p>
+          )}
 
           {loading ? (
             <p className="inline-flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm">
@@ -785,6 +921,17 @@ function AdminPage() {
               <table className="min-w-full border-collapse text-left text-sm">
                 <thead>
                   <tr className="bg-surface-muted text-xs uppercase tracking-[0.08em] text-ink">
+                    <th className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={allOnPageSelected}
+                        onChange={togglePage}
+                        disabled={pageIds.length === 0}
+                        aria-label="Select all rows on this page"
+                        data-cy="admin-select-page"
+                        className="h-4 w-4 accent-primary"
+                      />
+                    </th>
                     <th className="px-4 py-3">USN</th>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Sem</th>
@@ -803,6 +950,16 @@ function AdminPage() {
                       key={reg.regId}
                       className="border-t border-stroke align-top"
                     >
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(reg.regId)}
+                          onChange={() => toggleRow(reg.regId)}
+                          aria-label={`Select registration for ${reg.rollNo}`}
+                          data-cy={`admin-select-${reg.regId}`}
+                          className="h-4 w-4 accent-primary"
+                        />
+                      </td>
                       <td className="px-4 py-3 text-ink">
                         {reg.rollNo}
                       </td>

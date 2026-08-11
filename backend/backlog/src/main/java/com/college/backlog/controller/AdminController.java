@@ -4,6 +4,7 @@ import com.college.backlog.controller.dto.DepartmentRequest;
 import com.college.backlog.controller.dto.SubjectCreateRequest;
 import com.college.backlog.controller.dto.RegistrationSummaryResponse;
 import com.college.backlog.controller.dto.RegistrationEventResponse;
+import com.college.backlog.controller.dto.RegistrationExportRequest;
 import com.college.backlog.exception.ResourceNotFoundException;
 import org.springframework.web.server.ResponseStatusException;
 import com.college.backlog.model.Department;
@@ -22,6 +23,7 @@ import com.college.backlog.repository.SubjectRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.RegistrationSpecification;
 import com.college.backlog.service.PdfService;
+import com.college.backlog.service.Semesters;
 import com.college.backlog.service.SubjectService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -39,7 +41,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -146,8 +147,8 @@ public class AdminController {
             @RequestParam Optional<Long> subjectId,
             @RequestParam Optional<String> subjectType,
             @RequestParam Optional<String> searchQuery,
-            @RequestParam Optional<LocalDate> startDate,
-            @RequestParam Optional<LocalDate> endDate,
+            @RequestParam Optional<Integer> semester,
+            @RequestParam Optional<Long> departmentId,
             @RequestParam Optional<Long> examCycleId,
             @RequestParam Optional<String> status,
             @RequestParam(defaultValue = "0") int page,
@@ -165,16 +166,16 @@ public class AdminController {
             return Page.empty(pageable); // proctor with no assignments sees nothing
         }
 
-        Specification<Registration> spec = new RegistrationSpecification(
-                subjectId.orElse(null),
-                callerDeptId,
-                subjectType.orElse(null),
-                searchQuery.orElse(null),
-                startDate.orElse(null),
-                endDate.orElse(null),
-                examCycleId.orElse(null),
-                parseStatus(status.orElse(null)),
-                proctorRolls);
+        Specification<Registration> spec = RegistrationSpecification.builder()
+                .subjectId(subjectId.orElse(null))
+                .departmentId(effectiveDeptId(callerDeptId, departmentId.orElse(null)))
+                .subjectType(subjectType.orElse(null))
+                .searchQuery(searchQuery.orElse(null))
+                .semester(parseSemester(semester.orElse(null)))
+                .examCycleId(examCycleId.orElse(null))
+                .status(parseStatus(status.orElse(null)))
+                .studentRollNos(proctorRolls)
+                .build();
         // mapping stays in the service transaction — `subjects` loads lazily during it
         return registrationService.listSummaries(spec, pageable);
     }
@@ -187,8 +188,8 @@ public class AdminController {
             @RequestParam Optional<Long> subjectId,
             @RequestParam Optional<String> subjectType,
             @RequestParam Optional<String> searchQuery,
-            @RequestParam Optional<LocalDate> startDate,
-            @RequestParam Optional<LocalDate> endDate,
+            @RequestParam Optional<Integer> semester,
+            @RequestParam Optional<Long> departmentId,
             @RequestParam Optional<Long> examCycleId,
             Authentication authentication
     ) {
@@ -198,11 +199,17 @@ public class AdminController {
         if (proctorRolls != null && proctorRolls.isEmpty()) {
             return Map.of("total", 0L, "submitted", 0L, "verified", 0L, "rejected", 0L);
         }
-        // one GROUP BY over the filtered set (status left null — the cards span every status)
+        // one GROUP BY over the filtered set (status left unset — the cards span every status)
         Map<RegistrationStatus, Long> counts = registrationService.countGroupedByStatus(
-            new RegistrationSpecification(
-                subjectId.orElse(null), callerDeptId, subjectType.orElse(null), searchQuery.orElse(null),
-                startDate.orElse(null), endDate.orElse(null), examCycleId.orElse(null), null, proctorRolls));
+            RegistrationSpecification.builder()
+                .subjectId(subjectId.orElse(null))
+                .departmentId(effectiveDeptId(callerDeptId, departmentId.orElse(null)))
+                .subjectType(subjectType.orElse(null))
+                .searchQuery(searchQuery.orElse(null))
+                .semester(parseSemester(semester.orElse(null)))
+                .examCycleId(examCycleId.orElse(null))
+                .studentRollNos(proctorRolls)
+                .build());
         long submitted = counts.getOrDefault(RegistrationStatus.SUBMITTED, 0L);
         long verified = counts.getOrDefault(RegistrationStatus.VERIFIED, 0L);
         long rejected = counts.getOrDefault(RegistrationStatus.REJECTED, 0L);
@@ -211,6 +218,27 @@ public class AdminController {
             "submitted", submitted,
             "verified", verified,
             "rejected", rejected);
+    }
+
+    /**
+     * Department to filter on. A dept-pinned caller's OWN department always wins — the request
+     * parameter is a convenience for ADMIN/PRINCIPAL, who have no pin, and must never be able to
+     * widen or redirect a HOD/DEPT_OFFICE/PROCTOR's scope.
+     */
+    private Long effectiveDeptId(Long callerDeptId, Long requestedDeptId) {
+        return callerDeptId != null ? callerDeptId : requestedDeptId;
+    }
+
+    /** Optional semester filter; absent = every semester, out of range = 400. */
+    private Integer parseSemester(Integer semester) {
+        if (semester == null) {
+            return null;
+        }
+        if (!Semesters.isStudiable(semester)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Semester must be between " + Semesters.MIN + " and " + Semesters.MAX + ".");
+        }
+        return semester;
     }
 
     /** Optional status filter; blank/absent = all statuses, unknown value = 400. */
@@ -344,28 +372,36 @@ public class AdminController {
     public List<Subject> getSubjectsForFilter(
             @RequestParam Optional<String> subjectType,
             @RequestParam Optional<String> searchQuery,
-            @RequestParam Optional<LocalDate> startDate,
-            @RequestParam Optional<LocalDate> endDate,
+            @RequestParam Optional<Integer> semester,
+            @RequestParam Optional<Long> departmentId,
             Authentication authentication
     ) {
-        Long callerDeptId = resolveCallerDeptId(authentication);
+        User caller = callerUser(authentication);
+        Long callerDeptId = resolveCallerDeptId(caller);
+        java.util.Set<String> proctorRolls = proctorRollNos(caller);
+        // Proctor scope belongs here too, not just on the list: the options are computed by joining
+        // through Registration, so without it a proctor could read which subjects students they
+        // don't supervise registered for (searchQuery makes it an oracle). Same short-circuit as
+        // the list — an empty assigned set means nothing to offer.
+        if (proctorRolls != null && proctorRolls.isEmpty()) {
+            return List.of();
+        }
         return subjectService.findDistinctSubjectsByRegistrationFilters(
-                callerDeptId,
+                effectiveDeptId(callerDeptId, departmentId.orElse(null)),
                 subjectType.orElse(null),
                 searchQuery.orElse(null),
-                startDate.orElse(null),
-                endDate.orElse(null));
+                parseSemester(semester.orElse(null)),
+                proctorRolls);
     }
 
-    @GetMapping("/export-pdf")
+    /**
+     * Summary report of the rows the caller names — either an explicit selection or a filter set.
+     * POST, not GET: a selection of a few hundred regIds does not fit in a URL.
+     */
+    @PostMapping("/export-pdf")
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
     public void exportRegistrationsPdf(
-            @RequestParam Optional<Long> subjectId,
-            @RequestParam Optional<String> subjectType,
-            @RequestParam Optional<String> searchQuery,
-            @RequestParam Optional<LocalDate> startDate,
-            @RequestParam Optional<LocalDate> endDate,
-            @RequestParam Optional<Long> examCycleId,
+            @Valid @RequestBody RegistrationExportRequest request,
             Authentication authentication,
             HttpServletResponse response
     ) throws Exception {
@@ -373,37 +409,121 @@ public class AdminController {
         Long callerDeptId = resolveCallerDeptId(caller);
         java.util.Set<String> proctorRolls = proctorRollNos(caller);
 
-        // Scope to one exam cycle — the selected one, else the active one — otherwise the report
-        // spans every cycle. Neither selected nor active means nothing to export.
-        Long effectiveCycleId = examCycleId.orElseGet(() ->
-                examCycleRepository.findByActiveTrue().map(ExamCycle::getId).orElse(null));
-
+        java.util.LinkedHashMap<String, String> context = new java.util.LinkedHashMap<>();
         List<Registration> registrations;
-        if (effectiveCycleId == null || (proctorRolls != null && proctorRolls.isEmpty())) {
-            registrations = List.of();
-        } else {
-            // the report covers only verified rows — filter in the query so pending/rejected
-            // are never hydrated just to be discarded
-            Specification<Registration> spec = new RegistrationSpecification(
-                    subjectId.orElse(null),
-                    callerDeptId,
-                    subjectType.orElse(null),
-                    searchQuery.orElse(null),
-                    startDate.orElse(null),
-                    endDate.orElse(null),
-                    effectiveCycleId,
-                    RegistrationStatus.VERIFIED,
-                    proctorRolls);
 
-            registrations = registrationRepository
-                    .findAll(spec, Sort.by(Sort.Direction.DESC, "registeredAt"));
+        if (proctorRolls != null && proctorRolls.isEmpty()) {
+            registrations = List.of(); // proctor with no assignments has nothing to export
+        } else if (request.hasSelection()) {
+            // Selection wins over every filter — but NOT over scope. The id list came from a
+            // browser, so the dept pin and proctor scope are re-applied in the same query; without
+            // that, hand-editing the list would export any row in the college.
+            registrations = registrationRepository.findAll(
+                    RegistrationSpecification.builder()
+                            .regIds(request.getRegIds())
+                            .departmentId(callerDeptId)
+                            .studentRollNos(proctorRolls)
+                            .build(),
+                    Sort.by(Sort.Direction.DESC, "registeredAt"));
+            int asked = request.getRegIds().size();
+            context.put("Scope", "Selected rows");
+            // Say so when rows fall away rather than quietly shipping a shorter list — a silent
+            // drop is indistinguishable from "those students never registered".
+            context.put("Rows", registrations.size() == asked
+                    ? String.valueOf(asked)
+                    : registrations.size() + " of " + asked + " selected ("
+                        + (asked - registrations.size()) + " not available to you)");
+        } else {
+            RegistrationStatus status = resolveExportStatus(request.getStatus());
+            Long cycleId = resolveExportCycleId(request);
+            Long deptId = effectiveDeptId(callerDeptId, request.getDepartmentId());
+
+            registrations = registrationRepository.findAll(
+                    RegistrationSpecification.builder()
+                            .subjectId(request.getSubjectId())
+                            .departmentId(deptId)
+                            .subjectType(request.getSubjectType())
+                            .searchQuery(request.getSearchQuery())
+                            .semester(parseSemester(request.getSemester()))
+                            .examCycleId(cycleId)
+                            .status(status)
+                            .studentRollNos(proctorRolls)
+                            .build(),
+                    Sort.by(Sort.Direction.DESC, "registeredAt"));
+
+            describeFilters(context, request, cycleId, deptId, status, registrations.size());
         }
 
-        // Stream straight to the response, no full-document byte[] on the heap.
-        // Headers must be set before the first byte is written.
+        // Build fully before committing the response. Streaming straight to the output stream sent
+        // 200 + PDF headers first, so a mid-generation failure appended GlobalExceptionHandler's
+        // JSON into the file and the browser saved a corrupt PDF. Summary rows are small, and the
+        // per-student form PDF already buffers the same way.
+        byte[] pdf = pdfService.generateRegistrationsSummaryPdf(registrations, context);
+
         response.setContentType(MediaType.APPLICATION_PDF_VALUE);
+        response.setContentLength(pdf.length);
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION,
                 "attachment; filename=\"registrations-summary.pdf\"");
-        pdfService.generateRegistrationsSummaryPdf(registrations, response.getOutputStream());
+        response.getOutputStream().write(pdf);
+    }
+
+    /**
+     * Status a filter-based export covers. Blank/absent = VERIFIED, the report's long-standing
+     * default; the literal "ALL" spans every status, so an export can match the status tab the
+     * admin is looking at instead of silently narrowing to verified.
+     */
+    private RegistrationStatus resolveExportStatus(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return RegistrationStatus.VERIFIED;
+        }
+        if ("ALL".equalsIgnoreCase(raw.trim())) {
+            return null;
+        }
+        return parseStatus(raw);
+    }
+
+    /**
+     * Which exam cycle a filter-based export covers: the requested one, else every cycle if asked
+     * explicitly, else the active one. No active cycle and no explicit choice is a 400 — the old
+     * code returned an empty PDF, which reads as "nobody registered".
+     */
+    private Long resolveExportCycleId(RegistrationExportRequest request) {
+        if (request.getExamCycleId() != null) {
+            return request.getExamCycleId();
+        }
+        if (request.isAllCycles()) {
+            return null; // span every cycle, deliberately
+        }
+        return examCycleRepository.findByActiveTrue().map(ExamCycle::getId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No exam cycle is active. Pick a cycle to export, or choose All Cycles."));
+    }
+
+    /** Human-readable record of what the report covers, printed in the PDF header. */
+    private void describeFilters(java.util.Map<String, String> context,
+                                 RegistrationExportRequest request, Long cycleId, Long deptId,
+                                 RegistrationStatus status, int rowCount) {
+        context.put("Exam cycle", cycleId == null
+                ? "All cycles"
+                : examCycleRepository.findById(cycleId).map(ExamCycle::getName).orElse("#" + cycleId));
+        if (deptId != null) {
+            context.put("Department", departmentRepository.findById(deptId)
+                    .map(Department::getDeptName).orElse("#" + deptId));
+        }
+        if (request.getSemester() != null) {
+            context.put("Semester", String.valueOf(request.getSemester()));
+        }
+        if (request.getSubjectId() != null) {
+            context.put("Subject", subjectRepository.findById(request.getSubjectId())
+                    .map(s -> s.getCourseCode() + " " + s.getSubjectName())
+                    .orElse("#" + request.getSubjectId()));
+        } else if (request.getSubjectType() != null && !request.getSubjectType().isBlank()) {
+            context.put("Subject type", request.getSubjectType());
+        }
+        if (request.getSearchQuery() != null && !request.getSearchQuery().isBlank()) {
+            context.put("Search", request.getSearchQuery());
+        }
+        context.put("Status", status == null ? "All statuses" : status.name());
+        context.put("Rows", String.valueOf(rowCount));
     }
 }

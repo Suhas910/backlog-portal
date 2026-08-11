@@ -102,7 +102,7 @@ public class ProgressionService {
                 .map(StudentSemesterTerm::getSemester)
                 .collect(java.util.stream.Collectors.toSet());
         int created = 0;
-        for (int sem = entry; sem <= 8; sem++) {
+        for (int sem = entry; sem <= Semesters.MAX; sem++) {
             if (!recorded.contains(sem)) {
                 int ay = admissionYear + (sem - entry) / 2;
                 termRepository.save(new StudentSemesterTerm(rollNo, sem, ay));
@@ -117,12 +117,7 @@ public class ProgressionService {
      * so the preview flags the rows apply would reject (no WOULD_CREATE that then errors).
      */
     public void validateSemesterAndYear(int semester, int academicYear) {
-        // 1..8 is the semester range everywhere: eligibility, current/entry semester, subjects,
-        // clone and here. Keep it that way — recordProgression assigns this value to
-        // currentSemester, so a range wider than eligibility's would empty the student's window.
-        if (semester < 1 || semester > 8) {
-            throw new IllegalArgumentException("Semester must be between 1 and 8.");
-        }
+        Semesters.assertStudiable(semester);
         AcademicYears.assertInRange(academicYear);
     }
 

@@ -30,6 +30,7 @@ describe("Admin verification flow", () => {
   const stubSideCalls = () => {
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
   };
 
   it("logs in as admin and verifies pending registration", () => {

@@ -37,6 +37,7 @@ describe("Admin dashboard — role & department scoped access", () => {
     });
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
   };
 
   it("HOD: shows the department badge, defaults to the pending filter, and hides admin-only nav", () => {
@@ -119,6 +120,7 @@ describe("Admin dashboard — role & department scoped access", () => {
     });
     cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
 
     cy.visit("/admin", {
       onBeforeLoad: (win) => seedSession(win, "ADMIN"),
