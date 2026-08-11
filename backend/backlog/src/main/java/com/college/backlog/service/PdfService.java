@@ -15,7 +15,11 @@ import com.itextpdf.layout.borders.Border;
 import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.*;
 import com.itextpdf.layout.properties.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -26,6 +30,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class PdfService {
+
+    private static final Logger log = LoggerFactory.getLogger(PdfService.class);
 
     private static final DeviceRgb BLACK = new DeviceRgb(0, 0, 0);
 
@@ -43,6 +49,11 @@ public class PdfService {
 
     // ---- student registration form ----
     public byte[] generateRegistrationPdf(Registration reg) throws Exception {
+        // Only ever called with a registration the controller already loaded and ownership-checked,
+        // so null is a programming error, not the 409 a student should be shown.
+        if (reg == null) {
+            throw new IllegalArgumentException("Cannot render a registration form for a null registration");
+        }
 
         ByteArrayOutputStream baos   = new ByteArrayOutputStream();
         PdfWriter             writer = new PdfWriter(baos);
@@ -119,9 +130,15 @@ public class PdfService {
             int i = 1;
             for (Registration reg : registrations) {
                 table.addCell(dataCellCentre(String.valueOf(i++), regular));
-                table.addCell(dataCellCentre(safe(reg, r -> r.getStudent().getRollNo()), regular));
-                table.addCell(dataCell(safe(reg, r -> r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()), regular));
-                table.addCell(dataCellCentre(safe(reg, r -> String.valueOf(r.getSnapSemester() != null ? r.getSnapSemester() : r.getStudent().getCurrentSemester())), regular));
+                // cell(), not required(): this is a bulk report — one broken row must not cost the
+                // admin the other rows, but it must render as visibly broken rather than empty
+                table.addCell(dataCellCentre(cell(reg, "rollNo", r -> r.getStudent().getRollNo()), regular));
+                table.addCell(dataCell(cell(reg, "name",
+                        r -> r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()), regular));
+                table.addCell(dataCellCentre(cell(reg, "semester",
+                        r -> String.valueOf(r.getSnapSemester() != null
+                                ? r.getSnapSemester()
+                                : r.getStudent().getCurrentSemester())), regular));
 
                 // course code included per subject — it's the canonical identifier
                 String subjectsStr = reg.getSubjects() != null
@@ -294,14 +311,12 @@ public class PdfService {
     // ---- 5. current semester label ----
     private void addCurrentSemesterLabel(Document doc, PdfFont bold, PdfFont regular,
                                          Registration reg) {
-        String sem;
-        if (reg != null && reg.getSnapSemester() != null) {
-            sem = String.valueOf(reg.getSnapSemester());
-        } else if (reg != null && reg.getStudent() != null) {
-            sem = String.valueOf(reg.getStudent().getCurrentSemester());
-        } else {
-            sem = "..............";
-        }
+        // Required like the identity fields: this is what the exam section reads to decide which
+        // paper the student sits. The old dotted fallback printed a fill-in-by-hand blank, which
+        // is precisely the silent-blank failure being removed.
+        String sem = required(reg, "current semester", r -> r.getSnapSemester() != null
+                ? String.valueOf(r.getSnapSemester())
+                : String.valueOf(r.getStudent().getCurrentSemester()));
 
         Paragraph p = new Paragraph()
                 .setFontSize(FS_SECTION_HDR)
@@ -317,11 +332,19 @@ public class PdfService {
 
         String examMonthYear = (reg != null && reg.getRegisteredAt() != null)
                 ? reg.getRegisteredAt().format(DateTimeFormatter.ofPattern("MMMM yyyy")) : "";
-        String name   = safe(reg, r -> (r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()).toUpperCase());
-        String usn    = safe(reg, r -> r.getStudent().getRollNo());
-        String branch = safe(reg, r -> "B.E. / " + (r.getSnapBranch() != null ? r.getSnapBranch() : r.getStudent().getBranch()));
-        String email  = safe(reg, r -> r.getSnapEmail() != null ? r.getSnapEmail() : r.getStudent().getEmail());
-        String mobile = safe(reg, r -> r.getSnapPhone() != null ? r.getSnapPhone() : r.getStudent().getPhone());
+        // identity — the form means nothing without these, so a gap refuses the download
+        String name   = required(reg, "name", r ->
+                upper(r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()));
+        String usn    = required(reg, "USN", r -> r.getStudent().getRollNo());
+        // the prefix is added AFTER the check: concatenating first turned a missing branch into the
+        // literal "B.E. / null" on the printed form, which no exception and no null check could see
+        String branch = "B.E. / " + required(reg, "branch", r ->
+                r.getSnapBranch() != null ? r.getSnapBranch() : r.getStudent().getBranch());
+        // contact details — a blank line here is fillable by hand and phone is optional by design
+        String email  = optional(reg, "email", r ->
+                r.getSnapEmail() != null ? r.getSnapEmail() : r.getStudent().getEmail());
+        String mobile = optional(reg, "mobile", r ->
+                r.getSnapPhone() != null ? r.getSnapPhone() : r.getStudent().getPhone());
 
         String[][] fields = {
             { "Examination Month / Year",                  examMonthYear },
@@ -466,12 +489,18 @@ public class PdfService {
 
     // ---- helpers ----
 
+    /** Missing logo degrades to the text header rather than failing the form — but say so, or
+     *  every form ships without the institutional logo indefinitely and nobody finds out. */
     private byte[] loadLogoBytes() {
         try (InputStream is = getClass().getClassLoader()
                 .getResourceAsStream("RitLogo.png")) {
-            if (is == null) return null;
+            if (is == null) {
+                log.warn("PDF_LOGO_MISSING resource=RitLogo.png — forms render without the logo");
+                return null;
+            }
             return is.readAllBytes();
         } catch (Exception e) {
+            log.warn("PDF_LOGO_UNREADABLE resource=RitLogo.png", e);
             return null;
         }
     }
@@ -496,14 +525,76 @@ public class PdfService {
 
     private String nvl(String s) { return s != null ? s : ""; }
 
-    private String safe(Registration reg, Function<Registration, String> fn) {
-        if (reg == null) return "";
+    /** Null-safe upper-case, so a missing name is classified MISSING rather than surfacing as an
+     *  NPE that reads like a code fault. */
+    private String upper(String s) { return s != null ? s.toUpperCase() : null; }
+
+    // ---- field access ----
+    // Replaces a single `safe()` that caught Exception and returned "" for everything. That one
+    // helper served two documents with opposite needs, so it had to pick the weaker: a student
+    // could download a form with a blank USN, get it signed, and submit it. Split by document.
+
+    /** Printed in a summary cell whose value couldn't be read — a blank cell reads as "this
+     *  student has no name", which is exactly the silence this replaces. */
+    private static final String CELL_UNAVAILABLE = "!! unavailable";
+
+    /**
+     * A field the student's form is invalid without (name, USN, branch, semester). Missing or
+     * unreadable ⇒ refuse the download rather than print an empty box on a document that gets
+     * signed and submitted.
+     *
+     * <p>409 + "contact the department office", not 500: the data is broken and a human has to fix
+     * it, so telling the student to retry is useless. Mirrors the year-binding fail-closed wording
+     * in RegistrationService/StudentController.
+     */
+    private String required(Registration reg, String field, Function<Registration, String> fn) {
+        String value;
+        try {
+            value = fn.apply(reg);
+        } catch (RuntimeException e) {
+            // a throw here is a bug or a broken row, not a user error — keep the stack trace
+            log.error("PDF_FIELD_UNREADABLE regId={} field={}", regIdOf(reg), field, e);
+            throw incompleteForm(field);
+        }
+        if (value == null || value.isBlank()) {
+            log.warn("PDF_FIELD_MISSING regId={} field={} (form refused)", regIdOf(reg), field);
+            throw incompleteForm(field);
+        }
+        return value;
+    }
+
+    /** A field the form is still valid without (email, mobile — phone is optional by design).
+     *  Absent prints blank; a THROW is still not swallowed, since that means something else broke. */
+    private String optional(Registration reg, String field, Function<Registration, String> fn) {
         try {
             String v = fn.apply(reg);
             return v != null ? v : "";
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
+            log.warn("PDF_FIELD_UNREADABLE regId={} field={} (optional, left blank)",
+                    regIdOf(reg), field, e);
             return "";
         }
     }
 
+    /** Summary-report cell: one unreadable row must not lose the other rows, but it must LOOK
+     *  broken rather than empty. Never throws — the report is bulk. */
+    private String cell(Registration reg, String field, Function<Registration, String> fn) {
+        try {
+            String v = fn.apply(reg);
+            return v != null ? v : "";
+        } catch (RuntimeException e) {
+            log.warn("PDF_SUMMARY_CELL_UNREADABLE regId={} field={}", regIdOf(reg), field, e);
+            return CELL_UNAVAILABLE;
+        }
+    }
+
+    private ResponseStatusException incompleteForm(String field) {
+        return new ResponseStatusException(HttpStatus.CONFLICT,
+            "Your registration form is missing required details (" + field
+                + "). Please contact the department office.");
+    }
+
+    private String regIdOf(Registration reg) {
+        return reg != null ? reg.getRegId() : "null";
+    }
 }

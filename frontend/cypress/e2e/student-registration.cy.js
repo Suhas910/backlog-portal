@@ -103,7 +103,10 @@ describe("Student registration flow", () => {
       });
 
     cy.contains("Registration Submitted").should("be.visible");
-    cy.contains("REG-2026-1001").should("be.visible");
+    // the regId is deliberately NOT shown — it is an internal identifier the student cannot use
+    cy.contains("REG-2026-1001").should("not.exist");
+    // what the student actually needs next
+    cy.contains("Download PDF").should("be.visible");
   });
 
   it("offers only the eligible semesters in the dropdown", () => {

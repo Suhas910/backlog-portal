@@ -7,13 +7,17 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.canvas.parser.PdfTextExtractor;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Guards the one place iText is used. Pure unit test — no Spring context, no DB.
@@ -91,5 +95,88 @@ class PdfServiceTest {
 
         assertThat(new String(pdf, 0, 5, StandardCharsets.ISO_8859_1)).isEqualTo("%PDF-");
         assertThat(textOf(pdf)).contains("1MS22CS001");
+    }
+
+    // ---- required identity fields: refuse rather than print a blank on a form that gets signed ----
+
+    private static Registration withStudent(Student s) {
+        Registration reg = sampleRegistration();
+        reg.setStudent(s);
+        return reg;
+    }
+
+    @Test
+    void refusesTheFormWhenTheNameIsMissing() {
+        // the whole point: this used to render a form with an empty Name box, which a student could
+        // print, get signed by their proctor and HOD, and submit
+        Registration reg = withStudent(
+                new Student("1MS22CS001", null, "a@msrit.edu", "9999912345", 2022, 5, "CS"));
+
+        assertThatThrownBy(() -> service.generateRegistrationPdf(reg))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode())
+                        .isEqualTo(HttpStatus.CONFLICT))
+                .hasMessageContaining("name")
+                .hasMessageContaining("contact the department office");
+    }
+
+    @Test
+    void refusesTheFormWhenTheBranchIsMissing() {
+        // and never prints the literal "B.E. / null", which string concat produced before the
+        // prefix was moved after the check
+        Registration reg = withStudent(
+                new Student("1MS22CS001", "Asha Rao", "a@msrit.edu", "9999912345", 2022, 5, null));
+
+        assertThatThrownBy(() -> service.generateRegistrationPdf(reg))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("branch");
+    }
+
+    @Test
+    void refusesTheFormWhenTheStudentRowIsUnreadable() {
+        // registrations.roll_no is nullable at the DB, so an orphan row is reachable; it used to be
+        // swallowed into blank identity cells
+        Registration reg = sampleRegistration();
+        reg.setStudent(null);
+
+        assertThatThrownBy(() -> service.generateRegistrationPdf(reg))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("contact the department office");
+    }
+
+    @Test
+    void stillRendersWhenOnlyTheOptionalContactFieldsAreMissing() throws Exception {
+        // phone is optional by design and email is auto-assigned — neither invalidates the form,
+        // so these must NOT refuse the download
+        Registration reg = withStudent(
+                new Student("1MS22CS001", "Asha Rao", null, null, 2022, 5, "CS"));
+
+        String text = textOf(service.generateRegistrationPdf(reg));
+
+        assertThat(text).contains("1MS22CS001", "ASHA RAO");
+        assertThat(text).contains("B.E. / CS");
+    }
+
+    @Test
+    void nullRegistrationIsAProgrammingErrorNotAStudentFacingConflict() {
+        assertThatThrownBy(() -> service.generateRegistrationPdf(null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    // ---- summary report: one broken row must not cost the other rows, but must look broken ----
+
+    @Test
+    void summaryMarksAnUnreadableRowAndKeepsTheGoodOnes() throws Exception {
+        Registration broken = sampleRegistration();
+        broken.setStudent(null); // NPE inside the cell accessor
+        Registration ok = sampleRegistration();
+
+        byte[] pdf = service.generateRegistrationsSummaryPdf(List.of(broken, ok), Map.of());
+        String text = textOf(pdf);
+
+        // the good row survives — a bulk report must not be lost to one bad row
+        assertThat(text).contains("1MS22CS001");
+        // and the bad one reads as broken rather than as a student with no name
+        assertThat(text).contains("!! unavailable");
     }
 }

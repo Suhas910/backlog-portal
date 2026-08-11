@@ -12,7 +12,7 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentHeaders } from "../lib/api";
 import { formatAcademicYear } from "../lib/academicYear";
-import { savePdfBlob } from "../lib/downloadPdf";
+import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 function RegistrationPage() {
@@ -28,6 +28,7 @@ function RegistrationPage() {
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
   const [searchSemester, setSearchSemester] = useState("");
   // academic year the chosen semester resolved to, server-derived and shown read-only
   const [resolvedAcademicYear, setResolvedAcademicYear] = useState(null);
@@ -155,14 +156,22 @@ function RegistrationPage() {
 
   const handleDownloadPdf = async () => {
     setDownloading(true);
+    setDownloadError("");
     try {
       const res = await api.get(`/student/registrations/${regId}/pdf`, {
         headers: getStudentHeaders(),
         responseType: "blob",
       });
       savePdfBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`);
-    } catch {
-      alert("Could not download the form. Please try again from your dashboard.");
+    } catch (err) {
+      // surface the server's reason — a 409 here names the missing detail and says to contact the
+      // department office, which is the one thing the student can act on
+      setDownloadError(
+        await readBlobErrorMessage(
+          err,
+          "Could not download the form. Please try again from your dashboard.",
+        ),
+      );
     } finally {
       setDownloading(false);
     }
@@ -212,12 +221,20 @@ function RegistrationPage() {
         eyebrow="Submission Complete"
         title="Registration Submitted"
       >
-        <p className="mb-2 text-ink">
-          Your registration ID is: <strong>{regId}</strong>
-        </p>
+        {/* regId is an internal UUID — nothing quotes it (no track-by-id, no PDF field, no admin
+            column; staff look up by USN), so showing it only competes with the actual next step. */}
         <p className="mb-6 text-ink">
           Please download your form, print it, and get it signed by your Proctor and HOD.
         </p>
+        {downloadError && (
+          <p
+            className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+            role="alert"
+            data-cy="download-error"
+          >
+            {downloadError}
+          </p>
+        )}
         <div className="flex flex-wrap gap-3">
           <MagneticCta onClick={handleDownloadPdf} disabled={downloading} className="gap-2">
             {downloading ? <LoaderCircle size={16} className="animate-spin" /> : <Download size={16} />}

@@ -20,17 +20,56 @@ const STATUS_STYLES = {
   WOULD_CREATE: "text-primary-ink",
   SKIPPED_EXISTS: "text-ink-muted",
   WOULD_SKIP: "text-ink-muted",
+  // Amber, not red: a conflict is not a failure — the row needs a decision. amber-700, not -600:
+  // measured 3.19:1 on white at this size, under the 4.5 AA floor (the adjacent red-600 gets 4.83).
+  // Both share one dark re-tint in index.css, so this is a light-only correction.
+  CONFLICT: "text-amber-700",
+  WOULD_CONFLICT: "text-amber-700",
   ERROR: "text-red-600",
 };
 
-function ResultTable({ result }) {
+const isConflict = (status) => status === "CONFLICT" || status === "WOULD_CONFLICT";
+
+/**
+ * Per-row result list. Conflict rows get a one-click fix that writes the row's year through the
+ * audited single-row override — the bulk paths deliberately have no overwrite power, so without
+ * this the report would be a dead end the admin has to re-key by hand.
+ */
+function ResultTable({ result, onApplyCorrection }) {
+  const [applying, setApplying] = useState("");
+  const [applied, setApplied] = useState({});
+
   if (!result) return null;
+
+  const apply = async (r) => {
+    const key = `${r.rollNo}-${r.semester}`;
+    setApplying(key);
+    try {
+      await onApplyCorrection(r.rollNo, r.semester, r.requestedAcademicYear);
+      setApplied((prev) => ({ ...prev, [key]: "done" }));
+    } catch (err) {
+      setApplied((prev) => ({
+        ...prev,
+        [key]: err.response?.data?.message || "Could not apply.",
+      }));
+    } finally {
+      setApplying("");
+    }
+  };
+
   return (
     <div className="mt-4">
       <p className="mb-2 text-sm font-medium text-ink">
         {result.dryRun ? "Preview" : "Applied"} — {result.created} created, {result.skipped} skipped,{" "}
-        {result.errors} error(s)
+        {result.conflicts ?? 0} conflict(s), {result.errors} error(s)
       </p>
+      {(result.conflicts ?? 0) > 0 && (
+        <p className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-ink">
+          A conflict means the year on file disagrees with this row. Nothing was changed — the
+          recorded year is what a student&apos;s backlog subjects resolve against, so overwriting it
+          is a per-student decision. Apply the ones that are genuinely corrections.
+        </p>
+      )}
       <div className="max-h-72 overflow-auto rounded-xl border border-stroke">
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 bg-surface-muted text-xs uppercase tracking-[0.08em] text-ink-muted">
@@ -42,14 +81,41 @@ function ResultTable({ result }) {
             </tr>
           </thead>
           <tbody>
-            {result.results.map((r, i) => (
-              <tr key={`${r.rollNo}-${r.semester}-${i}`} className="border-t border-stroke">
-                <td className="px-3 py-2 font-mono text-xs">{r.rollNo}</td>
-                <td className="px-3 py-2">{r.semester ?? "—"}</td>
-                <td className={`px-3 py-2 font-semibold ${STATUS_STYLES[r.status] || ""}`}>{r.status}</td>
-                <td className="px-3 py-2 text-ink-muted">{r.message || ""}</td>
-              </tr>
-            ))}
+            {result.results.map((r, i) => {
+              const key = `${r.rollNo}-${r.semester}`;
+              return (
+                <tr key={`${r.rollNo}-${r.semester}-${i}`} className="border-t border-stroke">
+                  <td className="px-3 py-2 font-mono text-xs">{r.rollNo}</td>
+                  <td className="px-3 py-2">{r.semester ?? "—"}</td>
+                  <td className={`px-3 py-2 font-semibold ${STATUS_STYLES[r.status] || ""}`}>{r.status}</td>
+                  <td className="px-3 py-2 text-ink-muted">
+                    {r.message || ""}
+                    {isConflict(r.status) && r.requestedAcademicYear != null && onApplyCorrection && (
+                      <span className="ml-2 inline-flex items-center gap-2">
+                        {applied[key] === "done" ? (
+                          <span className="text-xs font-semibold text-primary-ink">
+                            Applied {r.requestedAcademicYear}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => apply(r)}
+                            disabled={applying === key}
+                            data-cy={`progression-apply-conflict-${r.rollNo}-${r.semester}`}
+                            className="rounded-lg border border-amber-300 px-2 py-0.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 disabled:opacity-50"
+                          >
+                            {applying === key ? "Applying..." : `Use ${r.requestedAcademicYear}`}
+                          </button>
+                        )}
+                        {applied[key] && applied[key] !== "done" && (
+                          <span className="text-xs font-medium text-red-600">{applied[key]}</span>
+                        )}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -314,6 +380,17 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
     }
   };
 
+  // Resolve one conflict row from a bulk result. Goes through the same single-row override the
+  // timeline uses — audited (PROGRESSION_OVERRIDE logs actor and previous→new) and one student at a
+  // time, which is the whole reason the bulk paths don't overwrite. Errors surface per row.
+  const applyCorrection = useCallback(async (rollNo, semester, academicYear) => {
+    await api.put(
+      `/admin/progression/${rollNo}/semester/${semester}`,
+      { academicYear },
+      { headers: getAdminHeaders() },
+    );
+  }, []);
+
   return (
     <div>
       <p className="mb-4 text-sm text-ink-muted">
@@ -422,7 +499,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                   <Users size={15} /> Apply promotion
                 </MagneticCta>
               </div>
-              <ResultTable result={pResult} />
+              <ResultTable result={pResult} onApplyCorrection={applyCorrection} />
             </Card>
 
             {/* CSV import */}
@@ -454,7 +531,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
                   <UploadCloud size={15} /> Import
                 </MagneticCta>
               </div>
-              <ResultTable result={iResult} />
+              <ResultTable result={iResult} onApplyCorrection={applyCorrection} />
             </Card>
 
             {/* Backfill */}

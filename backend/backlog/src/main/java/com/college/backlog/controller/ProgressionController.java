@@ -93,11 +93,12 @@ public class ProgressionController {
         // admission year stays an optional narrowing
         requireDeptScope(actor, deptId);
         List<Student> cohort = resolveCohort(actor, deptId, admissionYear, null);
-        Map<String, Set<Integer>> termsByRoll = termsByRoll(cohort);
+        Map<String, Map<Integer, Integer>> termsByRoll = termsByRoll(cohort);
 
         List<StudentGapResponse> gaps = new ArrayList<>();
         for (Student s : cohort) {
-            Set<Integer> recorded = termsByRoll.getOrDefault(s.getRollNo(), Set.of());
+            // a gap is a MISSING semester; the recorded years don't matter here
+            Set<Integer> recorded = termsByRoll.getOrDefault(s.getRollNo(), Map.of()).keySet();
             List<Integer> missing = eligibilityService
                 .eligibleSemesters(s.getCurrentSemester(), s.getEntrySemester()).stream()
                 .filter(sem -> !recorded.contains(sem))
@@ -124,10 +125,10 @@ public class ProgressionController {
         Set<String> excluded = req.getExcludeRollNos() == null ? Set.of() : new java.util.HashSet<>(req.getExcludeRollNos());
         List<Student> cohort = resolveCohort(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         // dry-run: one batched term lookup for the cohort, not an exists-probe round trip per student
-        Map<String, Set<Integer>> recordedByRoll = req.isDryRun() ? termsByRoll(cohort) : Map.of();
+        Map<String, Map<Integer, Integer>> recordedByRoll = req.isDryRun() ? termsByRoll(cohort) : Map.of();
 
         List<ProgressionRowResult> results = new ArrayList<>();
-        int created = 0, skipped = 0, errors = 0;
+        int created = 0, skipped = 0, conflicts = 0, errors = 0;
         for (Student s : cohort) {
             String roll = s.getRollNo();
             if (excluded.contains(roll)) {
@@ -146,23 +147,44 @@ public class ProgressionController {
                     // validate the year too, so the preview flags the rows recordProgression would
                     // reject — no WOULD_CREATE that then errors on apply (parity with import)
                     progressionService.validateSemesterAndYear(req.getTargetSemester(), req.getAcademicYear());
-                    boolean exists = recordedByRoll.getOrDefault(roll, Set.of()).contains(req.getTargetSemester());
-                    results.add(new ProgressionRowResult(roll, req.getTargetSemester(),
-                            exists ? "WOULD_SKIP" : "WOULD_CREATE",
-                            "promote to semester " + req.getTargetSemester()));
-                    if (exists) skipped++; else created++;
+                    Integer held = recordedByRoll.getOrDefault(roll, Map.of()).get(req.getTargetSemester());
+                    if (held == null) {
+                        results.add(new ProgressionRowResult(roll, req.getTargetSemester(), "WOULD_CREATE",
+                                "promote to semester " + req.getTargetSemester()));
+                        created++;
+                    } else if (held == req.getAcademicYear()) {
+                        results.add(new ProgressionRowResult(roll, req.getTargetSemester(), "WOULD_SKIP",
+                                "already recorded for " + held));
+                        skipped++;
+                    } else {
+                        results.add(new ProgressionRowResult(roll, req.getTargetSemester(), "WOULD_CONFLICT",
+                                conflictDetail(held, req.getAcademicYear()), req.getAcademicYear()));
+                        conflicts++;
+                    }
                 } else {
-                    ProgressionService.Outcome outcome =
+                    ProgressionService.Result r =
                             progressionService.recordProgression(roll, req.getTargetSemester(), req.getAcademicYear());
-                    results.add(new ProgressionRowResult(roll, req.getTargetSemester(), outcome.name(), null));
-                    if (outcome == ProgressionService.Outcome.CREATED) created++; else skipped++;
+                    results.add(new ProgressionRowResult(roll, req.getTargetSemester(), r.outcome().name(),
+                            r.outcome() == ProgressionService.Outcome.CONFLICT
+                                    ? conflictDetail(r.heldAcademicYear(), req.getAcademicYear()) : null,
+                            r.outcome() == ProgressionService.Outcome.CONFLICT ? req.getAcademicYear() : null));
+                    switch (r.outcome()) {
+                        case CREATED -> created++;
+                        case CONFLICT -> conflicts++;
+                        default -> skipped++;
+                    }
                 }
             } catch (IllegalArgumentException e) {
                 results.add(new ProgressionRowResult(roll, req.getTargetSemester(), "ERROR", e.getMessage()));
                 errors++;
             }
         }
-        return new BatchResult(req.isDryRun(), created, skipped, errors, results);
+        return new BatchResult(req.isDryRun(), created, skipped, conflicts, errors, results);
+    }
+
+    /** Both years, always — a conflict the admin can only see one side of can't be acted on. */
+    private String conflictDetail(int held, int requested) {
+        return "on file: " + held + ", this row says: " + requested + " — not changed";
     }
 
     // ---- CSV import ----
@@ -173,7 +195,7 @@ public class ProgressionController {
         proctorScope.rejectProctor(actor, BULK_REFUSED_FOR_PROCTORS);
         String callerDeptCode = callerDeptCode(actor);
         List<ProgressionRowResult> results = new ArrayList<>();
-        int created = 0, skipped = 0, errors = 0;
+        int created = 0, skipped = 0, conflicts = 0, errors = 0;
 
         for (ProgressionImportRow row : req.getRows() == null ? List.<ProgressionImportRow>of() : req.getRows()) {
             String roll = row.getRollNo() == null ? "" : row.getRollNo().trim();
@@ -187,15 +209,34 @@ public class ProgressionController {
                     studentRepository.findByRollNo(roll)
                             .orElseThrow(() -> new IllegalArgumentException("Student not found: " + roll));
                     progressionService.validateSemesterAndYear(row.getSemester(), row.getAcademicYear());
-                    boolean exists = termRepository.existsByRollNoAndSemester(roll, row.getSemester());
-                    results.add(new ProgressionRowResult(roll, row.getSemester(),
-                            exists ? "WOULD_SKIP" : "WOULD_CREATE", null));
-                    if (exists) skipped++; else created++;
+                    // fetch, not exists-probe: the preview has to answer "same year?" too, or it
+                    // predicts WOULD_SKIP for a row apply will report as a conflict
+                    Integer held = termRepository.findByRollNoAndSemester(roll, row.getSemester())
+                            .map(StudentSemesterTerm::getAcademicYear).orElse(null);
+                    if (held == null) {
+                        results.add(new ProgressionRowResult(roll, row.getSemester(), "WOULD_CREATE", null));
+                        created++;
+                    } else if (held == row.getAcademicYear()) {
+                        results.add(new ProgressionRowResult(roll, row.getSemester(), "WOULD_SKIP",
+                                "already recorded for " + held));
+                        skipped++;
+                    } else {
+                        results.add(new ProgressionRowResult(roll, row.getSemester(), "WOULD_CONFLICT",
+                                conflictDetail(held, row.getAcademicYear()), row.getAcademicYear()));
+                        conflicts++;
+                    }
                 } else {
-                    ProgressionService.Outcome outcome =
+                    ProgressionService.Result r =
                             progressionService.recordProgression(roll, row.getSemester(), row.getAcademicYear());
-                    results.add(new ProgressionRowResult(roll, row.getSemester(), outcome.name(), null));
-                    if (outcome == ProgressionService.Outcome.CREATED) created++; else skipped++;
+                    results.add(new ProgressionRowResult(roll, row.getSemester(), r.outcome().name(),
+                            r.outcome() == ProgressionService.Outcome.CONFLICT
+                                    ? conflictDetail(r.heldAcademicYear(), row.getAcademicYear()) : null,
+                            r.outcome() == ProgressionService.Outcome.CONFLICT ? row.getAcademicYear() : null));
+                    switch (r.outcome()) {
+                        case CREATED -> created++;
+                        case CONFLICT -> conflicts++;
+                        default -> skipped++;
+                    }
                 }
             } catch (IllegalArgumentException e) {
                 results.add(new ProgressionRowResult(roll, row.getSemester(), "ERROR", e.getMessage()));
@@ -207,7 +248,7 @@ public class ProgressionController {
                 errors++;
             }
         }
-        return new BatchResult(req.isDryRun(), created, skipped, errors, results);
+        return new BatchResult(req.isDryRun(), created, skipped, conflicts, errors, results);
     }
 
     // ---- linear backfill ----
@@ -219,7 +260,9 @@ public class ProgressionController {
         requireBulkScope(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         List<Student> cohort = resolveCohort(actor, req.getDeptId(), req.getAdmissionYear(), req.getRollNos());
         // dry-run: one batched term lookup for the cohort, not up to 8 exists-probes per student
-        Map<String, Set<Integer>> recordedByRoll = req.isDryRun() ? termsByRoll(cohort) : Map.of();
+        // backfill only asks "which semesters exist"; the years it would write are derived, so it
+        // reads just the key set of the shared lookup
+        Map<String, Map<Integer, Integer>> recordedByRoll = req.isDryRun() ? termsByRoll(cohort) : Map.of();
 
         List<ProgressionRowResult> results = new ArrayList<>();
         int created = 0, skipped = 0, errors = 0;
@@ -228,7 +271,7 @@ public class ProgressionController {
             try {
                 if (req.isDryRun()) {
                     int missing = countMissingLinear(
-                            recordedByRoll.getOrDefault(roll, Set.of()), s.getEntrySemester());
+                            recordedByRoll.getOrDefault(roll, Map.of()).keySet(), s.getEntrySemester());
                     results.add(new ProgressionRowResult(roll, null,
                             missing > 0 ? "WOULD_CREATE" : "WOULD_SKIP", missing + " row(s)"));
                     if (missing > 0) created += missing; else skipped++;
@@ -243,7 +286,8 @@ public class ProgressionController {
                 errors++;
             }
         }
-        return new BatchResult(req.isDryRun(), created, skipped, errors, results);
+        // backfill is write-once row creation only; it can't conflict on a year
+        return new BatchResult(req.isDryRun(), created, skipped, 0, errors, results);
     }
 
     // ---- current / entry semester correction ----
@@ -331,12 +375,21 @@ public class ProgressionController {
     }
 
     /** Batched (rollNo -> recorded semesters) lookup for a cohort — one query, not N. */
-    private Map<String, Set<Integer>> termsByRoll(List<Student> cohort) {
+    /**
+     * roll -> (semester -> academic year) for the cohort, in one query. Keeps the YEAR, which the
+     * old Set&lt;Integer&gt; projection discarded even though findByRollNoIn already loads it — that
+     * discard is why the dry-run could only ever answer "exists?" and never "same year?".
+     * Callers that only need the semesters use {@code .keySet()}.
+     */
+    private Map<String, Map<Integer, Integer>> termsByRoll(List<Student> cohort) {
         if (cohort.isEmpty()) return Map.of();
         return termRepository.findByRollNoIn(
                 cohort.stream().map(Student::getRollNo).collect(Collectors.toList())).stream()
             .collect(Collectors.groupingBy(StudentSemesterTerm::getRollNo,
-                Collectors.mapping(StudentSemesterTerm::getSemester, Collectors.toSet())));
+                Collectors.toMap(StudentSemesterTerm::getSemester, StudentSemesterTerm::getAcademicYear,
+                        // (rollNo, semester) is unique, so a duplicate can't occur; keep the first
+                        // rather than throwing if the data ever says otherwise
+                        (a, b) -> a)));
     }
 
     /** The dept code a caller is restricted to, or null if unrestricted (ADMIN/PRINCIPAL). */

@@ -55,7 +55,7 @@ describe("Manage Students — Progression tab", () => {
         admissionYear: 2024,
       });
 
-    cy.contains("Preview — 1 created, 0 skipped, 0 error(s)").should("be.visible");
+    cy.contains("Preview — 1 created, 0 skipped, 0 conflict(s), 0 error(s)").should("be.visible");
     cy.contains("td", "1MS24CS191").should("be.visible");
     cy.contains("td", "WOULD_CREATE").should("be.visible");
   });
@@ -125,7 +125,52 @@ describe("Manage Students — Progression tab", () => {
         ],
       });
 
-    cy.contains("Preview — 2 created, 0 skipped, 0 error(s)").should("be.visible");
+    cy.contains("Preview — 2 created, 0 skipped, 0 conflict(s), 0 error(s)").should("be.visible");
+  });
+
+  // A conflict is a row whose academic year disagrees with the one on file. It must be visible and
+  // resolvable — before this outcome existed it was reported as SKIPPED_EXISTS with an empty detail
+  // cell, so the department's real year was discarded with nothing on screen to show for it.
+  it("surfaces an import year-conflict and applies it through the audited override", () => {
+    cy.intercept("POST", "/api/admin/progression/import", {
+      statusCode: 200,
+      body: {
+        dryRun: true,
+        created: 0,
+        skipped: 0,
+        conflicts: 1,
+        errors: 0,
+        results: [
+          {
+            rollNo: "1MS24CS191",
+            semester: 5,
+            status: "WOULD_CONFLICT",
+            message: "on file: 2026, this row says: 2025 — not changed",
+            requestedAcademicYear: 2025,
+          },
+        ],
+      },
+    }).as("importProg");
+
+    cy.intercept("PUT", "/api/admin/progression/1MS24CS191/semester/5", {
+      statusCode: 200,
+      body: { rollNo: "1MS24CS191", name: "Test Student", currentSemester: 5, entrySemester: 1, terms: [] },
+    }).as("override");
+
+    visitAs("ADMIN");
+    cy.get('[data-cy="prog-tab-bulk"]').click();
+    cy.get('[data-cy="prog-import-csv"]').type("1MS24CS191,5,2025-26");
+    cy.get('[data-cy="prog-import-preview"]').click();
+    cy.wait("@importProg");
+
+    // counted apart from skips and from errors
+    cy.contains("Preview — 0 created, 0 skipped, 1 conflict(s), 0 error(s)").should("be.visible");
+    // both years reach the admin, or the row can't be judged
+    cy.contains("on file: 2026, this row says: 2025").should("be.visible");
+
+    cy.get('[data-cy="progression-apply-conflict-1MS24CS191-5"]').click();
+    cy.wait("@override").its("request.body").should("deep.equal", { academicYear: 2025 });
+    cy.contains("Applied 2025").should("be.visible");
   });
 
   it("looks up a student and corrects one semester's academic year", () => {

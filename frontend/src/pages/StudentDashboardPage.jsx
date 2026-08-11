@@ -15,7 +15,7 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getStudentHeaders, logoutStudent } from "../lib/api";
-import { savePdfBlob } from "../lib/downloadPdf";
+import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
 
 function statusBadgeClass(status) {
   if (status === "VERIFIED")
@@ -37,6 +37,8 @@ function StudentDashboardPage() {
   const [phoneError, setPhoneError] = useState("");
 
   const [downloadingId, setDownloadingId] = useState("");
+  // per-row, so the message sits next to the form it failed for rather than in a page-level banner
+  const [downloadError, setDownloadError] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,6 +102,7 @@ function StudentDashboardPage() {
 
   const downloadPdf = async (regId) => {
     setDownloadingId(regId);
+    setDownloadError(null); // a retry shouldn't sit under the previous attempt's message
     try {
       const res = await api.get(`/student/registrations/${regId}/pdf`, {
         headers: getStudentHeaders(),
@@ -108,7 +111,15 @@ function StudentDashboardPage() {
       savePdfBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`);
     } catch (err) {
       if (![401, 403].includes(err.response?.status)) {
-        alert("Could not download the form. Please try again.");
+        // the server's reason is the actionable part (e.g. a 409 telling the student which detail
+        // is missing and to contact the department office) — a generic alert threw it away
+        setDownloadError({
+          regId,
+          message: await readBlobErrorMessage(
+            err,
+            "Could not download the form. Please try again.",
+          ),
+        });
       }
     } finally {
       setDownloadingId("");
@@ -292,6 +303,15 @@ function StudentDashboardPage() {
                         <p className="text-xs text-ink-muted">
                           {reg.registeredAt ? new Date(reg.registeredAt).toLocaleString() : ""}
                         </p>
+                        {downloadError?.regId === reg.regId && (
+                          <p
+                            className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+                            role="alert"
+                            data-cy="download-error"
+                          >
+                            {downloadError.message}
+                          </p>
+                        )}
                       </div>
                       <button
                         type="button"

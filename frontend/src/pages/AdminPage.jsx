@@ -22,6 +22,7 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getAdminHeaders, clearAdminSession, logoutAdmin } from "../lib/api";
+import { readBlobErrorMessage } from "../lib/downloadPdf";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
 const PAGE_SIZE = 25;
@@ -474,20 +475,9 @@ function AdminPage() {
       })
       .catch(async (err) => {
         console.error("Failed to export PDF", err);
-        // responseType blob means an error body arrives as a Blob, not parsed JSON — read it,
-        // or the server's reason (e.g. "No exam cycle is active") is thrown away and every
-        // failure looks identical.
-        let message = "Failed to export PDF. Please try again.";
-        const body = err.response?.data;
-        if (body instanceof Blob) {
-          try {
-            const parsed = JSON.parse(await body.text());
-            if (parsed?.message) message = parsed.message;
-          } catch {
-            // non-JSON body: keep the generic message
-          }
-        }
-        setExportError(message);
+        setExportError(
+          await readBlobErrorMessage(err, "Failed to export PDF. Please try again."),
+        );
       })
       .finally(() => {
         setIsExporting(false);

@@ -26,7 +26,19 @@ public class ProgressionService {
     @Autowired
     private StudentSemesterTermRepository termRepository;
 
-    public enum Outcome { CREATED, SKIPPED_EXISTS }
+    /**
+     * CONFLICT = a row already exists for this (rollNo, semester) but holds a DIFFERENT academic
+     * year. Split out from SKIPPED_EXISTS deliberately: "already correct, nothing to do" and "we
+     * are discarding a year that contradicts what we hold" are opposite events, and one enum value
+     * for both meant the second inherited the first's silence.
+     */
+    public enum Outcome { CREATED, SKIPPED_EXISTS, CONFLICT }
+
+    /**
+     * @param heldAcademicYear the year already on file. Set only for CONFLICT (null otherwise), so
+     *     callers can report both years — a conflict a human can't see both sides of is unactionable.
+     */
+    public record Result(Outcome outcome, Integer heldAcademicYear) {}
 
     /**
      * Stamp the academic year a student studied a semester, write-once: inserts a
@@ -34,27 +46,41 @@ public class ProgressionService {
      * "first studied" year, and advances {@code currentSemester} if {@code semester} is higher
      * (current = highest semester entered).
      *
+     * <p>A requested year that contradicts the stored one is NEVER written here and returns
+     * CONFLICT. Overwriting is a deliberate, audited, per-student act — that is
+     * {@link #overrideProgression}, which logs actor and previous→new. Letting a bulk CSV do it
+     * would rewrite a cohort's history from one mis-mapped column with no trace.
+     *
      * @throws IllegalArgumentException on invalid input — callers map it to a per-row error in
      *         bulk flows, or a 400 in single-row flows
      */
     @Transactional
-    public Outcome recordProgression(String rollNo, int semester, int academicYear) {
+    public Result recordProgression(String rollNo, int semester, int academicYear) {
         Student student = validate(rollNo, semester, academicYear);
 
-        Outcome outcome;
-        if (termRepository.existsByRollNoAndSemester(rollNo, semester)) {
-            outcome = Outcome.SKIPPED_EXISTS;
-        } else {
+        StudentSemesterTerm existing = termRepository.findByRollNoAndSemester(rollNo, semester)
+                .orElse(null);
+        Result result;
+        if (existing == null) {
             termRepository.save(new StudentSemesterTerm(rollNo, semester, academicYear));
-            outcome = Outcome.CREATED;
+            result = new Result(Outcome.CREATED, null);
+        } else if (existing.getAcademicYear() == academicYear) {
+            result = new Result(Outcome.SKIPPED_EXISTS, null);
+        } else {
+            // logged at WARN: the row is dropped on purpose, but silently dropping department
+            // ground truth is what made this invisible for the whole life of the import feature
+            log.warn("PROGRESSION_CONFLICT rollNo={} semester={} held={} requested={} (not written)",
+                    rollNo, semester, existing.getAcademicYear(), academicYear);
+            result = new Result(Outcome.CONFLICT, existing.getAcademicYear());
         }
 
-        // current semester tracks the furthest the student has reached
+        // Current semester tracks the furthest the student has reached — advanced on CONFLICT too:
+        // the student demonstrably sat this semester, the dispute is which YEAR, not whether.
         if (student.getCurrentSemester() < semester) {
             student.setCurrentSemester(semester);
             studentRepository.save(student);
         }
-        return outcome;
+        return result;
     }
 
     /** Correct an existing (or missing) row — unlike recordProgression this OVERWRITES the

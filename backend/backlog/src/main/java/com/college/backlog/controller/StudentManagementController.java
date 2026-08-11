@@ -229,7 +229,8 @@ public class StudentManagementController {
                 errors++;
             }
         }
-        return new BatchResult(req.isDryRun(), created, skipped, errors, results);
+        // 0 conflicts: student import creates accounts, it doesn't restate a studied year
+        return new BatchResult(req.isDryRun(), created, skipped, 0, errors, results);
     }
 
     // ---- helpers ----
