@@ -15,14 +15,20 @@ public final class CourseCodes {
         return String.format("%02d", Math.floorMod(year, 100));
     }
 
-    /** Swap the leading two-digit prefix for the target year's (22CSL44 -> 23CSL44). */
+    /**
+     * Swap the leading two-digit prefix for the target year's (22CSL44 -> 23CSL44), or null when
+     * the code has no numeric prefix to swap.
+     *
+     * Null rather than the code unchanged: returning it unchanged made clone PREVIEW report
+     * WOULD_CREATE for a row that APPLY then rejects on the prefix=year check — a preview/apply
+     * parity break, the same class of bug already fixed on the progression import. Callers must
+     * treat null as "this row cannot be cloned" and say so.
+     */
     public static String bumpPrefix(String code, int targetYear) {
         if (code == null) return null;
         String trimmed = code.trim();
-        if (hasNumericPrefix(trimmed)) {
-            return prefixForYear(targetYear) + trimmed.substring(2);
-        }
-        return trimmed;
+        if (!hasNumericPrefix(trimmed)) return null;
+        return prefixForYear(targetYear) + trimmed.substring(2);
     }
 
     /** True when the code's first two digits equal the academic-year start's last two. */

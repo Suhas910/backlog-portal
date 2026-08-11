@@ -35,3 +35,21 @@ export function rememberExpiry(scope, expiresInSeconds) {
     sessionStorage.setItem(cfg.expiresKey, String(Date.now() + secs * 1000));
   }
 }
+
+/**
+ * The signed-in user's own department row. Matched by ID — the name is display-only and editable,
+ * so a rename used to silently break the pin for everyone already signed in. `adminDepartmentId`
+ * only exists for sessions created after that fix, so fall back to the name for the rest of the
+ * (max 1h) window rather than un-pinning them mid-session.
+ */
+export function findOwnDepartment(departments, adminDepartment) {
+  if (!Array.isArray(departments) || departments.length === 0) return null;
+  const id = sessionStorage.getItem("adminDepartmentId");
+  if (id) {
+    const byId = departments.find((d) => String(d.id) === id);
+    if (byId) return byId;
+  }
+  return adminDepartment
+    ? departments.find((d) => d.deptName === adminDepartment) || null
+    : null;
+}

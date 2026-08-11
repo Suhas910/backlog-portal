@@ -29,6 +29,9 @@ function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [departments, setDepartments] = useState([]);
+  // Separate from `error`: a failed departments fetch is not a login attempt failing, and it must
+  // survive the setError("") that starts every submit.
+  const [departmentsError, setDepartmentsError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -42,7 +45,21 @@ function AdminLoginPage() {
   }, [sessionExpired, navigate]);
 
   useEffect(() => {
-    api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
+    api
+      .get("/departments")
+      .then((res) => {
+        setDepartments(res.data);
+        setDepartmentsError("");
+      })
+      // Swallowing this made HOD/DEPT_OFFICE/PROCTOR unable to sign in at all: with no options the
+      // department <select> stays empty, so the "Please select your department." guard below can
+      // never be satisfied and blames the user for a server-side failure.
+      .catch(() => {
+        setDepartments([]);
+        setDepartmentsError(
+          "Could not load departments. Refresh the page, or contact the administrator if this continues.",
+        );
+      });
   }, []);
 
   const handleRoleSelect = (title, role) => {
@@ -85,6 +102,13 @@ function AdminLoginPage() {
           sessionStorage.setItem("adminDepartment", res.data.departmentName);
         } else {
           sessionStorage.removeItem("adminDepartment");
+        }
+        // The id is the stable identity; the name is display only and is editable, so pinning on
+        // it silently breaks for every signed-in dept user the moment a department is renamed.
+        if (res.data.departmentId) {
+          sessionStorage.setItem("adminDepartmentId", String(res.data.departmentId));
+        } else {
+          sessionStorage.removeItem("adminDepartmentId");
         }
 
         // accounts on a temp password (new, reset, or seeded) must set their own first
@@ -295,6 +319,15 @@ function AdminLoginPage() {
                     </option>
                   ))}
                 </select>
+                {departmentsError ? (
+                  <p
+                    role="alert"
+                    className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+                    data-cy="admin-departments-error"
+                  >
+                    {departmentsError}
+                  </p>
+                ) : null}
               </>
             )}
 

@@ -91,7 +91,11 @@ function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDept
   const toggleRemove = (key) =>
     setRows((prev) => prev.map((r) => (r._key === key ? { ...r, removed: !r.removed } : r)));
 
-  const applicableRows = (rows || []).filter((r) => !r.removed && r.status !== "WOULD_SKIP");
+  // ERROR rows are excluded too: they cannot be created (e.g. a course code with no year prefix),
+  // so submitting them would just produce guaranteed per-row failures on apply.
+  const applicableRows = (rows || []).filter(
+    (r) => !r.removed && r.status !== "WOULD_SKIP" && r.status !== "ERROR",
+  );
 
   const runApply = useCallback(async () => {
     setError("");

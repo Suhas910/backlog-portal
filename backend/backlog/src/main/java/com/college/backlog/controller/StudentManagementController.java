@@ -8,13 +8,15 @@ import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.StudentRepository;
 import com.college.backlog.repository.StudentSemesterTermRepository;
-import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.EligibilityService;
 import com.college.backlog.service.ProctorScopeService;
 import com.college.backlog.service.StudentManagementService;
 import com.college.backlog.service.StudentSpecification;
 import com.college.backlog.service.Usn;
+import com.college.backlog.service.CallerScope;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -44,6 +46,11 @@ import java.util.stream.Collectors;
 @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'DEPT_OFFICE', 'PROCTOR')")
 public class StudentManagementController {
 
+    @Autowired
+    private CallerScope callerScope;
+
+    private static final Logger log = LoggerFactory.getLogger(StudentManagementController.class);
+
     private static final Set<UserRole> DEPT_ROLES =
         Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
 
@@ -54,7 +61,6 @@ public class StudentManagementController {
     @Autowired private StudentRepository studentRepository;
     @Autowired private StudentSemesterTermRepository termRepository;
     @Autowired private DepartmentRepository departmentRepository;
-    @Autowired private UserRepository userRepository;
     @Autowired private StudentManagementService studentService;
     @Autowired private EligibilityService eligibilityService;
     @Autowired private ProctorScopeService proctorScope;
@@ -72,7 +78,7 @@ public class StudentManagementController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
             Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         String deptCode = effectiveDeptCode(actor, deptId.orElse(null));
         String rollNoLike = usnPattern(deptCode, admissionYear.orElse(null));
 
@@ -102,7 +108,7 @@ public class StudentManagementController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public StudentSummaryResponse create(@Valid @RequestBody StudentCreateRequest req, Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         proctorScope.rejectProctor(actor,
             "Proctors cannot create student accounts — claim existing students instead.");
         String rollNo = studentService.normalizeUsn(req.getRollNo());
@@ -128,7 +134,7 @@ public class StudentManagementController {
     public StudentSummaryResponse update(@PathVariable String rollNo,
                                          @Valid @RequestBody StudentUpdateRequest req,
                                          Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         Student student = loadInScope(actor, rollNo);
         Student saved;
         try {
@@ -147,7 +153,7 @@ public class StudentManagementController {
     public void resetDob(@PathVariable String rollNo,
                          @Valid @RequestBody ResetDobRequest req,
                          Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         Student student = loadInScope(actor, rollNo);
         try {
             studentService.resetDob(student, req.getDateOfBirth());
@@ -161,7 +167,7 @@ public class StudentManagementController {
     @DeleteMapping("/{rollNo}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String rollNo, Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         proctorScope.rejectProctor(actor,
             "Proctors cannot delete student accounts — remove the student from your supervision instead.");
         Student student = loadInScope(actor, rollNo);
@@ -176,7 +182,7 @@ public class StudentManagementController {
 
     @PostMapping("/import")
     public BatchResult importRows(@RequestBody StudentImportRequest req, Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         proctorScope.rejectProctor(actor,
             "Proctors cannot import student accounts — claim existing students instead.");
         String callerDeptCode = callerDeptCode(actor);
@@ -221,10 +227,17 @@ public class StudentManagementController {
             } catch (IllegalArgumentException e) {
                 results.add(new ProgressionRowResult(roll, currentSem, "ERROR", e.getMessage()));
                 errors++;
+            } catch (ResponseStatusException e) {
+                // keep the nested reason (e.g. a 409 naming the conflict); the generic catch below
+                // would flatten it, since ResponseStatusException is itself a RuntimeException
+                results.add(new ProgressionRowResult(roll, currentSem, "ERROR", e.getReason()));
+                errors++;
             } catch (RuntimeException e) {
                 // an unexpected per-row failure (e.g. a DB constraint) becomes an ERROR row, never
                 // aborting the batch or surfacing as a request-level 4xx/5xx — each createStudent
-                // is its own REQUIRES_NEW tx, so one rollback doesn't poison the rest
+                // is its own REQUIRES_NEW tx, so one rollback doesn't poison the rest. Logged
+                // because the row message cannot carry a stack trace.
+                log.error("STUDENT_IMPORT_ROW_FAILED rollNo={}", roll, e);
                 results.add(new ProgressionRowResult(roll, currentSem, "ERROR", "Could not import this row."));
                 errors++;
             }
@@ -235,18 +248,11 @@ public class StudentManagementController {
 
     // ---- helpers ----
 
-    private User requireActor(Authentication auth) {
-        if (auth == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        return userRepository.findById(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
-    }
-
-    /** Dept code a dept-scoped caller is pinned to, or null for ADMIN/PRINCIPAL. */
+    /** Dept code a dept-scoped caller is pinned to; null ONLY for a genuinely unrestricted
+     *  ADMIN/PRINCIPAL. A dept role without a department is unscopeable, not unrestricted. */
     private String callerDeptCode(User actor) {
-        if (actor == null || !DEPT_ROLES.contains(actor.getRole()) || actor.getDepartment() == null) {
-            return null;
-        }
-        return actor.getDepartment().getCode();
+        if (!DEPT_ROLES.contains(actor.getRole())) return null;
+        return callerScope.requireDepartmentCode(actor);
     }
 
     private String studentDeptCode(String rollNo) {

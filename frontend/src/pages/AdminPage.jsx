@@ -21,7 +21,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
-import api, { getAdminHeaders, clearAdminSession, logoutAdmin } from "../lib/api";
+import api, { getAdminHeaders, logoutAdmin } from "../lib/api";
 import { readBlobErrorMessage } from "../lib/downloadPdf";
 import MobileActionBar from "../components/layout/MobileActionBar";
 
@@ -68,6 +68,9 @@ function AdminPage() {
   const [rowErrors, setRowErrors] = useState({});
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  // Whole-list load failure (e.g. a 403 scope denial). Separate from rowErrors, which are per-row
+  // verify/reject failures.
+  const [loadError, setLoadError] = useState("");
 
   // rows ticked for export, by regId. Kept across pages so a selection can span them; cleared
   // whenever the filters change, since the ticked rows may no longer be in the result set.
@@ -251,6 +254,7 @@ function AdminPage() {
       })
       .then((res) => {
         if (seq !== registrationsReqRef.current) return; // superseded
+        setLoadError("");
         setRegistrations(res.data.content || []);
         setPageInfo({
           totalPages: res.data.totalPages ?? 0,
@@ -262,14 +266,19 @@ function AdminPage() {
       .catch((error) => {
         if (error.code === "ERR_CANCELED") return; // superseded request aborted
         console.error("Failed to fetch dashboard data:", error);
-        // An auth failure kills the session regardless of ordering, so the redirect isn't gated
-        // on seq — only the success state-write is.
-        if (error.response?.status === 401 || error.response?.status === 403) {
-          clearAdminSession();
-          navigate("/admin/login");
-        }
+        // 401 is the api.js interceptor's job (it signs out); handling it here too would race that
+        // redirect — and on a forced password change it would fight the change-password redirect.
+        // Everything else, 403 included, is shown in place: a scope denial must not eject an admin
+        // mid-task, and the server's reason is the actionable part.
+        if (error.response?.status === 401) return;
+        if (seq !== registrationsReqRef.current) return; // superseded
+        setLoadError(
+          error.response?.data?.message ||
+            "Could not load registrations. Please try again.",
+        );
+        setLoading(false); // otherwise the spinner outlives the failure
       });
-  }, [navigate, isAdmin, adminToken, appendFilterParams, filter, page]);
+  }, [isAdmin, adminToken, appendFilterParams, filter, page]);
 
   const fetchCounts = useCallback(() => {
     if (!isAdmin || !adminToken) return Promise.resolve();
@@ -898,6 +907,16 @@ function AdminPage() {
               data-cy="admin-export-error"
             >
               {exportError}
+            </p>
+          )}
+
+          {loadError && (
+            <p
+              className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+              role="alert"
+              data-cy="admin-load-error"
+            >
+              {loadError}
             </p>
           )}
 

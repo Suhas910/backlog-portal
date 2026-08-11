@@ -51,9 +51,14 @@ function StudentDashboardPage() {
       setProfile(meRes.data);
       setRegistrations(Array.isArray(regRes.data) ? regRes.data : []);
     } catch (err) {
-      // 401/403 redirects to login globally; other errors surface here
-      if (![401, 403].includes(err.response?.status)) {
-        setError("Unable to load your dashboard. Please refresh and try again.");
+      // 401 signs out via the api.js interceptor. Everything else surfaces here — 403 included:
+      // it means "authenticated but denied", so the server's reason is shown in place rather than
+      // swallowed into a blank dashboard.
+      if (err.response?.status !== 401) {
+        setError(
+          err.response?.data?.message ||
+            "Unable to load your dashboard. Please refresh and try again.",
+        );
       }
     } finally {
       setLoading(false);
@@ -110,7 +115,8 @@ function StudentDashboardPage() {
       });
       savePdfBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`);
     } catch (err) {
-      if (![401, 403].includes(err.response?.status)) {
+      // only 401 is handled globally (sign-out); 403 belongs here like any other denial
+      if (err.response?.status !== 401) {
         // the server's reason is the actionable part (e.g. a 409 telling the student which detail
         // is missing and to contact the department office) — a generic alert threw it away
         setDownloadError({

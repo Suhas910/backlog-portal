@@ -9,6 +9,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -17,6 +19,8 @@ import java.util.List;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     @Autowired
     private JwtService jwtService;
@@ -46,6 +50,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             username = jwtService.getUsernameFromToken(jwt);
         } catch (Exception e) {
+            // DEBUG, not WARN: expired tokens are normal traffic and would flood the log. But
+            // logging nothing at all made a botched JWT-secret rotation indistinguishable from
+            // "everyone's session expired at once" — with no record either way.
+            log.debug("Rejected token ({}), continuing as anonymous", e.getClass().getSimpleName());
             filterChain.doFilter(request, response);
             return;
         }

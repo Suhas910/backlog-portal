@@ -40,7 +40,7 @@ export function clearStudentSession() {
 }
 
 export function clearAdminSession() {
-  ["adminToken", "adminRole", "adminUsername", "adminDepartment", "adminExpiresAt"].forEach((k) =>
+  ["adminToken", "adminRole", "adminUsername", "adminDepartment", "adminDepartmentId", "adminExpiresAt"].forEach((k) =>
     sessionStorage.removeItem(k),
   );
 }

@@ -1,7 +1,6 @@
 package com.college.backlog.service;
 
 import com.college.backlog.controller.dto.RegistrationSummaryResponse;
-import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.*;
 import com.college.backlog.repository.*;
 import jakarta.persistence.EntityManager;
@@ -96,16 +95,15 @@ public class RegistrationService {
     /** Private on purpose: touches lazy state, so it must not be reachable from a controller
      *  (see {@link #listSummaries}). */
     private RegistrationSummaryResponse toSummary(Registration reg) {
-        // Locals, not repeated getter calls: `Integer != null ? Integer : int` unboxes the boxed
-        // branch (JLS 15.25), and null analysis can't carry the guard across a second getter call.
-        Integer snapSemester = reg.getSnapSemester();
-        Integer snapYearOfJoining = reg.getSnapYearOfJoining();
+        // Snapshot columns only — NOT NULL as of V7. The old `snap != null ? snap : student.get()`
+        // fallbacks silently printed the LIVE student row on an old registration, inverting the
+        // immutable-history convention this table exists to uphold.
         return new RegistrationSummaryResponse(
             reg.getRegId(),
             reg.getStudent().getRollNo(),
-            reg.getSnapName() != null ? reg.getSnapName() : reg.getStudent().getName(),
-            snapSemester != null ? snapSemester : reg.getStudent().getCurrentSemester(),
-            snapYearOfJoining != null ? snapYearOfJoining : reg.getStudent().getYearOfJoining(),
+            reg.getSnapName(),
+            reg.getSnapSemester(),
+            reg.getSnapYearOfJoining(),
             reg.getSubjects().stream()
                 .map(s -> s.getSubjectName() + " (" + s.getCourseCode() + ")")
                 .collect(java.util.stream.Collectors.toList()),
@@ -118,6 +116,14 @@ public class RegistrationService {
     // One transaction for the insert AND its SUBMITTED audit event, so history can never gain a
     // row without its audit trail. The unique-index backstop below still works — its catch
     // rethrows immediately and the transaction rolls back.
+    //
+    // Status rule for every refusal below, so the split isn't arbitrary:
+    //   400 — the SUBMISSION is wrong and the student can fix it by submitting differently
+    //         (malformed USN, unknown/ineligible/out-of-branch subject ids).
+    //   409 — the submission is fine but the RECORD isn't ready, and only staff can resolve it
+    //         (registrations closed, phone missing, current semester unset, no progression row for
+    //         the semester, a pending registration already exists).
+    // Keep new refusals on one side of that line rather than inventing a third code.
     @Transactional
     public Registration register(String rollNo, List<Long> subjectIds) {
 
@@ -138,9 +144,11 @@ public class RegistrationService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                 "Student account not found."));
 
-        // phone is set only from the dashboard; server-side guard, not bypassable by a crafted request
+        // phone is set only from the dashboard; server-side guard, not bypassable by a crafted request.
+        // 409, not 400 — the submission is well-formed; it's the ACCOUNT that isn't ready. See the
+        // status rule on this method.
         if (student.getPhone() == null || !student.getPhone().matches("^[0-9]{10}$")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Add your phone number in your profile before registering.");
         }
 
@@ -255,7 +263,11 @@ public class RegistrationService {
             saved = registrationRepository.saveAndFlush(reg);
         } catch (DataIntegrityViolationException e) {
             // race backstop: a concurrent submit that slipped past the count check above is
-            // caught by the partial unique index uq_pending_reg_per_cycle
+            // caught by the partial unique index uq_pending_reg_per_cycle. Check WHICH constraint
+            // fired — this used to tell a student with zero pending registrations to wait for one.
+            if (!Constraints.isViolationOf(e, Constraints.PENDING_REGISTRATION_PER_CYCLE)) {
+                throw e;
+            }
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "You already have a pending registration for this exam cycle. "
                     + "Wait for it to be verified or rejected before submitting another.");
@@ -280,7 +292,7 @@ public class RegistrationService {
             throw new IllegalArgumentException("action must be VERIFIED or REJECTED");
         }
         Registration reg = registrationRepository.findByRegId(regId)
-            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Registration not found with ID: " + regId));
 
         // one-way state machine; REJECTED is terminal (no un-reject, no re-verify):
         //   SUBMITTED -> VERIFIED | REJECTED

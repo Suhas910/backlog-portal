@@ -5,7 +5,6 @@ import com.college.backlog.controller.dto.SubjectCreateRequest;
 import com.college.backlog.controller.dto.RegistrationSummaryResponse;
 import com.college.backlog.controller.dto.RegistrationEventResponse;
 import com.college.backlog.controller.dto.RegistrationExportRequest;
-import com.college.backlog.exception.ResourceNotFoundException;
 import org.springframework.web.server.ResponseStatusException;
 import com.college.backlog.model.Department;
 import com.college.backlog.model.ExamCycle;
@@ -25,6 +24,7 @@ import com.college.backlog.service.RegistrationSpecification;
 import com.college.backlog.service.PdfService;
 import com.college.backlog.service.Semesters;
 import com.college.backlog.service.SubjectService;
+import com.college.backlog.service.CallerScope;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.data.domain.Page;
@@ -59,6 +59,9 @@ public class AdminController {
     private RegistrationRepository registrationRepository;
 
     @Autowired
+    private CallerScope callerScope;
+
+    @Autowired
     private com.college.backlog.service.RegistrationService registrationService;
 
     @Autowired
@@ -91,13 +94,17 @@ public class AdminController {
     // One DB lookup per request: endpoints needing both dept and proctor scope load the caller
     // once and pass the User to the helpers below, rather than each helper re-fetching the row.
     private User callerUser(Authentication auth) {
-        if (auth == null) return null;
-        return userRepository.findById(auth.getName()).orElse(null);
+        return callerScope.requireActor(auth);
     }
 
+    /**
+     * Dept id a caller is pinned to; null ONLY for a genuinely unrestricted ADMIN/PRINCIPAL — which
+     * is what every call site here assumes. "We can't tell" must never share that sentinel: an
+     * unknown caller 401s in callerUser above, and a dept role without a department 403s below.
+     */
     private Long resolveCallerDeptId(User user) {
-        if (user == null || !DEPT_ROLES.contains(user.getRole()) || user.getDepartment() == null) return null;
-        return user.getDepartment().getId();
+        if (!DEPT_ROLES.contains(user.getRole())) return null;
+        return callerScope.requireDepartmentId(user);
     }
 
     private Long resolveCallerDeptId(Authentication auth) {
@@ -133,7 +140,7 @@ public class AdminController {
         });
         if (!hasAccess) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                "This registration does not belong to your department");
+                "This registration does not belong to your department.");
         }
     }
 
@@ -260,7 +267,7 @@ public class AdminController {
         // dept-scoped roles may only read event trails their department can act on
         // — same rule as verify (RegistrationController)
         Registration reg = registrationRepository.findByRegId(regId)
-            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Registration not found with ID: " + regId));
         assertRegistrationInScope(authentication, reg);
         return registrationEventRepository.findByRegIdOrderByTimestampAsc(regId).stream()
             .map(e -> new RegistrationEventResponse(
@@ -313,7 +320,7 @@ public class AdminController {
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL')")
     public Department updateDepartment(@PathVariable Long id, @Valid @RequestBody DepartmentRequest request) {
         Department dept = departmentRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + id));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Department not found with ID: " + id));
         // The @Version lock only guards a race within this request — it can't catch a stale-page
         // overwrite, since we just loaded the *current* row. So compare the version the client
         // last saw and reject if another admin saved in between.
@@ -350,7 +357,7 @@ public class AdminController {
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL')")
     public void deleteDepartment(@PathVariable Long id) {
         Department dept = departmentRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + id));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Department not found with ID: " + id));
 
         if (subjectRepository.existsByDepartment_Id(id) || subjectRepository.existsByEligibleDepartments_Id(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

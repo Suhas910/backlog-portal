@@ -1,7 +1,6 @@
 package com.college.backlog.service;
 
 import com.college.backlog.controller.dto.SubjectCreateRequest;
-import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.*;
 import com.college.backlog.controller.dto.SubjectUpdateRequest;
 import com.college.backlog.repository.DepartmentRepository;
@@ -60,23 +59,20 @@ public class SubjectService {
                     + CourseCodes.prefixForYear(request.getAcademicYearOffered()) + ").");
         }
 
+        // 400, not 404: the deptId comes from the REQUEST BODY, so the resource addressed by the
+        // URL exists and it is the submitted reference that is wrong. Matches the three sibling
+        // body-referenced lookups (SubjectClone, StudentManagement, Progression).
         Department department = departmentRepository.findById(request.getDeptId())
-                .orElseThrow(() -> new ResourceNotFoundException("Department not found with ID: " + request.getDeptId()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown department."));
 
         Subject subject = new Subject(null, request.getSubjectName(), request.getCourseCode(),
                 request.getSemester(), request.getCredits(), request.getAcademicYearOffered(), department);
 
-        // unknown/blank falls back to REGULAR: the form only sends REGULAR or ELECTIVE, and the
-        // DB CHECK would reject anything else
-        SubjectType type = SubjectType.fromNullable(request.getSubjectType());
-        if (type == null) {
-            type = SubjectType.REGULAR;
-        }
+        SubjectType type = resolveSubjectType(request.getSubjectType());
         subject.setSubjectType(type);
 
         if (type == SubjectType.ELECTIVE && request.getEligibleDeptIds() != null && !request.getEligibleDeptIds().isEmpty()) {
-            List<Department> eligibleDepts = departmentRepository.findAllById(request.getEligibleDeptIds());
-            subject.setEligibleDepartments(eligibleDepts);
+            subject.setEligibleDepartments(resolveEligibleDepartments(request.getEligibleDeptIds()));
         }
 
         return subjectRepository.save(subject);
@@ -90,7 +86,7 @@ public class SubjectService {
     @Transactional
     public Subject updateSubject(Long id, SubjectUpdateRequest request, Long callerDeptId) {
         Subject subject = subjectRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + id));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found with ID: " + id));
 
         if (callerDeptId != null
                 && (subject.getDepartment() == null || !callerDeptId.equals(subject.getDepartment().getId()))) {
@@ -110,14 +106,11 @@ public class SubjectService {
         subject.setSemester(request.getSemester());
         subject.setCredits(request.getCredits());
 
-        SubjectType type = SubjectType.fromNullable(request.getSubjectType());
-        if (type == null) {
-            type = SubjectType.REGULAR;
-        }
+        SubjectType type = resolveSubjectType(request.getSubjectType());
         subject.setSubjectType(type);
         if (type == SubjectType.ELECTIVE
                 && request.getEligibleDeptIds() != null && !request.getEligibleDeptIds().isEmpty()) {
-            subject.setEligibleDepartments(departmentRepository.findAllById(request.getEligibleDeptIds()));
+            subject.setEligibleDepartments(resolveEligibleDepartments(request.getEligibleDeptIds()));
         } else {
             subject.setEligibleDepartments(new ArrayList<>());
         }
@@ -125,6 +118,12 @@ public class SubjectService {
         try {
             return subjectRepository.saveAndFlush(subject);
         } catch (DataIntegrityViolationException e) {
+            // Only the code+year unique index means "duplicate". Any other violation used to be
+            // reported as one too, which is a false explanation of someone else's problem — let it
+            // fall through to GlobalExceptionHandler's generic 409, which also logs it.
+            if (!Constraints.isViolationOf(e, Constraints.SUBJECT_CODE_YEAR)) {
+                throw e;
+            }
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Another subject with course code '" + request.getCourseCode()
                     + "' already exists for this academic year.");
@@ -136,7 +135,7 @@ public class SubjectService {
     @Transactional
     public void deleteSubject(Long id, Long callerDeptId) {
         Subject subject = subjectRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Subject not found with ID: " + id));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Subject not found with ID: " + id));
 
         if (callerDeptId != null
                 && (subject.getDepartment() == null || !callerDeptId.equals(subject.getDepartment().getId()))) {
@@ -209,5 +208,38 @@ public class SubjectService {
 
         query.orderBy(cb.asc(subjectJoin.get("subjectName")));
         return entityManager.createQuery(query).getResultList();
+    }
+
+    /**
+     * Blank/absent means REGULAR (the field is optional). An UNRECOGNISED value is a 400 — it used
+     * to fall back to REGULAR too, so "ELECTIV" silently created a REGULAR subject that then never
+     * reached the students the elective was meant for. The old comment justified the fallback with
+     * "the form only sends REGULAR or ELECTIVE", but the clone path builds these requests from
+     * client-supplied rows, so that was a client-trust assumption on a write path.
+     */
+    private SubjectType resolveSubjectType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return SubjectType.REGULAR;
+        }
+        SubjectType type = SubjectType.fromNullable(raw);
+        if (type == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Unknown subject type '" + raw + "'. Use REGULAR or ELECTIVE.");
+        }
+        return type;
+    }
+
+    /**
+     * Eligible departments by id, rejecting ids that don't exist. findAllById just omits unknown
+     * ids, so a stale one silently saved the subject with narrower eligibility than the admin
+     * chose. Same size check RegistrationService already applies to subject ids.
+     */
+    private List<Department> resolveEligibleDepartments(Collection<Long> ids) {
+        List<Department> found = departmentRepository.findAllById(ids);
+        if (found.size() != new java.util.HashSet<>(ids).size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "One or more selected eligible departments no longer exist.");
+        }
+        return found;
     }
 }

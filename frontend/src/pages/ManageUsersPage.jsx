@@ -14,6 +14,7 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
 import MobileActionBar from "../components/layout/MobileActionBar";
+import { findOwnDepartment } from "../lib/session";
 
 // Roles each actor may create. The server enforces the same rules; this only shapes the UI.
 const CREATABLE_ROLES = {
@@ -81,7 +82,9 @@ function ManageUsersPage() {
     api
       .get("/departments")
       .then((res) => setDepartments(res.data))
-      .catch(() => {});
+      .catch(() =>
+        setError("Could not load departments. Creating a department-scoped user may be unavailable."),
+      );
   }, [loadUsers]);
 
   // pin the department to the HOD's own once departments load
@@ -91,7 +94,7 @@ function ManageUsersPage() {
   // state, not pure derivation, so useMemo doesn't apply. A knowing lint error, not disabled.
   useEffect(() => {
     if (deptLocked && adminDepartment && departments.length > 0) {
-      const myDept = departments.find((d) => d.deptName === adminDepartment);
+      const myDept = findOwnDepartment(departments, adminDepartment);
       if (myDept) {
         setNewDeptId(String(myDept.id));
       }
@@ -291,7 +294,7 @@ function ManageUsersPage() {
                     {DEPT_ROLES.has(newRole) ? "Select department" : "Not applicable"}
                   </option>
                   {(deptLocked
-                    ? departments.filter((d) => d.deptName === adminDepartment)
+                    ? departments.filter((d) => d.id === findOwnDepartment(departments, adminDepartment)?.id)
                     : departments
                   ).map((d) => (
                     <option key={d.id} value={String(d.id)}>

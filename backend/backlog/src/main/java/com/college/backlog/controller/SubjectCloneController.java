@@ -8,9 +8,9 @@ import com.college.backlog.model.Department;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
-import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.AcademicYears;
 import com.college.backlog.service.SubjectCloneService;
+import com.college.backlog.service.CallerScope;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,10 +31,12 @@ import java.util.Set;
 @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','HOD','DEPT_OFFICE')")
 public class SubjectCloneController {
 
+    @Autowired
+    private CallerScope callerScope;
+
     private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
     @Autowired private SubjectCloneService cloneService;
-    @Autowired private UserRepository userRepository;
     @Autowired private DepartmentRepository departmentRepository;
 
     @PostMapping("/preview")
@@ -54,19 +56,13 @@ public class SubjectCloneController {
 
     /** Department the caller may act on: own for HOD/DEPT_OFFICE, any for ADMIN/PRINCIPAL. */
     private Department resolveDept(Authentication auth, Long requestedDeptId) {
-        if (auth == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
-        User actor = userRepository.findById(auth.getName())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
+        User actor = callerScope.requireActor(auth);
         if (DEPT_ROLES.contains(actor.getRole())) {
-            if (actor.getDepartment() == null) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No department assigned to your account");
-            }
-            if (requestedDeptId != null && !requestedDeptId.equals(actor.getDepartment().getId())) {
+            Department own = callerScope.requireDepartment(actor);
+            if (requestedDeptId != null && !requestedDeptId.equals(own.getId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Outside your department's scope.");
             }
-            return actor.getDepartment();
+            return own;
         }
         if (requestedDeptId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Department is required.");

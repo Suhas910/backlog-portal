@@ -11,6 +11,9 @@ import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.StudentManagementService;
 import com.college.backlog.service.StudentSpecification;
 import com.college.backlog.service.Usn;
+import com.college.backlog.service.CallerScope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +44,11 @@ import java.util.stream.Collectors;
 @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD', 'PROCTOR')")
 public class ProctorAssignmentController {
 
+    @Autowired
+    private CallerScope callerScope;
+
+    private static final Logger log = LoggerFactory.getLogger(ProctorAssignmentController.class);
+
     // Same page guards as the student roster list.
     private static final int MAX_PAGE_SIZE = 200;
     private static final int DEFAULT_PAGE_SIZE = 25;
@@ -63,7 +71,7 @@ public class ProctorAssignmentController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "" + DEFAULT_PAGE_SIZE) int size,
             Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         User target = resolveTargetProctor(actor, proctor.orElse(null));
         String deptCode = requireDeptCode(target);
 
@@ -91,7 +99,7 @@ public class ProctorAssignmentController {
     @GetMapping("/students")
     public List<AssignedStudentResponse> assigned(@RequestParam Optional<String> proctor,
                                                   Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         User target = resolveTargetProctor(actor, proctor.orElse(null));
         List<ProctorAssignment> assignments =
             assignmentRepository.findByProctorUsername(target.getUsername());
@@ -119,7 +127,7 @@ public class ProctorAssignmentController {
 
     @PostMapping("/assignments")
     public BatchResult assign(@RequestBody ProctorAssignRequest req, Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         User target = resolveTargetProctor(actor, req.getProctor());
         String deptCode = requireDeptCode(target);
 
@@ -164,9 +172,16 @@ public class ProctorAssignmentController {
             } catch (IllegalArgumentException e) {
                 results.add(new ProgressionRowResult(roll, null, "ERROR", e.getMessage()));
                 errors++;
+            } catch (ResponseStatusException e) {
+                // a nested 403/409 (e.g. out-of-scope student) carries the actionable sentence;
+                // the generic catch below would flatten it, RSE being a RuntimeException
+                results.add(new ProgressionRowResult(roll, null, "ERROR", e.getReason()));
+                errors++;
             } catch (RuntimeException e) {
                 // e.g. two proctors racing on one student: the PK on roll_no makes the second save
-                // a constraint violation — reported per-row, never aborting the batch
+                // a constraint violation — reported per-row, never aborting the batch. Logged: the
+                // race is the expected cause, but nothing else would record any other cause.
+                log.error("PROCTOR_ASSIGN_ROW_FAILED rollNo={}", roll, e);
                 results.add(new ProgressionRowResult(roll, null, "ERROR",
                     "Could not assign this student (it may have just been claimed)."));
                 errors++;
@@ -181,7 +196,7 @@ public class ProctorAssignmentController {
     @DeleteMapping("/assignments/{rollNo}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void unassign(@PathVariable String rollNo, Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         String roll = studentService.normalizeUsn(rollNo);
         ProctorAssignment assignment = assignmentRepository.findById(roll)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
@@ -203,12 +218,6 @@ public class ProctorAssignmentController {
     }
 
     // ---- helpers ----
-
-    private User requireActor(Authentication auth) {
-        if (auth == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        return userRepository.findById(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
-    }
 
     /** Whose assignment list is read/written: PROCTOR only themselves, HOD proctors of their own
      *  department, ADMIN/PRINCIPAL any proctor. */

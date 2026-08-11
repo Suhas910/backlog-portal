@@ -7,6 +7,7 @@ import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.JwtService;
 import com.college.backlog.security.LoginThrottleService;
 import com.college.backlog.security.SessionCookieService;
+import com.college.backlog.service.CallerScope;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -32,6 +33,9 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private CallerScope callerScope;
 
     @Autowired
     private LoginThrottleService throttle;
@@ -80,7 +84,10 @@ public class AuthController {
                 try {
                     long reqId = Long.parseLong(requestedDeptId);
                     if (reqId != user.getDepartment().getId()) {
-                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid department for this account");
+                        // 400, not 401: the password already matched: what's wrong is the
+                        // departmentId FIELD, not the credentials. Nothing extra leaks — the
+                        // caller has already proven who they are.
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid department for this account");
                     }
                 } catch (NumberFormatException e) {
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid departmentId format");
@@ -119,14 +126,14 @@ public class AuthController {
      *  password. Powers both the forced first-login change (mustChangePassword) and voluntary ones. */
     @PostMapping("/change-password")
     public Map<String, String> changePassword(@Valid @RequestBody ChangePasswordRequest req, Authentication auth) {
-        if (auth == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
-        User user = userRepository.findById(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
+        User user = callerScope.requireActor(auth);
 
         if (!matchesPassword(user, req.getCurrentPassword())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Current password is incorrect");
+            // 400, not 401: the session is valid — a mistyped `currentPassword` is a bad FIELD, not
+            // a dead session. It survives as a 401 today only because api.js's admin-scoped URL
+            // matcher happens not to cover /auth/change-password; widen that matcher later and a
+            // typo would sign the user out mid-change.
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
         }
         if (passwordEncoder.matches(req.getNewPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "New password must be different from the current one");

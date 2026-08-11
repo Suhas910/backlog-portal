@@ -3,6 +3,7 @@ import { AlertTriangle, BadgeCheck, LoaderCircle, UserPlus } from "lucide-react"
 import { Link } from "react-router-dom";
 import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
+import { findOwnDepartment } from "../../lib/session";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
@@ -36,7 +37,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
   // dept code a dept-scoped admin's USNs must carry, shown as a hint
   const myDeptCode = useMemo(() => {
     if (!deptLocked) return "";
-    return departments.find((d) => d.deptName === adminDepartment)?.code || "";
+    return findOwnDepartment(departments, adminDepartment)?.code || "";
   }, [deptLocked, departments, adminDepartment]);
 
   const set = (name, value) => setForm((prev) => ({ ...prev, [name]: value }));

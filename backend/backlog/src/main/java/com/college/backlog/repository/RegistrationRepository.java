@@ -19,10 +19,17 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
     // Fetch-joins what every caller touches: the dept/proctor scope checks walk `subjects` (and
     // each subject's eligible departments) before the response is built, and the PDF path needs
     // the same. Joining the collection is safe here — single-row lookup, no pagination to break.
-    @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
+    //
+    // type = LOAD is load-bearing, and applies to all three unpaginated graphs below. The default
+    // (FETCH) treats every attribute NOT named here as LAZY, overriding the mapping — it silently
+    // demoted the EAGER Subject.eligibleDepartments, so a dept-scope DENIAL threw
+    // LazyInitializationException (500) instead of 403 with open-in-view off. LOAD keeps unlisted
+    // attributes at their mapped type, so that collection stays EAGER on its own @BatchSize(50).
+    // Naming it here instead would fetch a second bag — MultipleBagFetchException.
+    @EntityGraph(attributePaths = {"student", "subjects", "examCycle"}, type = EntityGraph.EntityGraphType.LOAD)
     Optional<Registration> findByRegId(String regId);
 
-    @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
+    @EntityGraph(attributePaths = {"student", "subjects", "examCycle"}, type = EntityGraph.EntityGraphType.LOAD)
     List<Registration> findByStudent_RollNo(String rollNo);
 
     // Pending-limit check: one indexed COUNT (served exactly by the partial unique index
@@ -37,7 +44,7 @@ public interface RegistrationRepository extends JpaRepository<Registration, Long
 
     // Fetch-joins what the PDF export touches per row; safe because this overload is unpaginated.
     @Override
-    @EntityGraph(attributePaths = {"student", "subjects", "examCycle"})
+    @EntityGraph(attributePaths = {"student", "subjects", "examCycle"}, type = EntityGraph.EntityGraphType.LOAD)
     List<Registration> findAll(Specification<Registration> spec, Sort sort);
 
     // Paginated admin list: ManyToOne relations only — fetching the `subjects` collection here

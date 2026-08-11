@@ -9,6 +9,7 @@ import AddStudentTab from "./AddStudentTab";
 import ImportStudentsTab from "./ImportStudentsTab";
 import ProgressionTab from "./ProgressionTab";
 import ClaimStudentsTab from "./ClaimStudentsTab";
+import { findOwnDepartment } from "../../lib/session";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
 const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"];
@@ -47,6 +48,7 @@ function StudentsPage() {
   const deptLocked = DEPT_ROLES.has(adminRole);
 
   const [departments, setDepartments] = useState([]);
+  const [deptError, setDeptError] = useState("");
 
   const tabs = tabsForRole(adminRole);
   const tabKeys = new Set(tabs.map((t) => t.key));
@@ -58,7 +60,7 @@ function StudentsPage() {
   // find() is cheap enough per render.
   const pinnedDept =
     deptLocked && adminDepartment && departments.length > 0
-      ? departments.find((d) => d.deptName === adminDepartment)
+      ? findOwnDepartment(departments, adminDepartment)
       : null;
   const pinnedDeptId = pinnedDept ? String(pinnedDept.id) : "";
 
@@ -71,7 +73,16 @@ function StudentsPage() {
       navigate("/admin");
       return;
     }
-    api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
+    api
+      .get("/departments")
+      .then((res) => {
+        setDepartments(res.data);
+        setDeptError("");
+      })
+      // a swallowed failure here silently un-pins a dept-scoped user's department
+      .catch(() =>
+        setDeptError("Could not load departments. Some filters may be unavailable — refresh to retry."),
+      );
   }, [adminRole, navigate]);
 
   const shared = { departments, adminRole, adminDepartment, deptLocked, pinnedDeptId };
@@ -100,6 +111,16 @@ function StudentsPage() {
             {deptLocked && adminDepartment ? ` Scoped to ${adminDepartment}.` : ""}
           </p>
         </div>
+        {deptError ? (
+          <p
+            role="alert"
+            className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+            data-cy="dept-load-error"
+          >
+            {deptError}
+          </p>
+        ) : null}
+
 
         <div className="mb-6 flex flex-wrap gap-2" role="tablist" aria-label="Student management">
           {tabs.map((t) => {

@@ -6,6 +6,7 @@ import {
   Download,
   LoaderCircle,
   Phone,
+  TriangleAlert,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
@@ -41,9 +42,12 @@ function RegistrationPage() {
       .get("/student/me", { headers: getStudentHeaders() })
       .then((res) => setProfile(res.data))
       .catch((err) => {
-        // 401/403 redirects to login via the global interceptor
-        if (![401, 403].includes(err.response?.status)) {
-          setProfileError("Unable to load your profile. Please try again.");
+        // 401 signs out via the global interceptor; 403 and everything else show in place
+        if (err.response?.status !== 401) {
+          setProfileError(
+            err.response?.data?.message ||
+              "Unable to load your profile. Please try again.",
+          );
           setProfile({});
         }
       });
@@ -185,6 +189,18 @@ function RegistrationPage() {
           <LoaderCircle size={18} className="animate-spin" /> Loading...
         </p>
       </div>
+    );
+  }
+
+  // The profile never loaded (e.g. a 403 denial). Without this the empty profile falls through to
+  // the "add your phone number" gate below and the student is told to fix the wrong thing.
+  if (profileError && !profile.rollNo) {
+    return (
+      <CenteredCard icon={<TriangleAlert size={24} />} title="Cannot load your profile">
+        <p className="mb-6 text-ink" data-cy="registration-profile-error">
+          {profileError}
+        </p>
+      </CenteredCard>
     );
   }
 

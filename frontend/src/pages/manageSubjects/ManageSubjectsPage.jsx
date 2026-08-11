@@ -7,6 +7,7 @@ import MobileActionBar from "../../components/layout/MobileActionBar";
 import ManageTab from "./ManageTab";
 import AddSubjectTab from "./AddSubjectTab";
 import CloneSubjectsTab from "./CloneSubjectsTab";
+import { findOwnDepartment } from "../../lib/session";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE"]);
 const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE"];
@@ -33,13 +34,14 @@ function ManageSubjectsPage() {
   const deptLocked = DEPT_ROLES.has(adminRole);
 
   const [departments, setDepartments] = useState([]);
+  const [deptError, setDeptError] = useState("");
 
   // Dept-scoped roles are pinned to their own department across every tab: pure derivation from
   // (departments, role, dept), computed during render rather than stored via an effect, so it
   // resolves on first paint with no cascading render.
   const pinnedDeptId = useMemo(() => {
     if (!(deptLocked && adminDepartment && departments.length > 0)) return "";
-    const mine = departments.find((d) => d.deptName === adminDepartment);
+    const mine = findOwnDepartment(departments, adminDepartment);
     return mine ? String(mine.id) : "";
   }, [departments, deptLocked, adminDepartment]);
 
@@ -53,7 +55,15 @@ function ManageSubjectsPage() {
       navigate("/admin");
       return;
     }
-    api.get("/departments").then((res) => setDepartments(res.data)).catch(() => {});
+    api
+      .get("/departments")
+      .then((res) => {
+        setDepartments(res.data);
+        setDeptError("");
+      })
+      .catch(() =>
+        setDeptError("Could not load departments. Some filters may be unavailable — refresh to retry."),
+      );
   }, [adminRole, navigate]);
 
 
@@ -95,6 +105,16 @@ function ManageSubjectsPage() {
             );
           })}
         </div>
+
+        {deptError ? (
+          <p
+            role="alert"
+            className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+            data-cy="dept-load-error"
+          >
+            {deptError}
+          </p>
+        ) : null}
 
         {activeTab === "manage" && <ManageTab {...shared} />}
         {activeTab === "add" && <AddSubjectTab {...shared} />}

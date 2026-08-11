@@ -53,10 +53,12 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
     if (isProctor) return;
     api
       .get("/admin/users", { headers: getAdminHeaders() })
-      .then((res) =>
-        setProctors((res.data || []).filter((u) => u.role === "PROCTOR")),
-      )
-      .catch(() => {});
+      .then((res) => {
+        setProctors((res.data || []).filter((u) => u.role === "PROCTOR"));
+        setError("");
+      })
+      // without this the target-proctor picker is silently empty and HOD/admin cannot assign
+      .catch(() => setError("Could not load the proctor list. Refresh to retry.")); 
   }, [isProctor]);
 
   const proctorParam = isProctor ? "" : targetProctor;

@@ -4,7 +4,6 @@ import com.college.backlog.controller.dto.PhoneUpdateRequest;
 import com.college.backlog.controller.dto.RegistrationSummaryResponse;
 import com.college.backlog.controller.dto.StudentProfileResponse;
 import com.college.backlog.controller.dto.StudentSubjectsResponse;
-import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.Department;
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.Student;
@@ -154,9 +153,11 @@ public class StudentController {
             .map(reg -> new RegistrationSummaryResponse(
                 reg.getRegId(),
                 reg.getStudent().getRollNo(),
-                reg.getSnapName() != null ? reg.getSnapName() : reg.getStudent().getName(),
-                reg.getSnapSemester() != null ? reg.getSnapSemester() : reg.getStudent().getCurrentSemester(),
-                reg.getSnapYearOfJoining() != null ? reg.getSnapYearOfJoining() : reg.getStudent().getYearOfJoining(),
+                // snapshot only, never the live student row: these are NOT NULL as of V7, and
+                // falling back would print today's values on an old registration
+                reg.getSnapName(),
+                reg.getSnapSemester(),
+                reg.getSnapYearOfJoining(),
                 reg.getSubjects().stream()
                     .map(s -> s.getSubjectName() + " (" + s.getCourseCode() + ")")
                     .collect(Collectors.toList()),
@@ -171,13 +172,13 @@ public class StudentController {
     public ResponseEntity<byte[]> downloadOwnPdf(@PathVariable String regId,
                                                  Authentication authentication) throws Exception {
         Registration reg = registrationRepository.findByRegId(regId)
-            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Registration not found with ID: " + regId));
 
         // ownership: a student may only download their own form. 404 not 403, so probing can't
         // confirm a regId exists.
         if (reg.getStudent() == null
                 || !authentication.getName().equals(reg.getStudent().getRollNo())) {
-            throw new ResourceNotFoundException("Registration not found with ID: " + regId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Registration not found with ID: " + regId);
         }
 
         byte[] pdfBytes = pdfService.generateRegistrationPdf(reg);

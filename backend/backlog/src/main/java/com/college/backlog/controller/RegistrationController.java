@@ -2,16 +2,15 @@ package com.college.backlog.controller;
 
 import com.college.backlog.controller.dto.StudentRegistrationRequest;
 import com.college.backlog.controller.dto.VerificationResponse;
-import com.college.backlog.exception.ResourceNotFoundException;
 import com.college.backlog.model.ActorRole;
 import com.college.backlog.model.Registration;
 import com.college.backlog.model.RegistrationStatus;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.RegistrationRepository;
-import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.ProctorScopeService;
 import com.college.backlog.service.RegistrationService;
+import com.college.backlog.service.CallerScope;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -32,10 +31,11 @@ public class RegistrationController {
     private RegistrationService registrationService;
 
     @Autowired
-    private RegistrationRepository registrationRepository;
+    private CallerScope callerScope;
 
     @Autowired
-    private UserRepository userRepository;
+    private RegistrationRepository registrationRepository;
+
 
     @Autowired
     private ProctorScopeService proctorScope;
@@ -44,22 +44,19 @@ public class RegistrationController {
     // scoping, once for the audit actor role.
     private void checkDeptAccess(User user, Registration reg) {
         // a proctor is scoped by assigned STUDENT, not the subject's department
-        if (user != null && user.getRole() == UserRole.PROCTOR) {
+        if (user.getRole() == UserRole.PROCTOR) {
             proctorScope.assertSupervises(user, reg.getStudent().getRollNo());
             return;
         }
-        if (user == null || !DEPT_ROLES.contains(user.getRole())) return;
-        if (user.getDepartment() == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "No department assigned to your account");
-        }
-        Long userDeptId = user.getDepartment().getId();
+        if (!DEPT_ROLES.contains(user.getRole())) return; // ADMIN / PRINCIPAL: unrestricted
+        Long userDeptId = callerScope.requireDepartmentId(user);
         boolean hasAccess = reg.getSubjects().stream().anyMatch(s -> {
             if (s.getDepartment() != null && userDeptId.equals(s.getDepartment().getId())) return true;
             return s.getEligibleDepartments() != null &&
                    s.getEligibleDepartments().stream().anyMatch(d -> userDeptId.equals(d.getId()));
         });
         if (!hasAccess) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This registration does not belong to your department");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This registration does not belong to your department.");
         }
     }
 
@@ -86,12 +83,10 @@ public class RegistrationController {
             @RequestBody(required = false) Map<String, String> body,
             Authentication authentication) {
         Registration reg = registrationRepository.findByRegId(regId)
-            .orElseThrow(() -> new ResourceNotFoundException("Registration not found with ID: " + regId));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Registration not found with ID: " + regId));
 
         // loaded once, for both the scope check and the audit actor role
-        User caller = authentication != null
-            ? userRepository.findById(authentication.getName()).orElse(null)
-            : null;
+        User caller = callerScope.requireActor(authentication);
         checkDeptAccess(caller, reg);
 
         // explicit known action required — never default a typo to VERIFIED
@@ -106,11 +101,10 @@ public class RegistrationController {
                 "action must be 'VERIFIED' or 'REJECTED'.");
         }
 
-        String actor = authentication != null ? authentication.getName() : null;
-        // UserRole is a by-name subset of ActorRole, so this mapping always resolves
-        ActorRole actorRole = (caller != null)
-            ? ActorRole.valueOf(caller.getRole().name())
-            : ActorRole.ADMIN;
+        String actor = authentication.getName();
+        // UserRole is a by-name subset of ActorRole, so this mapping always resolves. No fallback:
+        // an unidentifiable caller now 401s above rather than being audited as ADMIN.
+        ActorRole actorRole = ActorRole.valueOf(caller.getRole().name());
 
         // status flip + audit event commit atomically; the pending-state check and the @Version
         // optimistic-lock backstop both run inside that transaction

@@ -38,7 +38,13 @@ class PdfServiceTest {
         reg.setStudent(student);
         reg.setSubjects(List.of(s1, s2));
         reg.setRegisteredAt(LocalDateTime.of(2026, 8, 10, 9, 30));
+        // The form reads the SNAPSHOT, never the live student row — snap_name/semester/
+        // year_of_joining/branch are NOT NULL as of V7, and the fallbacks that used to read the
+        // live row are gone (they printed today's values on an old registration).
+        reg.setSnapName("Asha Rao");
         reg.setSnapSemester(5);
+        reg.setSnapYearOfJoining(2022);
+        reg.setSnapBranch("CS");
         return reg;
     }
 
@@ -109,8 +115,8 @@ class PdfServiceTest {
     void refusesTheFormWhenTheNameIsMissing() {
         // the whole point: this used to render a form with an empty Name box, which a student could
         // print, get signed by their proctor and HOD, and submit
-        Registration reg = withStudent(
-                new Student("1MS22CS001", null, "a@msrit.edu", "9999912345", 2022, 5, "CS"));
+        Registration reg = sampleRegistration();
+        reg.setSnapName(null); // V7 makes this unreachable in the DB; the guard stays as a backstop
 
         assertThatThrownBy(() -> service.generateRegistrationPdf(reg))
                 .isInstanceOf(ResponseStatusException.class)
@@ -124,8 +130,8 @@ class PdfServiceTest {
     void refusesTheFormWhenTheBranchIsMissing() {
         // and never prints the literal "B.E. / null", which string concat produced before the
         // prefix was moved after the check
-        Registration reg = withStudent(
-                new Student("1MS22CS001", "Asha Rao", "a@msrit.edu", "9999912345", 2022, 5, null));
+        Registration reg = sampleRegistration();
+        reg.setSnapBranch(null);
 
         assertThatThrownBy(() -> service.generateRegistrationPdf(reg))
                 .isInstanceOf(ResponseStatusException.class)
@@ -150,6 +156,8 @@ class PdfServiceTest {
         // so these must NOT refuse the download
         Registration reg = withStudent(
                 new Student("1MS22CS001", "Asha Rao", null, null, 2022, 5, "CS"));
+        reg.setSnapEmail(null);
+        reg.setSnapPhone(null);
 
         String text = textOf(service.generateRegistrationPdf(reg));
 

@@ -8,6 +8,7 @@ import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.TempPasswordGenerator;
+import com.college.backlog.service.CallerScope;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -48,6 +49,9 @@ public class UserManagementController {
     private UserRepository userRepository;
 
     @Autowired
+    private CallerScope callerScope;
+
+    @Autowired
     private DepartmentRepository departmentRepository;
 
     @Autowired
@@ -56,7 +60,7 @@ public class UserManagementController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD')")
     public List<UserResponse> listUsers(Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         return userRepository.findAll().stream()
                 .filter(u -> !u.getUsername().equals(actor.getUsername())) // self managed via change-password
                 .filter(u -> canManage(actor, u))
@@ -65,10 +69,13 @@ public class UserManagementController {
                 .collect(Collectors.toList());
     }
 
+    // 201 like every other create here (subjects, departments, students, exam cycles). The sibling
+    // /{username}/reset stays 200 on purpose — it returns a credential, it creates nothing.
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD')")
     public Map<String, String> createUser(@Valid @RequestBody CreateUserRequest req, Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
 
         String username = req.getUsername().trim();
         UserRole role = UserRole.fromNullable(req.getRole());
@@ -92,7 +99,7 @@ public class UserManagementController {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown department"));
             // HOD may only create within their own department
             if (actor.getRole() == UserRole.HOD && !sameDept(actor, department.getId())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only manage users in your own department");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only manage users in your own department.");
             }
         }
 
@@ -111,7 +118,7 @@ public class UserManagementController {
     @PostMapping("/{username}/reset")
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD')")
     public Map<String, String> resetPassword(@PathVariable String username, Authentication auth) {
-        User actor = requireActor(auth);
+        User actor = callerScope.requireActor(auth);
         User target = loadManageableTarget(actor, username);
 
         if (target.getUsername().equals(actor.getUsername())) {
@@ -126,10 +133,13 @@ public class UserManagementController {
         return tempPasswordResponse(target, tempPassword);
     }
 
+    // 204 like every other delete here (subjects, departments, students, proctor assignments). The
+    // body it used to return was never read by the only caller.
     @DeleteMapping("/{username}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN', 'PRINCIPAL', 'HOD')")
-    public Map<String, String> deleteUser(@PathVariable String username, Authentication auth) {
-        User actor = requireActor(auth);
+    public void deleteUser(@PathVariable String username, Authentication auth) {
+        User actor = callerScope.requireActor(auth);
         User target = loadManageableTarget(actor, username);
 
         if (target.getUsername().equals(actor.getUsername())) {
@@ -141,21 +151,9 @@ public class UserManagementController {
         }
 
         userRepository.delete(target);
-        Map<String, String> resp = new HashMap<>();
-        resp.put("message", "User deleted");
-        resp.put("username", target.getUsername());
-        return resp;
     }
 
     // ---- helpers ----
-
-    private User requireActor(Authentication auth) {
-        if (auth == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
-        return userRepository.findById(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unknown account"));
-    }
 
     /** Loads a target the actor is allowed to manage, or throws 404/403. */
     private User loadManageableTarget(User actor, String username) {

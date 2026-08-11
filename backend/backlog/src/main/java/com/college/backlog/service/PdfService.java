@@ -133,12 +133,9 @@ public class PdfService {
                 // cell(), not required(): this is a bulk report — one broken row must not cost the
                 // admin the other rows, but it must render as visibly broken rather than empty
                 table.addCell(dataCellCentre(cell(reg, "rollNo", r -> r.getStudent().getRollNo()), regular));
-                table.addCell(dataCell(cell(reg, "name",
-                        r -> r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()), regular));
+                table.addCell(dataCell(cell(reg, "name", Registration::getSnapName), regular));
                 table.addCell(dataCellCentre(cell(reg, "semester",
-                        r -> String.valueOf(r.getSnapSemester() != null
-                                ? r.getSnapSemester()
-                                : r.getStudent().getCurrentSemester())), regular));
+                        r -> String.valueOf(r.getSnapSemester())), regular));
 
                 // course code included per subject — it's the canonical identifier
                 String subjectsStr = reg.getSubjects() != null
@@ -314,9 +311,7 @@ public class PdfService {
         // Required like the identity fields: this is what the exam section reads to decide which
         // paper the student sits. The old dotted fallback printed a fill-in-by-hand blank, which
         // is precisely the silent-blank failure being removed.
-        String sem = required(reg, "current semester", r -> r.getSnapSemester() != null
-                ? String.valueOf(r.getSnapSemester())
-                : String.valueOf(r.getStudent().getCurrentSemester()));
+        String sem = required(reg, "current semester", r -> String.valueOf(r.getSnapSemester()));
 
         Paragraph p = new Paragraph()
                 .setFontSize(FS_SECTION_HDR)
@@ -333,13 +328,11 @@ public class PdfService {
         String examMonthYear = (reg != null && reg.getRegisteredAt() != null)
                 ? reg.getRegisteredAt().format(DateTimeFormatter.ofPattern("MMMM yyyy")) : "";
         // identity — the form means nothing without these, so a gap refuses the download
-        String name   = required(reg, "name", r ->
-                upper(r.getSnapName() != null ? r.getSnapName() : r.getStudent().getName()));
+        String name   = required(reg, "name", r -> upper(r.getSnapName()));
         String usn    = required(reg, "USN", r -> r.getStudent().getRollNo());
         // the prefix is added AFTER the check: concatenating first turned a missing branch into the
         // literal "B.E. / null" on the printed form, which no exception and no null check could see
-        String branch = "B.E. / " + required(reg, "branch", r ->
-                r.getSnapBranch() != null ? r.getSnapBranch() : r.getStudent().getBranch());
+        String branch = "B.E. / " + required(reg, "branch", Registration::getSnapBranch);
         // contact details — a blank line here is fillable by hand and phone is optional by design
         String email  = optional(reg, "email", r ->
                 r.getSnapEmail() != null ? r.getSnapEmail() : r.getStudent().getEmail());

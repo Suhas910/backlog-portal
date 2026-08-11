@@ -5,9 +5,9 @@ import com.college.backlog.model.Subject;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.SubjectRepository;
-import com.college.backlog.repository.UserRepository;
 import com.college.backlog.service.SubjectService;
 import com.college.backlog.service.SubjectSpecification;
+import com.college.backlog.service.CallerScope;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 import java.util.Set;
@@ -32,6 +33,9 @@ import java.util.Set;
 @PreAuthorize("hasAnyRole('ADMIN','PRINCIPAL','HOD','DEPT_OFFICE')")
 public class SubjectController {
 
+    @Autowired
+    private CallerScope callerScope;
+
     private static final Set<UserRole> DEPT_ROLES = Set.of(UserRole.HOD, UserRole.DEPT_OFFICE);
 
     // Mirrors AdminController: cap so `size` can't pull the whole catalog in one request.
@@ -40,7 +44,6 @@ public class SubjectController {
 
     @Autowired private SubjectRepository subjectRepository;
     @Autowired private SubjectService subjectService;
-    @Autowired private UserRepository userRepository;
 
     // Spring Page envelope ({content, totalPages, totalElements, number, ...}), matching
     // /registrations. Was an unbounded findAll, which timed out clients once the catalog grew.
@@ -79,13 +82,11 @@ public class SubjectController {
         subjectService.deleteSubject(id, resolveCallerDeptId(auth));
     }
 
-    /** Dept id a caller is pinned to; null for ADMIN/PRINCIPAL (unrestricted). */
+    /** Dept id a caller is pinned to; null ONLY for a genuinely unrestricted ADMIN/PRINCIPAL —
+     *  "we can't tell who this is" 401s, and a dept role without a department 403s. */
     private Long resolveCallerDeptId(Authentication auth) {
-        if (auth == null) return null;
-        User user = userRepository.findById(auth.getName()).orElse(null);
-        if (user == null || !DEPT_ROLES.contains(user.getRole()) || user.getDepartment() == null) {
-            return null;
-        }
-        return user.getDepartment().getId();
+        User user = callerScope.requireActor(auth);
+        if (!DEPT_ROLES.contains(user.getRole())) return null;
+        return callerScope.requireDepartmentId(user);
     }
 }

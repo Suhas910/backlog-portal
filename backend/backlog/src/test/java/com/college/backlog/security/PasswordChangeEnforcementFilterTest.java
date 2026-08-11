@@ -124,6 +124,69 @@ class PasswordChangeEnforcementFilterTest {
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
+    // The token outlives the row: JwtAuthenticationFilter is stateless, so without this a deleted
+    // account keeps its authority until the token lapses. The resolvers 401 on an unknown caller
+    // too, but they only protect endpoints that RESOLVE a scope — exam cycles and department CRUD
+    // never load the caller at all, so this filter is the only thing covering them.
+    @Test
+    void deletedAccountIsRejectedEvenWithAValidToken() throws Exception {
+        authenticateAs("hodcse", "HOD");
+        when(userRepository.findById("hodcse")).thenReturn(Optional.empty());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request("GET", "/api/admin/subjects"), response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString()).contains("Unknown account");
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    // The change-password exemption covers the password gate only — a deleted account has no
+    // password to set, so it must not be the one endpoint that still honours a dead token.
+    @Test
+    void deletedAccountCannotReachTheChangePasswordEndpointEither() throws Exception {
+        authenticateAs("admin", "ADMIN");
+        when(userRepository.findById("admin")).thenReturn(Optional.empty());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilter(request("POST", "/api/auth/change-password"), response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verify(chain, never()).doFilter(any(), any());
+    }
+
+    // Logout only expires the cookie. Gating it stranded exactly the accounts that must be signed
+    // out — and it costs no DB lookup, so the repository is never touched.
+    @Test
+    void aDeletedAccountCanStillLogOut() throws Exception {
+        authenticateAs("hodcse", "HOD");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        MockHttpServletRequest req = request("POST", "/api/auth/logout");
+        filter.doFilter(req, response, chain);
+
+        verify(chain, times(1)).doFilter(req, response);
+        assertThat(response.getStatus()).isEqualTo(200);
+        verifyNoInteractions(userRepository);
+    }
+
+    @Test
+    void anAccountPendingAPasswordChangeCanStillLogOut() throws Exception {
+        authenticateAs("admin", "ADMIN");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        MockHttpServletRequest req = request("POST", "/api/auth/logout");
+        filter.doFilter(req, response, chain);
+
+        verify(chain, times(1)).doFilter(req, response);
+        assertThat(response.getStatus()).isEqualTo(200);
+        verifyNoInteractions(userRepository);
+    }
+
     @Test
     void unauthenticatedRequestsAreNotGatedHere() throws Exception {
         MockHttpServletResponse response = new MockHttpServletResponse();
