@@ -102,10 +102,17 @@ function AdminPage() {
     examCycleId: "",
   });
 
-  // Audit history modal
+  // Audit history modal. registration_events is append-only and the only writer reachable from
+  // this screen is this admin, so a fetched trail stays valid until we verify/reject that row —
+  // cache it per regId (invalidated below) and reopen instantly instead of re-paying the fetch.
   const [historyRegId, setHistoryRegId] = useState("");
-  const [historyEvents, setHistoryEvents] = useState([]);
+  const [historyCache, setHistoryCache] = useState({});
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  // regId the in-flight events request belongs to, so a superseded response can't clear the
+  // spinner or post an error over a row the admin has since switched to.
+  const historyReqRef = useRef("");
+  const historyEvents = historyCache[historyRegId] || [];
 
   // Monotonic counter shared by every registrations fetch (the filter effect and the imperative
   // post-action resync). Each call captures the next value and applies its response only if still
@@ -353,13 +360,24 @@ function AdminPage() {
     });
   };
 
-  const clearRowError = (regId) =>
-    setRowErrors((prev) => {
+  // Drop one regId-keyed entry, returning `prev` untouched when absent so React can bail out of
+  // the re-render. Shared by the per-row error map and the history cache.
+  const dropRegId = (setter, regId) =>
+    setter((prev) => {
       if (!prev[regId]) return prev;
       const next = { ...prev };
       delete next[regId];
       return next;
     });
+
+  const clearRowError = (regId) => dropRegId(setRowErrors, regId);
+
+  // Verify/reject appends an event and moves the row, so the cached trail is stale and the table
+  // and stat cards both need refetching. Every post-action path goes through here.
+  const resyncAfterAction = async (regId) => {
+    dropRegId(setHistoryCache, regId);
+    await Promise.all([fetchRegistrations(), fetchCounts()]);
+  };
 
   // Verify/reject failures land here. Rows mutate only on success, so there is nothing to roll
   // back — surface an inline per-row error instead. When the server says the row moved underneath
@@ -373,7 +391,7 @@ function AdminPage() {
       [regId]: err.response?.data?.message || fallback,
     }));
     if (status === 404 || status === 409 || status === 410) {
-      await Promise.all([fetchRegistrations(), fetchCounts()]);
+      await resyncAfterAction(regId);
     }
   };
 
@@ -386,9 +404,8 @@ function AdminPage() {
         { action: "VERIFIED" },
         { headers: getAdminHeaders() },
       );
-      // refetch: under server-side status filtering the row may leave the current page, and the
-      // stat cards need fresh counts
-      await Promise.all([fetchRegistrations(), fetchCounts()]);
+      // refetch: under server-side status filtering the row may leave the current page
+      await resyncAfterAction(regId);
     } catch (err) {
       await handleActionError(regId, err, "Failed to verify. Please refresh and try again.");
     } finally {
@@ -405,7 +422,7 @@ function AdminPage() {
         { action: "REJECTED" },
         { headers: getAdminHeaders() },
       );
-      await Promise.all([fetchRegistrations(), fetchCounts()]);
+      await resyncAfterAction(regId);
     } catch (err) {
       await handleActionError(regId, err, "Failed to reject. Please refresh and try again.");
     } finally {
@@ -416,17 +433,34 @@ function AdminPage() {
 
   const openHistory = async (regId) => {
     setHistoryRegId(regId);
-    setHistoryEvents([]);
+    setHistoryError("");
+    historyReqRef.current = regId;
+    if (historyCache[regId]) {
+      setHistoryLoading(false);
+      return;
+    }
+
     setHistoryLoading(true);
     try {
       const res = await api.get(`/admin/registrations/${regId}/events`, {
         headers: getAdminHeaders(),
       });
-      setHistoryEvents(res.data);
+      setHistoryCache((prev) => ({
+        ...prev,
+        [regId]: Array.isArray(res.data) ? res.data : [],
+      }));
     } catch (err) {
+      // Surface it: a failed fetch and a genuinely empty trail render identically otherwise, so a
+      // 403/404/network drop would read as "nobody actioned this registration" — the one claim an
+      // audit view must never make on its own failure. Nothing is cached, so reopening retries.
       console.error("Failed to load history", err);
+      if (historyReqRef.current === regId) {
+        setHistoryError(
+          err.response?.data?.message || "Unable to load history. Please try again.",
+        );
+      }
     } finally {
-      setHistoryLoading(false);
+      if (historyReqRef.current === regId) setHistoryLoading(false);
     }
   };
 
@@ -1197,6 +1231,14 @@ function AdminPage() {
             {historyLoading ? (
               <p className="inline-flex items-center gap-2 text-sm text-ink">
                 <LoaderCircle size={16} className="animate-spin" /> Loading history...
+              </p>
+            ) : historyError ? (
+              <p
+                className="text-sm font-medium text-red-600"
+                role="alert"
+                data-cy="admin-history-error"
+              >
+                {historyError}
               </p>
             ) : historyEvents.length === 0 ? (
               <p className="text-sm text-ink-muted">
