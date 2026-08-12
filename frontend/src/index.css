@@ -43,7 +43,8 @@
      reached by (2)-(3) — that is exactly why --hero-* exists; add a token instead.
    - Using a light-only palette class (bg-red-50, text-amber-700, …)? Add a matching dark re-tint
      under (2), or it stays a bright patch on a dark surface.
-   - Solid fills (bg-red-600/700 with white text) and --color-cta are theme-INDEPENDENT by design.
+   - Solid fills (bg-red-600/700 with white text) are theme-INDEPENDENT by design. --color-cta is
+     NOT: it is the one token that goes BRIGHTER in dark, so the CTA out-contrasts a dark page.
    - This file is UNLAYERED on purpose, so it outranks Tailwind's utilities layer regardless of
      specificity — that's what makes .shadow-soft and (2)-(3) win. Don't wrap it in @layer.
    - Verify both themes before calling a UI change done. */
