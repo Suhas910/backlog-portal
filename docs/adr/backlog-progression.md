@@ -191,4 +191,6 @@ branch code exactly like `ProgressionController` (ADMIN/PRINCIPAL broad; HOD/DEP
 - Within a phase: ship read/UI before submit-hardening so the UI is compliant before the
   server starts rejecting.
 - Don't reintroduce the N+1 just fixed (`@EntityGraph` on `RegistrationRepository.findAll`).
+  Fetch strategy, `open-in-view=false`, and the transaction boundary the admin list depends on
+  are now specified in `docs/adr/persistence-fetching.md` — read it before changing any query.
 - Biggest risk: backfill accuracy for detained students — linear default + correction + fail-closed.

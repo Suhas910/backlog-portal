@@ -103,7 +103,8 @@ public class AuthController {
         Map<String, String> body2 = new HashMap<>();
         body2.put("message", "Login success");
         body2.put("role", user.getRole().name());
-        // expiresIn lets the SPA schedule a refresh without reading the token
+        // httpOnly, so JS can't read `exp`: expiresIn lets the SPA derive an absolute expiry for its
+        // sign-out timer + warning banner. NOT a refresh — sessions are fixed, non-renewable (JwtService).
         body2.put("expiresIn", String.valueOf(jwtService.secondsUntilExpiry(token)));
         body2.put("mustChangePassword", String.valueOf(user.isMustChangePassword()));
         if (user.getDepartment() != null) {
