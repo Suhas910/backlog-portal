@@ -5,7 +5,6 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentToken } from "../lib/api";
 import { rememberExpiry } from "../lib/session";
-import MobileActionBar from "../components/layout/MobileActionBar";
 
 const USN_PATTERN = /^1MS\d{2}[A-Z]{2}\d{3}$/;
 
@@ -68,7 +67,7 @@ function StudentLoginPage() {
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-10 sm:px-6 lg:px-8">
       <div
-        className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
+        className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft sm:p-8"
       >
         <div className="mb-6 text-left">
           <div className="mb-4 flex items-center rounded-2xl border border-stroke bg-secondary px-4 py-3 text-white shadow-soft">
@@ -159,8 +158,6 @@ function StudentLoginPage() {
           </Link>
         </div>
       </div>
-
-      <MobileActionBar />
     </div>
   );
 }

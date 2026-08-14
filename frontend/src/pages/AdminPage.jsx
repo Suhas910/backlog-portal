@@ -23,7 +23,6 @@ import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getAdminHeaders, logoutAdmin } from "../lib/api";
 import { readBlobErrorMessage } from "../lib/downloadPdf";
-import MobileActionBar from "../components/layout/MobileActionBar";
 
 const PAGE_SIZE = 25;
 // 1..8 is the programme, matching Semesters.java on the server
@@ -593,7 +592,7 @@ function AdminPage() {
         Skip to admin table
       </a>
 
-      <div id="admin-main" className="mx-auto w-full max-w-7xl pb-24 md:pb-0">
+      <div id="admin-main" className="mx-auto w-full max-w-7xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary px-4 py-4 text-white shadow-soft sm:px-6">
           <div>
             <BrandIdentity compact />
@@ -1288,8 +1287,6 @@ function AdminPage() {
           </div>
         </div>
       )}
-
-      <MobileActionBar />
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
-import MobileActionBar from "../components/layout/MobileActionBar";
 
 // Two flows:
 //  - forced (?forced=1): logged in on a temp password and must set their own first;
@@ -59,7 +58,7 @@ function ChangePasswordPage() {
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-10 sm:px-6 lg:px-8">
       <div
-        className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
+        className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft sm:p-8"
       >
         <div className="mb-6 text-left">
           <BrandIdentity compact onSurface />
@@ -166,8 +165,6 @@ function ChangePasswordPage() {
           </div>
         )}
       </div>
-
-      <MobileActionBar />
     </div>
   );
 }

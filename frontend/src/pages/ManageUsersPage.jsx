@@ -13,7 +13,6 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
-import MobileActionBar from "../components/layout/MobileActionBar";
 import { findOwnDepartment } from "../lib/session";
 
 // Roles each actor may create. The server enforces the same rules; this only shapes the UI.
@@ -187,7 +186,7 @@ function ManageUsersPage() {
 
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-5xl pb-24 md:pb-8">
+      <div className="mx-auto w-full max-w-5xl pb-8">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <div className="flex gap-2">
@@ -461,8 +460,6 @@ function ManageUsersPage() {
           </div>
         </div>
       )}
-
-      <MobileActionBar />
     </div>
   );
 }

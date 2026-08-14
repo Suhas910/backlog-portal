@@ -3,7 +3,6 @@ import { ArrowLeft, BookOpen, Copy, PlusCircle } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../../components/layout/BrandIdentity";
 import api from "../../lib/api";
-import MobileActionBar from "../../components/layout/MobileActionBar";
 import ManageTab from "./ManageTab";
 import AddSubjectTab from "./AddSubjectTab";
 import CloneSubjectsTab from "./CloneSubjectsTab";
@@ -71,7 +70,7 @@ function ManageSubjectsPage() {
 
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-5xl pb-24 md:pb-8">
+      <div className="mx-auto w-full max-w-5xl pb-8">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <Link
@@ -120,8 +119,6 @@ function ManageSubjectsPage() {
         {activeTab === "add" && <AddSubjectTab {...shared} />}
         {activeTab === "clone" && <CloneSubjectsTab {...shared} />}
       </div>
-
-      <MobileActionBar />
     </div>
   );
 }

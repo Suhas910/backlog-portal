@@ -14,7 +14,6 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminToken, logoutAdmin } from "../lib/api";
 import { rememberExpiry } from "../lib/session";
-import MobileActionBar from "../components/layout/MobileActionBar";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
 
@@ -147,7 +146,7 @@ function AdminLoginPage() {
 
       <div
         id="admin-login-main"
-        className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 pb-24 shadow-soft sm:p-8 md:pb-8"
+        className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft sm:p-8"
       >
         <div className="mb-6 text-left">
           <div className="mb-4 flex items-center rounded-2xl border border-stroke bg-secondary px-4 py-3 text-white shadow-soft">
@@ -382,8 +381,6 @@ function AdminLoginPage() {
           </Link>
         </div>
       </div>
-
-      <MobileActionBar />
     </div>
   );
 }

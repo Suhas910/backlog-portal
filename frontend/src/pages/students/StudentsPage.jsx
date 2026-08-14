@@ -3,7 +3,6 @@ import { ArrowLeft, CalendarClock, GraduationCap, UploadCloud, UserCheck, UserPl
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../../components/layout/BrandIdentity";
 import api from "../../lib/api";
-import MobileActionBar from "../../components/layout/MobileActionBar";
 import StudentsManageTab from "./StudentsManageTab";
 import AddStudentTab from "./AddStudentTab";
 import ImportStudentsTab from "./ImportStudentsTab";
@@ -89,7 +88,7 @@ function StudentsPage() {
 
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-5xl pb-24 md:pb-8">
+      <div className="mx-auto w-full max-w-5xl pb-8">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <Link
@@ -152,8 +151,6 @@ function StudentsPage() {
         {activeTab === "progression" && <ProgressionTab {...shared} />}
         {(activeTab === "claim" || activeTab === "proctors") && <ClaimStudentsTab {...shared} />}
       </div>
-
-      <MobileActionBar />
     </div>
   );
 }

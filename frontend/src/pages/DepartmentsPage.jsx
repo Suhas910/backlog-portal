@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
-import MobileActionBar from "../components/layout/MobileActionBar";
 
 function DepartmentsPage() {
   const navigate = useNavigate();
@@ -181,7 +180,7 @@ function DepartmentsPage() {
 
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-3xl pb-24 md:pb-0">
+      <div className="mx-auto w-full max-w-3xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary px-4 py-4 text-white shadow-soft sm:px-6">
           <div>
             <BrandIdentity compact />
@@ -397,8 +396,6 @@ function DepartmentsPage() {
           )}
         </section>
       </div>
-
-      <MobileActionBar />
     </div>
   );
 }

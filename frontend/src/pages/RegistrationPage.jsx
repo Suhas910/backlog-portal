@@ -14,7 +14,6 @@ import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentHeaders } from "../lib/api";
 import { formatAcademicYear } from "../lib/academicYear";
 import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
-import MobileActionBar from "../components/layout/MobileActionBar";
 
 function RegistrationPage() {
   const navigate = useNavigate();
@@ -270,7 +269,7 @@ function RegistrationPage() {
   // ---- main subject-selection form ----
   return (
     <div className="min-h-screen bg-surface-1 text-ink">
-      <div className="mx-auto w-full max-w-6xl px-4 py-8 pb-24 sm:px-6 lg:px-8 md:pb-8">
+      <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
           <BrandIdentity compact />
           <Link
@@ -487,8 +486,6 @@ function RegistrationPage() {
           </MagneticCta>
         </div>
       </div>
-
-      <MobileActionBar />
     </div>
   );
 }
