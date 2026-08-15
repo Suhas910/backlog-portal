@@ -13,7 +13,7 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentHeaders } from "../lib/api";
 import { formatAcademicYear } from "../lib/academicYear";
-import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
+import { saveBlob, readBlobErrorMessage } from "../lib/download";
 
 function RegistrationPage() {
   const navigate = useNavigate();
@@ -165,7 +165,7 @@ function RegistrationPage() {
         headers: getStudentHeaders(),
         responseType: "blob",
       });
-      savePdfBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`);
+      saveBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`, "application/pdf");
     } catch (err) {
       // surface the server's reason — a 409 here names the missing detail and says to contact the
       // department office, which is the one thing the student can act on

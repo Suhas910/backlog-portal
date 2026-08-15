@@ -23,7 +23,7 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getAdminHeaders, logoutAdmin } from "../lib/api";
-import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
+import { saveBlob, readBlobErrorMessage } from "../lib/download";
 import { reportLoadError } from "../lib/loadError";
 
 const PAGE_SIZE = 25;
@@ -589,11 +589,11 @@ function AdminPage() {
         if (!contentType.includes("application/pdf")) {
           throw new Error(`Unexpected export content type: ${contentType}`);
         }
-        // savePdfBlob, not a hand-rolled anchor: it delays revokeObjectURL (iOS Safari consumes
+        // saveBlob, not a hand-rolled anchor: it delays revokeObjectURL (iOS Safari consumes
         // the blob URL asynchronously, so revoking right after click() cancels the download) and
         // falls back to opening the blob where `download` is unsupported. Both were silent no-ops
         // here — the spinner cleared, no error, no file.
-        savePdfBlob(res.data, `registrations-summary-${Date.now()}.pdf`);
+        saveBlob(res.data, `registrations-summary-${Date.now()}.pdf`, "application/pdf");
       })
       .catch(async (err) => {
         console.error("Failed to export PDF", err);

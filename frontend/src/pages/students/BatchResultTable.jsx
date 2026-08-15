@@ -1,12 +1,11 @@
 // Shared render for the batch-result DTO (ProgressionRowResult rows + created/skipped/errors
-// counts) that bulk progression, student import, and proctor claim all return. Three near-identical
-// copies existed before; the guard below had to be written three times and had already drifted to a
-// weaker operator in one of them.
+// counts) that bulk progression, student import, and proctor claim all return. Keep it shared: as
+// three copies the rows guard was written three times and had already drifted to a weaker operator.
 
 import { batchRows } from "./batchResult";
 
-// Superset of the statuses the three endpoints emit: progression adds the WOULD_* preview forms and
-// the conflict pair, import and claim emit subsets.
+// Superset of the three endpoints' statuses: progression adds the WOULD_* previews and the conflict
+// pair, import and claim emit subsets.
 const STATUS_STYLES = {
   CREATED: "text-primary-ink",
   WOULD_CREATE: "text-primary-ink",

@@ -3,6 +3,7 @@ import { Download, LoaderCircle, Search, UploadCloud } from "lucide-react";
 import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
 import BatchResultTable from "./BatchResultTable";
+import { saveBlob } from "../../lib/download";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
@@ -46,6 +47,9 @@ function ImportStudentsTab() {
   const run = useCallback(
     async (dryRun) => {
       setError("");
+      // the card describes ONE run; cleared here, not in the catch, so the empty-CSV early-return
+      // below is covered too
+      setResult(null);
       const rows = parseCsv(csv);
       if (rows.length === 0) {
         setError("Paste at least one row: " + HEADER);
@@ -73,17 +77,9 @@ function ImportStudentsTab() {
     [csv, defaultCurrent, defaultEntry],
   );
 
-  const downloadTemplate = () => {
-    const blob = new Blob([TEMPLATE], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "students-template.csv");
-    document.body.appendChild(link);
-    link.click();
-    link.parentNode.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
+  // saveBlob, not a hand-rolled anchor: an immediate revokeObjectURL cancels the download outright
+  // on iOS Safari, which consumes the blob URL asynchronously.
+  const downloadTemplate = () => saveBlob(TEMPLATE, "students-template.csv", "text/csv");
 
   return (
     <section className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-6">

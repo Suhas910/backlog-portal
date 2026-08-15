@@ -44,8 +44,8 @@ function ManageUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   // Separate from `error`, as AdminLoginPage does: a failed departments fetch is not a user action
-  // failing, it must survive the setError("") that starts every submit, and the two fetches
-  // resolving into one slot meant the second one silently won.
+  // failing, must survive the setError("") starting every submit, and sharing one slot let the
+  // second of the two fetches silently win.
   const [departmentsError, setDepartmentsError] = useState("");
 
   // Create form
@@ -367,9 +367,9 @@ function ManageUsersPage() {
                 users…
               </div>
             ) : users.length === 0 ? (
-              // "none exist" is only true if the fetch actually succeeded — with `error` set the
-              // list is unknown, and claiming an empty result beside the failure reads as a
-              // permissions verdict the server never gave.
+              // "none exist" holds only if the fetch succeeded; with `error` set the list is
+              // unknown, and an empty result beside the failure reads as a permissions verdict the
+              // server never gave.
               <p className="py-8 text-center text-sm text-ink-muted">
                 {error ? "Users could not be loaded." : "No users you can manage yet."}
               </p>

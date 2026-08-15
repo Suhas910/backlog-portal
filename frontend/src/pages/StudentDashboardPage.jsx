@@ -15,7 +15,7 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getStudentHeaders, logoutStudent } from "../lib/api";
-import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
+import { saveBlob, readBlobErrorMessage } from "../lib/download";
 
 function statusBadgeClass(status) {
   if (status === "VERIFIED")
@@ -51,9 +51,9 @@ function StudentDashboardPage() {
       setProfile(meRes.data);
       setRegistrations(Array.isArray(regRes.data) ? regRes.data : []);
     } catch (err) {
-      // 401 signs out via the api.js interceptor. Return WITHOUT clearing loading (so no `finally`
-      // here): an empty registrations list plus loading=false paints "You have no registrations
-      // yet" behind the redirect.
+      // 401 signs out via the api.js interceptor. Return WITHOUT clearing loading (hence no
+      // `finally`): empty registrations + loading=false paints "You have no registrations yet"
+      // behind the redirect.
       if (err.response?.status === 401) {
         return;
       }
@@ -115,7 +115,7 @@ function StudentDashboardPage() {
         headers: getStudentHeaders(),
         responseType: "blob",
       });
-      savePdfBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`);
+      saveBlob(res.data, `backlog-registration-${profile?.rollNo || regId}.pdf`, "application/pdf");
     } catch (err) {
       // only 401 is handled globally (sign-out); 403 belongs here like any other denial
       if (err.response?.status !== 401) {

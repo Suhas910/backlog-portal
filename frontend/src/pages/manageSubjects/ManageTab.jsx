@@ -55,6 +55,10 @@ function ManageTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
         totalElements: data.totalElements ?? 0,
       });
     } catch (err) {
+      // back to null ("not loaded"), not []: the previous department's rows would read as this
+      // department's, and [] would claim "No subjects match these filters" — both assert a result
+      // the failed request never returned.
+      setSubjects(null);
       setError(
         err.response?.data?.message ||
           (err.code === "ECONNABORTED"

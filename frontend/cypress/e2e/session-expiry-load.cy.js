@@ -1,16 +1,15 @@
 // A load that 401s means the session lapsed and api.js is redirecting to the login screen. Until
-// that lands the page must show NOTHING new — no error banner, and no empty-state copy claiming the
+// that lands the page must show NOTHING new — no error banner, no empty-state copy claiming the
 // account has no data. Both used to paint for a beat: the banner blamed the server for an expired
 // session, and "No users you can manage yet" read as a permissions verdict.
 //
-// WHY THERE IS NO DOM ASSERTION FOR THE 401 FLASH: the flash lives in the frame between
-// window.location.assign() and the navigation committing. Cypress cannot pin that frame —
+// NO DOM ASSERTION FOR THE 401 FLASH, deliberately: it lives in the frame between
+// window.location.assign() and navigation committing. Cypress cannot pin that frame —
 // location.assign is non-configurable, so cy.stub throws "Cannot redefine property: assign" — and
-// once navigation commits the banner is gone whether or not the bug is present. That was verified
-// the hard way: an earlier version of this spec asserted `.should("not.exist")` and stayed green
-// with the bug deliberately reintroduced. Assertions that cannot fail are worse than no assertions,
-// so the decision itself is asserted directly below, and the DOM specs cover the paths that are
-// genuinely observable.
+// post-navigation the banner is gone either way. Verified the hard way: an earlier version asserted
+// `.should("not.exist")` and stayed green with the bug deliberately reintroduced. An assertion that
+// cannot fail is worse than none, so the decision is asserted directly below and the DOM specs
+// cover only what is genuinely observable.
 import { reportLoadError } from "../../src/lib/loadError";
 
 function seedAdmin(role = "ADMIN", department) {

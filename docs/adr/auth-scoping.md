@@ -34,6 +34,13 @@ Every other outcome is an explicit refusal. Do not reintroduce a third meaning f
 | Dept-scoped role, no department | **403** "No department assigned to your account." |
 | ADMIN / PRINCIPAL | `null` — unrestricted, by design |
 
+**"Unrestricted" is about DEPARTMENT scope, not about every action.** One carve-out exists:
+**PRINCIPAL cannot verify or reject a registration** — that is the departments' call, not the
+registrar's. Asserted in three places that must stay in step: the `/api/register/verify/**` matcher
+in `SecurityConfig`, `RegistrationController#verifyRegistration`'s `@PreAuthorize`, and the
+dashboard's `adminRole !== "PRINCIPAL"` button gate. Both server-side checks fail closed
+independently; `admin-access.cy.js` asserts the UI half.
+
 **2. Identifying the caller lives in one place: `service/CallerScope.java`.** `requireActor` throws
 rather than returning a sentinel, so the fail-closed contract is stated once and is unit-testable —
 private controller helpers are not, and this repo has no controller tests.

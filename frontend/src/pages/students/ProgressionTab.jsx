@@ -126,6 +126,10 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
   const runPromote = useCallback(
     async (dryRun) => {
       setPError("");
+      // the card describes ONE run, so it can't outlive the next one. Cleared here, not in the
+      // catch, to cover the validation early-returns below too — they left "Preview — 30 created"
+      // standing beside "Target semester is required."
+      setPResult(null);
       if (!pTargetSem) {
         setPError("Target semester is required.");
         return;
@@ -176,6 +180,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
   const runImport = useCallback(
     async (dryRun) => {
       setIError("");
+      setIResult(null); // see runPromote: the previous run's card must not outlive its run
       const rows = csv
         .split("\n")
         .map((line) => line.trim())
@@ -208,6 +213,7 @@ function ProgressionTab({ departments, adminDepartment, deptLocked, pinnedDeptId
   const runBackfill = useCallback(
     async (dryRun) => {
       setBError("");
+      setBResult(null); // see runPromote: the previous run's card must not outlive its run
       // same explicit-cohort rule as promote; mirrors the server-side 400 guard
       const deptId = deptLocked ? pinnedDeptId : bDeptId;
       if (!deptId) {

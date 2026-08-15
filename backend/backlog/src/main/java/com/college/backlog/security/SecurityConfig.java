@@ -91,7 +91,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/student/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/departments").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/registration-status").permitAll()
-                        .requestMatchers("/api/register/verify/**").hasAnyRole("ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR")
+                        // PRINCIPAL deliberately absent: verification is not theirs. In step with
+                        // RegistrationController#verifyRegistration's @PreAuthorize and the
+                        // dashboard gate; listing it here was dead (both must pass) but made
+                        // removing that annotation silently GRANT the role. Binds both ways, and
+                        // no HttpMethod arg = the whole verify/ subtree: a new endpoint under it
+                        // must join this list or its own @PreAuthorize is silently overridden.
+                        // See docs/adr/auth-scoping.md.
+                        .requestMatchers("/api/register/verify/**").hasAnyRole("ADMIN", "HOD", "DEPT_OFFICE", "PROCTOR")
                         .requestMatchers(HttpMethod.POST, "/api/register").hasRole("STUDENT")
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
                         // PROCTOR clears this coarse gate; each /api/admin controller's own
