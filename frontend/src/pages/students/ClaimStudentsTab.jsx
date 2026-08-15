@@ -10,6 +10,8 @@ import {
   Users,
 } from "lucide-react";
 import api, { getAdminHeaders } from "../../lib/api";
+import { batchRows } from "./batchResult";
+import { reportLoadError } from "../../lib/loadError";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
@@ -58,7 +60,9 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
         setError("");
       })
       // without this the target-proctor picker is silently empty and HOD/admin cannot assign
-      .catch(() => setError("Could not load the proctor list. Refresh to retry.")); 
+      .catch((err) =>
+        reportLoadError(err, setError, "Could not load the proctor list. Refresh to retry."),
+      );
   }, [isProctor]);
 
   const proctorParam = isProctor ? "" : targetProctor;
@@ -364,7 +368,9 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
             <p className="font-semibold">
               Assigned {results.created} · skipped {results.skipped} · errors {results.errors}
             </p>
-            {(results.results || [])
+            {/* Same DTO as the bulk tabs, but only the failures are worth a line here, so this
+                shares the rows decision and not the table. */}
+            {batchRows(results)
               .filter((r) => r.status === "ERROR")
               .map((r) => (
                 <p key={r.rollNo} className="mt-1 text-xs text-red-600">

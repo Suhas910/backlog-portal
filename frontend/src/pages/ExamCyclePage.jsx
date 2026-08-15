@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
+import { reportLoadError } from "../lib/loadError";
 
 function ExamCyclePage() {
   const navigate = useNavigate();
@@ -28,12 +29,15 @@ function ExamCyclePage() {
     setLoading(true);
     api
       .get("/admin/exam-cycles", { headers: getAdminHeaders() })
-      .then((res) => setCycles(res.data))
+      .then((res) => {
+        setCycles(res.data);
+        setLoading(false);
+      })
+      // no .finally: on a 401 the spinner must stay up until the redirect lands
       .catch((err) => {
         console.error("Failed to load exam cycles", err);
-        setError("Could not load exam cycles.");
-      })
-      .finally(() => setLoading(false));
+        if (reportLoadError(err, setError, "Could not load exam cycles.")) setLoading(false);
+      });
   };
 
   useEffect(() => {

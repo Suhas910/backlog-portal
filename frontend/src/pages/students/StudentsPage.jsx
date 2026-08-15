@@ -3,6 +3,7 @@ import { ArrowLeft, CalendarClock, GraduationCap, UploadCloud, UserCheck, UserPl
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../../components/layout/BrandIdentity";
 import api from "../../lib/api";
+import { reportLoadError } from "../../lib/loadError";
 import StudentsManageTab from "./StudentsManageTab";
 import AddStudentTab from "./AddStudentTab";
 import ImportStudentsTab from "./ImportStudentsTab";
@@ -79,8 +80,12 @@ function StudentsPage() {
         setDeptError("");
       })
       // a swallowed failure here silently un-pins a dept-scoped user's department
-      .catch(() =>
-        setDeptError("Could not load departments. Some filters may be unavailable — refresh to retry."),
+      .catch((err) =>
+        reportLoadError(
+          err,
+          setDeptError,
+          "Could not load departments. Some filters may be unavailable — refresh to retry.",
+        ),
       );
   }, [adminRole, navigate]);
 

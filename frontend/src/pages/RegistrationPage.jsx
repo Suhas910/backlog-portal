@@ -203,7 +203,9 @@ function RegistrationPage() {
     );
   }
 
-  if (regStatus.open === false) {
+  // `!== true`, not `=== false`: a 200 whose body is missing `open` must land here, not fall
+  // through to an open form the server would then reject.
+  if (regStatus.open !== true) {
     return (
       <CenteredCard icon={<CalendarX size={24} />} title="No Open Registrations">
         {/* Also the fail-closed landing spot for a failed status check, so the copy names no

@@ -10,21 +10,21 @@ class EligibilityServiceTest {
 
     @Test
     void windowMatchesTheRuleForEverySemester() {
-        assertThat(service.eligibleSemesters(1)).containsExactlyInAnyOrder(1);
-        assertThat(service.eligibleSemesters(2)).containsExactlyInAnyOrder(1, 2);
-        assertThat(service.eligibleSemesters(3)).containsExactlyInAnyOrder(1, 2, 3);
-        assertThat(service.eligibleSemesters(4)).containsExactlyInAnyOrder(1, 2, 3, 4);
-        assertThat(service.eligibleSemesters(5)).containsExactlyInAnyOrder(3, 4, 5);
-        assertThat(service.eligibleSemesters(6)).containsExactlyInAnyOrder(3, 4, 5, 6);
-        assertThat(service.eligibleSemesters(7)).containsExactlyInAnyOrder(5, 6, 7);
-        assertThat(service.eligibleSemesters(8)).containsExactlyInAnyOrder(5, 6, 7, 8);
+        assertThat(service.eligibleSemesters(1, 1)).containsExactlyInAnyOrder(1);
+        assertThat(service.eligibleSemesters(2, 1)).containsExactlyInAnyOrder(1, 2);
+        assertThat(service.eligibleSemesters(3, 1)).containsExactlyInAnyOrder(1, 2, 3);
+        assertThat(service.eligibleSemesters(4, 1)).containsExactlyInAnyOrder(1, 2, 3, 4);
+        assertThat(service.eligibleSemesters(5, 1)).containsExactlyInAnyOrder(3, 4, 5);
+        assertThat(service.eligibleSemesters(6, 1)).containsExactlyInAnyOrder(3, 4, 5, 6);
+        assertThat(service.eligibleSemesters(7, 1)).containsExactlyInAnyOrder(5, 6, 7);
+        assertThat(service.eligibleSemesters(8, 1)).containsExactlyInAnyOrder(5, 6, 7, 8);
     }
 
     @Test
     void outOfRangeCurrentSemesterYieldsEmpty() {
-        assertThat(service.eligibleSemesters(0)).isEmpty();
-        assertThat(service.eligibleSemesters(9)).isEmpty();
-        assertThat(service.eligibleSemesters(-3)).isEmpty();
+        assertThat(service.eligibleSemesters(0, 1)).isEmpty();
+        assertThat(service.eligibleSemesters(9, 1)).isEmpty();
+        assertThat(service.eligibleSemesters(-3, 1)).isEmpty();
     }
 
     @Test
@@ -34,14 +34,6 @@ class EligibilityServiceTest {
         assertThat(service.isEligible(6, 1, 6)).isTrue();
         assertThat(service.isEligible(6, 1, 2)).isFalse();
         assertThat(service.isEligible(6, 1, 7)).isFalse();
-    }
-
-    @Test
-    void entrySemesterOfOneIsIdenticalToTheNormalWindow() {
-        for (int cur = 1; cur <= 8; cur++) {
-            assertThat(service.eligibleSemesters(cur, 1))
-                .isEqualTo(service.eligibleSemesters(cur));
-        }
     }
 
     @Test

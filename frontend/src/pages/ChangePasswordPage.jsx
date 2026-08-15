@@ -1,18 +1,15 @@
 import { useState } from "react";
 import { ArrowLeft, KeyRound, LoaderCircle, Lock } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
 
-// Two flows:
-//  - forced (?forced=1): logged in on a temp password and must set their own first;
-//    back-navigation is hidden.
-//  - voluntary: a logged-in admin changing their own password.
+// One flow: a signed-in admin-type user changing their own password. Nothing forces them here —
+// accounts start on the derived default (username + "4321") and stay on it until they choose
+// otherwise, so every role reaches this from the dashboard header.
 function ChangePasswordPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const forced = searchParams.get("forced") === "1";
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -65,14 +62,8 @@ function ChangePasswordPage() {
           <p className="mb-2 mt-4 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-surface-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary-ink">
             <KeyRound size={12} /> Change Password
           </p>
-          <h1 className="text-3xl font-semibold text-secondary-ink">
-            {forced ? "Set a New Password" : "Change Password"}
-          </h1>
-          <p className="mt-2 text-sm text-ink">
-            {forced
-              ? "You're using a temporary password. Choose a new password to continue."
-              : "Update the password for your account."}
-          </p>
+          <h1 className="text-3xl font-semibold text-secondary-ink">Change Password</h1>
+          <p className="mt-2 text-sm text-ink">Update the password for your account.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -81,7 +72,7 @@ function ChangePasswordPage() {
               htmlFor="current-password"
               className="text-xs font-semibold uppercase tracking-[0.08em] text-ink"
             >
-              {forced ? "Temporary Password" : "Current Password"}
+              Current Password
             </label>
             <input
               id="current-password"
@@ -154,16 +145,14 @@ function ChangePasswordPage() {
           </MagneticCta>
         </form>
 
-        {!forced && (
-          <div className="mt-4 text-center">
-            <Link
-              to="/admin"
-              className="inline-flex items-center gap-1 text-sm font-medium text-secondary-ink underline-offset-4 hover:underline"
-            >
-              <ArrowLeft size={14} /> Back to dashboard
-            </Link>
-          </div>
-        )}
+        <div className="mt-4 text-center">
+          <Link
+            to="/admin"
+            className="inline-flex items-center gap-1 text-sm font-medium text-secondary-ink underline-offset-4 hover:underline"
+          >
+            <ArrowLeft size={14} /> Back to dashboard
+          </Link>
+        </div>
       </div>
     </div>
   );

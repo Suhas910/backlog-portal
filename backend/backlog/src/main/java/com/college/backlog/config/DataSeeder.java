@@ -37,7 +37,8 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // created only when an explicit seed password is supplied; existing rows never overwritten
+        // created only when an explicit seed password is supplied; existing rows never overwritten,
+        // and the seeded password stands until its holder changes it (/api/auth/change-password)
         seedUser("principal", principalPassword, UserRole.PRINCIPAL);
         seedUser("admin", adminPassword, UserRole.ADMIN);
 
@@ -62,35 +63,22 @@ public class DataSeeder implements CommandLineRunner {
             user.setUsername(username);
             user.setPassword(passwordEncoder.encode(password));
             user.setRole(role);
-            // force the seeded password to be replaced on first login
-            user.setMustChangePassword(true);
             userRepository.save(user);
             return;
         }
 
-        boolean dirty = false;
+        // row exists without a usable password: repair only from an explicit seed password
         if (user.getPassword() == null || user.getPassword().isBlank()) {
-            // row exists without a usable password: repair only from an explicit seed password
             if (!hasPassword) {
                 log.warn("Account '{}' has no usable password and no admin.password.{} is "
                         + "configured to repair it; leaving it untouched.",
                         username, role.name().toLowerCase());
-            } else {
-                user.setPassword(passwordEncoder.encode(password));
-                user.setMustChangePassword(true);
-                if (user.getRole() == null) {
-                    user.setRole(role);
-                }
-                dirty = true;
+                return;
             }
-        } else if (hasPassword && passwordEncoder.matches(password, user.getPassword())
-                && !user.isMustChangePassword()) {
-            // still on the seeded password — arm the forced change. Idempotent: once rotated it
-            // no longer matches the seed, so this never re-triggers.
-            user.setMustChangePassword(true);
-            dirty = true;
-        }
-        if (dirty) {
+            user.setPassword(passwordEncoder.encode(password));
+            if (user.getRole() == null) {
+                user.setRole(role);
+            }
             userRepository.save(user);
         }
     }

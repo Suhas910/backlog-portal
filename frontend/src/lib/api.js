@@ -93,14 +93,6 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || "";
-    // Forced password change: still authenticated, just restricted until a new password is set.
-    // Route to the change screen — clearing the session would strand them.
-    if (status === 403 && error.response?.data?.code === "PASSWORD_CHANGE_REQUIRED") {
-      if (!window.location.pathname.startsWith("/admin/change-password")) {
-        window.location.assign("/admin/change-password?forced=1");
-      }
-      return Promise.reject(error);
-    }
     // 401 = no valid session (the fixed 1h window lapsed, or the cookie is gone): sign out. The
     // server emits it via SecurityConfig's authenticationEntryPoint. 403 is deliberately NOT
     // handled here — it means "authenticated but denied", so the request rejects through and the

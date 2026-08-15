@@ -24,12 +24,11 @@ import java.util.Set;
 @Service
 public class EligibilityService {
 
-    /** Overload for a normal intake (entrySemester = 1). */
-    public Set<Integer> eligibleSemesters(int currentSemester) {
-        return eligibleSemesters(currentSemester, 1);
-    }
-
-    /** Semesters the student may register backlogs for, ascending. Empty if out of range. */
+    /**
+     * Semesters the student may register backlogs for, ascending. Empty if out of range.
+     * No one-arg overload — entry is never implicit, since defaulting it silently widens a lateral
+     * entrant's window to semesters they never studied here ({@code 1} for a normal intake).
+     */
     public Set<Integer> eligibleSemesters(int currentSemester, int entrySemester) {
         Set<Integer> eligible = new LinkedHashSet<>();
         if (currentSemester < 1 || currentSemester > 8) {

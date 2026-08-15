@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
+import { reportLoadError } from "../lib/loadError";
 
 function DepartmentsPage() {
   const navigate = useNavigate();
@@ -50,12 +51,13 @@ function DepartmentsPage() {
         setEmailEdits(
           res.data.reduce((acc, d) => ({ ...acc, [d.id]: d.contactEmail || "" }), {}),
         );
+        setLoading(false);
       })
+      // no .finally: on a 401 the spinner must stay up until the redirect lands
       .catch((err) => {
         console.error("Failed to load departments", err);
-        setError("Could not load departments.");
-      })
-      .finally(() => setLoading(false));
+        if (reportLoadError(err, setError, "Could not load departments.")) setLoading(false);
+      });
   };
 
   useEffect(() => {

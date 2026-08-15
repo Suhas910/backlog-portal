@@ -51,22 +51,24 @@ function StudentDashboardPage() {
       setProfile(meRes.data);
       setRegistrations(Array.isArray(regRes.data) ? regRes.data : []);
     } catch (err) {
-      // 401 signs out via the api.js interceptor. Everything else surfaces here — 403 included:
-      // it means "authenticated but denied", so the server's reason is shown in place rather than
-      // swallowed into a blank dashboard.
-      if (err.response?.status !== 401) {
-        setError(
-          err.response?.data?.message ||
-            "Unable to load your dashboard. Please refresh and try again.",
-        );
+      // 401 signs out via the api.js interceptor. Return WITHOUT clearing loading (so no `finally`
+      // here): an empty registrations list plus loading=false paints "You have no registrations
+      // yet" behind the redirect.
+      if (err.response?.status === 401) {
+        return;
       }
-    } finally {
-      setLoading(false);
+      // Everything else surfaces here — 403 included: it means "authenticated but denied", so the
+      // server's reason is shown in place rather than swallowed into a blank dashboard.
+      setError(
+        err.response?.data?.message ||
+          "Unable to load your dashboard. Please refresh and try again.",
+      );
     }
+    setLoading(false); // deliberately NOT a finally — the 401 above must leave loading set
   }, []);
 
   // NOTE: react-hooks/set-state-in-effect flags this (load setStates internally). Intended and
-  // correct — fetch-on-mount into an external system, state lands in the async body/finally.
+  // correct — fetch-on-mount into an external system, state lands in the async body.
   // A knowing lint error, deliberately not disabled.
   useEffect(() => {
     load();

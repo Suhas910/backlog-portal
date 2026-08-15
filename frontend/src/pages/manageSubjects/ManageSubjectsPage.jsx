@@ -3,6 +3,7 @@ import { ArrowLeft, BookOpen, Copy, PlusCircle } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandIdentity from "../../components/layout/BrandIdentity";
 import api from "../../lib/api";
+import { reportLoadError } from "../../lib/loadError";
 import ManageTab from "./ManageTab";
 import AddSubjectTab from "./AddSubjectTab";
 import CloneSubjectsTab from "./CloneSubjectsTab";
@@ -60,8 +61,12 @@ function ManageSubjectsPage() {
         setDepartments(res.data);
         setDeptError("");
       })
-      .catch(() =>
-        setDeptError("Could not load departments. Some filters may be unavailable — refresh to retry."),
+      .catch((err) =>
+        reportLoadError(
+          err,
+          setDeptError,
+          "Could not load departments. Some filters may be unavailable — refresh to retry.",
+        ),
       );
   }, [adminRole, navigate]);
 

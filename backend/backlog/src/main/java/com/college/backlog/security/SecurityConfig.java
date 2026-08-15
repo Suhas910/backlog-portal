@@ -36,7 +36,7 @@ public class SecurityConfig {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Autowired
-    private PasswordChangeEnforcementFilter passwordChangeEnforcementFilter;
+    private AccountExistenceFilter accountExistenceFilter;
 
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}")
     private String allowedOrigins;
@@ -80,7 +80,7 @@ public class SecurityConfig {
                             }
                         }))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(passwordChangeEnforcementFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(accountExistenceFilter, JwtAuthenticationFilter.class)
                 // forces the CsrfToken to render so CookieCsrfTokenRepository writes the cookie
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
                 .authorizeHttpRequests(auth -> auth

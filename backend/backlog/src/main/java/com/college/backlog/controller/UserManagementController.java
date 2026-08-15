@@ -7,7 +7,6 @@ import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.UserRepository;
-import com.college.backlog.security.TempPasswordGenerator;
 import com.college.backlog.service.CallerScope;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,8 +33,11 @@ import java.util.stream.Collectors;
  *   DEPT_OFFICE -> no access
  *   PROCTOR     -> no access
  *
- * Passwords are never returned. Create/reset issue a one-time temp password, shown once, and force
- * a change on next login. Self-service changes go through {@code POST /api/auth/change-password}.
+ * Passwords are never returned, and none needs to be: create and reset both install the same
+ * derived default, {@code username + "4321"}, which the manager can simply tell the holder. The
+ * username minimum of 4 ({@code CreateUserRequest}) keeps that default at or above the 8-character
+ * floor {@code ChangePasswordRequest} imposes on chosen passwords. Nothing forces a change — the
+ * holder changes it when they like via {@code POST /api/auth/change-password}.
  */
 @RestController
 @RequestMapping("/api/admin/users")
@@ -77,7 +79,8 @@ public class UserManagementController {
     public Map<String, String> createUser(@Valid @RequestBody CreateUserRequest req, Authentication auth) {
         User actor = callerScope.requireActor(auth);
 
-        String username = req.getUsername().trim();
+        // already trimmed by the DTO setter, so this is the same value @Size validated
+        String username = req.getUsername();
         UserRole role = UserRole.fromNullable(req.getRole());
 
         if (role == null) {
@@ -103,16 +106,14 @@ public class UserManagementController {
             }
         }
 
-        String tempPassword = TempPasswordGenerator.generate();
         User user = new User();
         user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(tempPassword));
+        user.setPassword(passwordEncoder.encode(defaultPasswordFor(username)));
         user.setRole(role);
         user.setDepartment(department);
-        user.setMustChangePassword(true);
         userRepository.save(user);
 
-        return tempPasswordResponse(user, tempPassword);
+        return accountResponse(user);
     }
 
     @PostMapping("/{username}/reset")
@@ -125,12 +126,10 @@ public class UserManagementController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Use Change Password to update your own account");
         }
 
-        String tempPassword = TempPasswordGenerator.generate();
-        target.setPassword(passwordEncoder.encode(tempPassword));
-        target.setMustChangePassword(true);
+        target.setPassword(passwordEncoder.encode(defaultPasswordFor(target.getUsername())));
         userRepository.save(target);
 
-        return tempPasswordResponse(target, tempPassword);
+        return accountResponse(target);
     }
 
     // 204 like every other delete here (subjects, departments, students, proctor assignments). The
@@ -197,11 +196,18 @@ public class UserManagementController {
         return actor.getDepartment() != null && actor.getDepartment().getId().equals(deptId);
     }
 
-    private Map<String, String> tempPasswordResponse(User user, String tempPassword) {
+    /** The password create and reset both install. Derived, not random, so it never has to be
+     *  transported or shown once — the manager already knows it from the username. */
+    static String defaultPasswordFor(String username) {
+        return username + "4321";
+    }
+
+    // No password here: it is derivable from the username, so there is nothing to reveal and
+    // nothing that becomes unrecoverable once this response is dismissed.
+    private Map<String, String> accountResponse(User user) {
         Map<String, String> resp = new HashMap<>();
         resp.put("username", user.getUsername());
         resp.put("role", user.getRole() != null ? user.getRole().name() : null);
-        resp.put("tempPassword", tempPassword);
         if (user.getDepartment() != null) {
             resp.put("departmentName", user.getDepartment().getDeptName());
         }

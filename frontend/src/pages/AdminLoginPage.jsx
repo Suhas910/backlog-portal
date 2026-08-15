@@ -140,12 +140,6 @@ function AdminLoginPage() {
           sessionStorage.removeItem("adminDepartmentId");
         }
 
-        // accounts on a temp password (new, reset, or seeded) must set their own first
-        if (res.data.mustChangePassword === "true") {
-          navigate("/admin/change-password?forced=1");
-          return;
-        }
-
         const redirectUrl = searchParams.get("redirect");
         if (redirectUrl) {
           navigate(redirectUrl);

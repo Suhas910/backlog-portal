@@ -106,7 +106,6 @@ public class AuthController {
         // httpOnly, so JS can't read `exp`: expiresIn lets the SPA derive an absolute expiry for its
         // sign-out timer + warning banner. NOT a refresh — sessions are fixed, non-renewable (JwtService).
         body2.put("expiresIn", String.valueOf(jwtService.secondsUntilExpiry(token)));
-        body2.put("mustChangePassword", String.valueOf(user.isMustChangePassword()));
         if (user.getDepartment() != null) {
             body2.put("departmentId", String.valueOf(user.getDepartment().getId()));
             body2.put("departmentName", user.getDepartment().getDeptName());
@@ -124,7 +123,8 @@ public class AuthController {
     }
 
     /** Self-service password change for any authenticated admin-type user; requires the current
-     *  password. Powers both the forced first-login change (mustChangePassword) and voluntary ones. */
+     *  password. The only way off the derived default issued by create/reset (username + "4321"),
+     *  so every admin role must be able to reach it — the dashboard header links it. */
     @PostMapping("/change-password")
     public Map<String, String> changePassword(@Valid @RequestBody ChangePasswordRequest req, Authentication auth) {
         User user = callerScope.requireActor(auth);
@@ -141,7 +141,6 @@ public class AuthController {
         }
 
         user.setPassword(passwordEncoder.encode(req.getNewPassword()));
-        user.setMustChangePassword(false);
         userRepository.save(user);
 
         Map<String, String> resp = new HashMap<>();

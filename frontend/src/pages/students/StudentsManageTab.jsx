@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api, { getAdminHeaders } from "../../lib/api";
+import { reportLoadError } from "../../lib/loadError";
 import { parseAcademicYear } from "../../lib/academicYear";
 import { SemesterTimeline } from "./SemesterTimeline";
 
@@ -599,13 +600,13 @@ function StudentSemesters({ rollNo }) {
     api
       .get(`/admin/progression/${rollNo}`, { headers: getAdminHeaders() })
       .then((res) => {
-        if (!ignore) setData(res.data);
+        if (ignore) return;
+        setData(res.data);
+        setBusy(false);
       })
+      // no .finally: on a 401 the spinner must stay up until the redirect lands
       .catch((err) => {
-        if (!ignore) setError(err.response?.data?.message || "Could not load semesters.");
-      })
-      .finally(() => {
-        if (!ignore) setBusy(false);
+        if (!ignore && reportLoadError(err, setError, "Could not load semesters.")) setBusy(false);
       });
     return () => {
       ignore = true;

@@ -9,13 +9,11 @@ public class UserResponse {
     private String role;
     private Long departmentId;
     private String departmentName;
-    private boolean mustChangePassword;
 
     public static UserResponse from(User user) {
         UserResponse r = new UserResponse();
         r.username = user.getUsername();
         r.role = user.getRole() != null ? user.getRole().name() : null;
-        r.mustChangePassword = user.isMustChangePassword();
         if (user.getDepartment() != null) {
             r.departmentId = user.getDepartment().getId();
             r.departmentName = user.getDepartment().getDeptName();
@@ -27,5 +25,4 @@ public class UserResponse {
     public String getRole() { return role; }
     public Long getDepartmentId() { return departmentId; }
     public String getDepartmentName() { return departmentName; }
-    public boolean isMustChangePassword() { return mustChangePassword; }
 }

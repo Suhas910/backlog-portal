@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   ArrowLeft,
-  Copy,
   KeyRound,
   LoaderCircle,
   Trash2,
@@ -13,6 +12,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
+import { reportLoadError } from "../lib/loadError";
 import { findOwnDepartment } from "../lib/session";
 
 // Roles each actor may create. The server enforces the same rules; this only shapes the UI.
@@ -43,6 +43,10 @@ function ManageUsersPage() {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // Separate from `error`, as AdminLoginPage does: a failed departments fetch is not a user action
+  // failing, it must survive the setError("") that starts every submit, and the two fetches
+  // resolving into one slot meant the second one silently won.
+  const [departmentsError, setDepartmentsError] = useState("");
 
   // Create form
   const [newUsername, setNewUsername] = useState("");
@@ -51,9 +55,8 @@ function ManageUsersPage() {
   const [creating, setCreating] = useState(false);
 
   // One-time temp-password reveal + pending action state
-  const [tempCredential, setTempCredential] = useState(null); // { username, tempPassword, label }
+  const [notice, setNotice] = useState(null); // { username, label }
   const [busyUser, setBusyUser] = useState(""); // username currently being reset/deleted
-  const [copied, setCopied] = useState(false);
 
   // Only ADMIN / PRINCIPAL / HOD may be here — the redirect below and the fetch guard share this.
   const canManageUsers = creatableRoles.length > 0;
@@ -68,11 +71,14 @@ function ManageUsersPage() {
     setLoading(true);
     api
       .get("/admin/users", { headers: getAdminHeaders() })
-      .then((res) => setUsers(res.data))
-      .catch((err) =>
-        setError(err.response?.data?.message || "Could not load users."),
-      )
-      .finally(() => setLoading(false));
+      .then((res) => {
+        setUsers(res.data);
+        setLoading(false);
+      })
+      // no .finally: on a 401 the spinner must stay up until the redirect lands
+      .catch((err) => {
+        if (reportLoadError(err, setError, "Could not load users.")) setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -87,8 +93,12 @@ function ManageUsersPage() {
     api
       .get("/departments")
       .then((res) => setDepartments(res.data))
-      .catch(() =>
-        setError("Could not load departments. Creating a department-scoped user may be unavailable."),
+      .catch((err) =>
+        reportLoadError(
+          err,
+          setDepartmentsError,
+          "Could not load departments. Creating a department-scoped user may be unavailable.",
+        ),
       );
   }, [loadUsers, canManageUsers]);
 
@@ -124,11 +134,7 @@ function ManageUsersPage() {
       const res = await api.post("/admin/users", payload, {
         headers: getAdminHeaders(),
       });
-      setTempCredential({
-        username: res.data.username,
-        tempPassword: res.data.tempPassword,
-        label: "Account created",
-      });
+      setNotice({ username: res.data.username, label: "Account created" });
       setNewUsername("");
       if (!deptLocked) setNewDeptId("");
       setNewRole(creatableRoles[0] || "");
@@ -149,11 +155,7 @@ function ManageUsersPage() {
         {},
         { headers: getAdminHeaders() },
       );
-      setTempCredential({
-        username: res.data.username,
-        tempPassword: res.data.tempPassword,
-        label: "Password reset",
-      });
+      setNotice({ username: res.data.username, label: "Password reset" });
       loadUsers();
     } catch (apiError) {
       setError(apiError.response?.data?.message || "Could not reset password.");
@@ -178,13 +180,6 @@ function ManageUsersPage() {
     } finally {
       setBusyUser("");
     }
-  };
-
-  const copyTemp = () => {
-    if (!tempCredential) return;
-    navigator.clipboard?.writeText(tempCredential.tempPassword);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
   };
 
   const inputClass =
@@ -232,6 +227,42 @@ function ManageUsersPage() {
             >
               {error}
             </p>
+          )}
+
+          {/* Its own banner: the create form below depends on this list, and folding it into
+              `error` let a user action's message overwrite it (or vice versa). */}
+          {departmentsError && (
+            <p
+              role="alert"
+              data-cy="users-departments-error"
+              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-ink"
+            >
+              {departmentsError}
+            </p>
+          )}
+
+          {/* No secret to transport: the password is derived from the username, so this states the
+              convention rather than revealing a value that can never be shown again. */}
+          {notice && (
+            <div
+              role="status"
+              className="flex items-start justify-between gap-3 rounded-xl border border-stroke bg-primary-tint px-4 py-3 text-sm text-ink"
+            >
+              <p>
+                <strong>{notice.label}.</strong> The password for{" "}
+                <strong>{notice.username}</strong> is{" "}
+                <code className="select-all font-mono">{notice.username}4321</code> — they can
+                change it any time from My Password.
+              </p>
+              <button
+                type="button"
+                onClick={() => setNotice(null)}
+                aria-label="Dismiss"
+                className="rounded-full p-1 text-ink-muted hover:bg-surface-muted"
+              >
+                <X size={16} />
+              </button>
+            </div>
           )}
 
           {/* Create user */}
@@ -336,8 +367,11 @@ function ManageUsersPage() {
                 users…
               </div>
             ) : users.length === 0 ? (
+              // "none exist" is only true if the fetch actually succeeded — with `error` set the
+              // list is unknown, and claiming an empty result beside the failure reads as a
+              // permissions verdict the server never gave.
               <p className="py-8 text-center text-sm text-ink-muted">
-                No users you can manage yet.
+                {error ? "Users could not be loaded." : "No users you can manage yet."}
               </p>
             ) : (
               <div className="overflow-x-auto">
@@ -347,7 +381,6 @@ function ManageUsersPage() {
                       <th className="py-2.5 pr-4 font-semibold">Username</th>
                       <th className="py-2.5 pr-4 font-semibold">Role</th>
                       <th className="py-2.5 pr-4 font-semibold">Department</th>
-                      <th className="py-2.5 pr-4 font-semibold">Status</th>
                       <th className="py-2.5 pr-4 text-right font-semibold">
                         Actions
                       </th>
@@ -371,17 +404,6 @@ function ManageUsersPage() {
                           </td>
                           <td className="py-3 pr-4 text-ink-muted">
                             {u.departmentName || "—"}
-                          </td>
-                          <td className="py-3 pr-4">
-                            {u.mustChangePassword ? (
-                              <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-                                Pending first login
-                              </span>
-                            ) : (
-                              <span className="inline-flex rounded-full bg-primary-tint px-2.5 py-1 text-xs font-medium text-primary-ink">
-                                Active
-                              </span>
-                            )}
                           </td>
                           <td className="py-3 pr-4">
                             <div className="flex items-center justify-end gap-2">
@@ -419,53 +441,6 @@ function ManageUsersPage() {
         </div>
       </div>
 
-      {/* One-time temp password modal */}
-      {tempCredential && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div
-            className="w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-secondary-ink">
-                {tempCredential.label}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setTempCredential(null)}
-                aria-label="Close"
-                className="rounded-full p-1 text-ink-muted hover:bg-surface-muted"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <p className="mb-4 text-sm text-ink">
-              Share this one-time password with{" "}
-              <strong>{tempCredential.username}</strong>. It is shown{" "}
-              <strong>only once</strong> and cannot be retrieved again. They'll
-              be asked to set their own password on first login.
-            </p>
-            <div className="flex items-center gap-2 rounded-xl border border-stroke bg-surface-muted px-3.5 py-3">
-              <code className="flex-1 select-all font-mono text-base tracking-wide text-ink">
-                {tempCredential.tempPassword}
-              </code>
-              <button
-                type="button"
-                onClick={copyTemp}
-                className="inline-flex items-center gap-1 rounded-lg bg-cta px-3 py-1.5 text-xs font-semibold text-cta-text"
-              >
-                <Copy size={13} /> {copied ? "Copied" : "Copy"}
-              </button>
-            </div>
-            <MagneticCta
-              onClick={() => setTempCredential(null)}
-              className="mt-5 w-full rounded-xl"
-              aria-label="Done"
-            >
-              Done
-            </MagneticCta>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

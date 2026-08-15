@@ -9,6 +9,7 @@ import {
   Download,
   History,
   IdCard,
+  KeyRound,
   LoaderCircle,
   LogOut,
   Search,
@@ -23,6 +24,7 @@ import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getAdminHeaders, logoutAdmin } from "../lib/api";
 import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
+import { reportLoadError } from "../lib/loadError";
 
 const PAGE_SIZE = 25;
 // 1..8 is the programme, matching Semesters.java on the server
@@ -114,6 +116,10 @@ function AdminPage() {
   // that found no ACTIVE cycle — that scope is a real answer, not an unknown one.
   const [cyclesStatus, setCyclesStatus] = useState("loading"); // "loading" | "loaded" | "error"
   const [cyclesError, setCyclesError] = useState("");
+  // Same one-value-two-meanings trap for the other two filter dropdowns: an empty list reads as
+  // "none are configured", so a failed fetch needs a slot of its own to say otherwise.
+  const [subjectsError, setSubjectsError] = useState("");
+  const [departmentsError, setDepartmentsError] = useState("");
 
   // The states above are the DRAFT being edited; the registrations fetch keys off appliedFilters,
   // so the table updates only on Apply, never mid-edit on a half-built combo.
@@ -186,11 +192,13 @@ function AdminPage() {
       .then((res) => {
         if (ignore) return;
         setAllSubjects(res.data);
+        setSubjectsError("");
       })
       .catch((err) => {
-        if (ignore || err.code === "ERR_CANCELED") return;
+        if (ignore) return;
         console.error("Failed to fetch subjects list for filter", err);
         setAllSubjects([]);
+        reportLoadError(err, setSubjectsError, "Could not load the subject list. Please refresh.");
       })
       .finally(() => {
         if (!ignore) setLoadingSubjects(false);
@@ -217,13 +225,16 @@ function AdminPage() {
     api
       .get("/admin/departments", { headers: getAdminHeaders(), signal: controller.signal })
       .then((res) => {
-        if (!ignore) setDepartments(Array.isArray(res.data) ? res.data : []);
+        if (ignore) return;
+        setDepartments(Array.isArray(res.data) ? res.data : []);
+        setDepartmentsError("");
       })
       .catch((err) => {
-        if (ignore || err.code === "ERR_CANCELED") return;
+        if (ignore) return;
         // an empty dropdown reads as "no departments exist" — say what actually happened
         console.error("Failed to fetch departments for filter", err);
         setDepartments([]);
+        reportLoadError(err, setDepartmentsError, "Could not load departments. Please refresh.");
       });
     return () => {
       ignore = true;
@@ -314,8 +325,7 @@ function AdminPage() {
         if (error.code === "ERR_CANCELED") return; // superseded request aborted
         console.error("Failed to fetch dashboard data:", error);
         // 401 is the api.js interceptor's job (it signs out); handling it here too would race that
-        // redirect — and on a forced password change it would fight the change-password redirect.
-        // Everything else, 403 included, is shown in place: a scope denial must not eject an admin
+        // redirect. Everything else, 403 included, is shown in place: a scope denial must not eject an admin
         // mid-task, and the server's reason is the actionable part.
         if (error.response?.status === 401) return;
         if (seq !== registrationsReqRef.current) return; // superseded
@@ -712,6 +722,14 @@ function AdminPage() {
                 <IdCard size={14} /> {adminRole === "PROCTOR" ? "My Students" : "Students"}
               </Link>
             )}
+            {/* ungated: accounts start on the derived default password, so every admin role needs
+                a way here — Manage Users only reaches ADMIN/PRINCIPAL/HOD */}
+            <Link
+              to="/admin/change-password"
+              className="inline-flex items-center gap-1 rounded-full border border-white/35 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
+            >
+              <KeyRound size={14} /> My Password
+            </Link>
             <ThemeToggle />
             <Link
               to="/"
@@ -789,6 +807,16 @@ function AdminPage() {
               data-cy="admin-cycles-error"
             >
               {cyclesError}
+            </p>
+          )}
+          {/* Amber, not red: the table still works, only this dropdown's options are unknown. */}
+          {(subjectsError || departmentsError) && (
+            <p
+              className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-ink"
+              role="alert"
+              data-cy="admin-filter-options-error"
+            >
+              {[subjectsError, departmentsError].filter(Boolean).join(" ")}
             </p>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

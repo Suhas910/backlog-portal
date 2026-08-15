@@ -2,16 +2,10 @@ import { useState, useCallback } from "react";
 import { Download, LoaderCircle, Search, UploadCloud } from "lucide-react";
 import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
+import BatchResultTable from "./BatchResultTable";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
-
-const STATUS_STYLES = {
-  CREATED: "text-primary-ink",
-  WOULD_CREATE: "text-primary-ink",
-  SKIPPED_EXISTS: "text-ink-muted",
-  ERROR: "text-red-600",
-};
 
 const HEADER = "USN,name,phone,dateOfBirth,currentSemester,entrySemester";
 const TEMPLATE =
@@ -37,40 +31,6 @@ function parseCsv(text) {
         entrySemester: entrySemester ? Number(entrySemester) : null,
       };
     });
-}
-
-function ResultTable({ result }) {
-  if (!result) return null;
-  return (
-    <div className="mt-4" data-cy="students-import-result">
-      <p className="mb-2 text-sm font-medium text-ink">
-        {result.dryRun ? "Preview" : "Imported"} — {result.created} created, {result.skipped} skipped,{" "}
-        {result.errors} error(s)
-      </p>
-      <div className="max-h-72 overflow-auto rounded-xl border border-stroke">
-        <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 bg-surface-muted text-xs uppercase tracking-[0.08em] text-ink-muted">
-            <tr>
-              <th className="px-3 py-2">USN</th>
-              <th className="px-3 py-2">Sem</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Detail</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.results.map((r, i) => (
-              <tr key={`${r.rollNo}-${i}`} className="border-t border-stroke">
-                <td className="px-3 py-2 font-mono text-xs">{r.rollNo}</td>
-                <td className="px-3 py-2">{r.semester ?? "—"}</td>
-                <td className={`px-3 py-2 font-semibold ${STATUS_STYLES[r.status] || ""}`}>{r.status}</td>
-                <td className="px-3 py-2 text-ink-muted">{r.message || ""}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 }
 
 // Bulk-import students from CSV. Presentational tab: per-row semesters fall back to the batch
@@ -213,7 +173,7 @@ function ImportStudentsTab() {
         </MagneticCta>
       </div>
 
-      <ResultTable result={result} />
+      <BatchResultTable result={result} verb="Imported" dataCy="students-import-result" />
     </section>
   );
 }

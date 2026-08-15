@@ -38,7 +38,7 @@ Every other outcome is an explicit refusal. Do not reintroduce a third meaning f
 rather than returning a sentinel, so the fail-closed contract is stated once and is unit-testable —
 private controller helpers are not, and this repo has no controller tests.
 
-**3. Revocation lives in exactly one place: `PasswordChangeEnforcementFilter`.** It 401s when an
+**3. Revocation lives in exactly one place: `AccountExistenceFilter`.** It 401s when an
 admin principal's `users` row no longer exists.
 
 **4. Enforcement is server-side on every admin endpoint.** UI gating is a convenience, never the
@@ -54,10 +54,28 @@ admits NULL (`NULL = ANY(...)` evaluates to NULL, not false), so a hand-edited r
 Without the explicit check, every `DEPT_ROLES.contains(role)` call NPEs — `Set.of()` rejects a null
 lookup — turning a broken account into a 500 at nine separate sites.
 
-**Why the revocation check sits in `PasswordChangeEnforcementFilter`.** It already loads that
-`users` row for the password gate, so the check costs no extra query; it is already admin-only; and
-it covers endpoints that never resolve a departmental scope at all (exam cycles, department CRUD),
-which a scope-resolver-only fix would have missed.
+**Why the revocation check sits in `AccountExistenceFilter`.** The filter was originally
+`PasswordChangeEnforcementFilter`, and the revocation check was added there because it already
+loaded that `users` row for the forced-password-change gate, so it cost no extra query. The forced
+change was removed on 2026-08-15 (see below) and the class renamed; the check stays because the
+other two reasons still hold — it is admin-only, and it covers endpoints that never resolve a
+departmental scope at all (exam cycles, department CRUD), which a scope-resolver-only fix would
+have missed. It is now the class's only job, and a `existsById` rather than a full load.
+
+**Forced password change, removed 2026-08-15.** Accounts were created and reset with a random
+one-time password (`TempPasswordGenerator`), shown once in the UI, with a `users.must_change_password`
+flag that this filter enforced with a 403 `PASSWORD_CHANGE_REQUIRED` on every endpoint but
+change-password. That is gone: V8 drops the column, and create/reset now install a derived default,
+`username + "4321"`. Owner's decision — the ceremony was judged excessive for a college portal whose
+managers hand out credentials in person. The cost is explicit and accepted: a staff account's
+password is derivable from its username, which is displayed in Manage Users, so the login endpoint
+will accept a first guess from anyone who knows the convention. `LoginThrottleService` throttles
+repeated *failures* and does nothing about that. What preserves a way out is that
+`POST /api/auth/change-password` stays, and the dashboard header links it for **all five roles** —
+Manage Users only reaches ADMIN/PRINCIPAL/HOD, so before this change DEPT_OFFICE and PROCTOR would
+have had no route to it at all. `CreateUserRequest` also gained `@Size(min = 4)` on the username
+(trimmed in the setter, since Jackson binds before validation) so the derived default always clears
+the 8-character floor `ChangePasswordRequest` puts on chosen passwords.
 
 **Never move this into `JwtAuthenticationFilter`.** That filter is shared with STUDENT tokens, and
 students are not rows in `users` — every student request would 401.
@@ -110,7 +128,7 @@ gates.
 
 ## Related
 
-- `CallerScope`, `ProctorScopeService`, `PasswordChangeEnforcementFilter`, `SecurityConfig`,
+- `CallerScope`, `ProctorScopeService`, `AccountExistenceFilter`, `SecurityConfig`,
   `RegistrationSpecification`, `frontend/src/lib/api.js`.
 - `docs/adr/student-authentication.md` — the student credential decision.
 - `docs/adr/persistence-fetching.md` — an entity-graph trap that made one scope **denial** 500
