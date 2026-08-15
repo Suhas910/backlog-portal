@@ -320,14 +320,24 @@ function RegistrationPage() {
                     key={`sel-${subject.id}`}
                     className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary-tint p-3 shadow-sm"
                   >
-                    <div>
-                      <p className="text-sm font-semibold text-ink sm:text-base">
+                    {/* min-w-0: flex items default to min-width:auto, so without it the 4-fact meta
+                        line overflowed the card and squeezed Remove on mobile. */}
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-semibold text-ink sm:text-base">
                         {subject.subjectName}
                       </p>
-                      <p className="text-xs text-ink sm:text-sm">
+                      {/* nowrap per fact: only the • separators are break points, so "Sem 1" and
+                          "4 credits" never split across lines. */}
+                      <p className="break-words text-xs text-ink sm:text-sm">
                         <span className="font-mono">{subject.courseCode}</span> •{" "}
-                        {subject.department?.deptName} • Sem {subject.semester || searchSemester} •{" "}
-                        {subject.credits} {subject.credits === 1 ? "credit" : "credits"}
+                        {subject.department?.deptName} •{" "}
+                        <span className="whitespace-nowrap">
+                          Sem {subject.semester || searchSemester}
+                        </span>{" "}
+                        •{" "}
+                        <span className="whitespace-nowrap">
+                          {subject.credits} {subject.credits === 1 ? "credit" : "credits"}
+                        </span>
                       </p>
                     </div>
                     <button
@@ -435,19 +445,25 @@ function RegistrationPage() {
                           onChange={() => handleSubjectToggle(subject)}
                           className="h-4 w-4 accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                         />
+                        {/* Stacks under sm; shrink-0/right-align/truncate are sm+ only. Horizontal,
+                            the meta's shrink-0 claimed the long deptName's width and the name, the
+                            only shrinkable child, truncated to ~2 chars at 375px. */}
                         <label
                           htmlFor={`subject-${subject.id}`}
-                          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-3 text-sm text-ink sm:text-base"
+                          className="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-1 text-sm text-ink sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:text-base"
                         >
-                          <span className="flex min-w-0 flex-col">
-                            <span className="truncate">{subject.subjectName}</span>
+                          <span className="flex min-w-0 max-w-full flex-col">
+                            <span className="break-words sm:truncate">{subject.subjectName}</span>
                             <span className="font-mono text-xs text-ink-muted">
                               {subject.courseCode}
                             </span>
                           </span>
-                          <span className="shrink-0 text-right text-xs text-ink sm:text-sm">
-                            {subject.department?.deptName}
-                            <span className="block text-ink-muted">
+                          {/* flex-wrap + nowrap credits: breaks land between the two facts, never
+                              inside "N credits". sm:block restores the stacked right-aligned pair. */}
+                          <span className="flex min-w-0 max-w-full flex-wrap items-baseline gap-x-1.5 text-left text-xs text-ink sm:block sm:shrink-0 sm:text-right sm:text-sm">
+                            <span className="break-words">{subject.department?.deptName}</span>
+                            <span className="whitespace-nowrap text-ink-muted sm:block">
+                              <span className="sm:hidden">· </span>
                               {subject.credits} {subject.credits === 1 ? "credit" : "credits"}
                             </span>
                           </span>
