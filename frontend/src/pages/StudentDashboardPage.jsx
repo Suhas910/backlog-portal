@@ -19,7 +19,7 @@ import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
 
 function statusBadgeClass(status) {
   if (status === "VERIFIED")
-    return "border-primary/30 bg-[rgba(145,25,28,0.08)] text-primary-ink";
+    return "border-primary/30 bg-primary-tint text-primary-ink";
   if (status === "REJECTED") return "border-red-200 bg-red-50 text-red-600";
   return "border-stroke bg-surface-muted text-ink";
 }

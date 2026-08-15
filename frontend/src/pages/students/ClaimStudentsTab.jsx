@@ -416,7 +416,7 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
                             <td className="px-4 py-2.5">{s.currentSemester}</td>
                             <td className="px-4 py-2.5">
                               {s.mine ? (
-                                <span className="rounded-full bg-[rgba(145,25,28,0.08)] px-2.5 py-0.5 text-xs font-semibold text-primary-ink">
+                                <span className="rounded-full bg-primary-tint px-2.5 py-0.5 text-xs font-semibold text-primary-ink">
                                   {isProctor ? "Yours" : "This proctor's"}
                                 </span>
                               ) : s.proctored ? (

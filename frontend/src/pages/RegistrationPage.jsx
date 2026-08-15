@@ -314,7 +314,7 @@ function RegistrationPage() {
                 {selectedSubjects.map((subject) => (
                   <div
                     key={`sel-${subject.id}`}
-                    className="flex items-center justify-between rounded-xl border border-primary/30 bg-[rgba(145,25,28,0.08)] p-3 shadow-sm"
+                    className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary-tint p-3 shadow-sm"
                   >
                     <div>
                       <p className="text-sm font-semibold text-ink sm:text-base">
@@ -419,7 +419,7 @@ function RegistrationPage() {
                       key={subject.id}
                       className={`rounded-xl border p-3 transition-transform duration-200 motion-safe:hover:translate-y-[-2px] ${
                         isSelected
-                          ? "border-primary/45 bg-[rgba(145,25,28,0.08)] opacity-60"
+                          ? "border-primary/45 bg-primary-tint opacity-60"
                           : "border-stroke bg-surface-muted"
                       }`}
                     >

@@ -135,7 +135,7 @@ function StudentsPage() {
                 data-cy={`tab-${t.key}`}
                 className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
                   on
-                    ? "border-primary bg-[rgba(145,25,28,0.08)] text-primary-ink"
+                    ? "border-primary bg-primary-tint text-primary-ink"
                     : "border-stroke bg-surface-muted text-ink hover:border-primary"
                 }`}
               >

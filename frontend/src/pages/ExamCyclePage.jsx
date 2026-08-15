@@ -187,7 +187,7 @@ function ExamCyclePage() {
                     <p className="font-semibold text-ink">
                       {c.name}
                       {c.active && (
-                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-[rgba(145,25,28,0.1)] px-2.5 py-0.5 text-[11px] font-semibold text-primary-ink">
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-primary-tint px-2.5 py-0.5 text-[11px] font-semibold text-primary-ink">
                           <CheckCircle2 size={12} /> Active
                         </span>
                       )}

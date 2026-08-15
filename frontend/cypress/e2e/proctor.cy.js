@@ -25,6 +25,18 @@ describe("Proctor role", () => {
     mine,
   });
 
+  // A proctor has no users to manage, so /admin/users redirects. It used to fire the fetch anyway
+  // in the same commit, so a guaranteed 403 and its red banner flashed before the redirect landed.
+  it("redirects a proctor off /admin/users without firing a doomed request", () => {
+    stubDepartments();
+    cy.intercept("GET", "/api/admin/users", { statusCode: 403, body: {} }).as("getUsers");
+
+    cy.visit("/admin/users", { onBeforeLoad: seedProctor });
+
+    cy.location("pathname").should("eq", "/admin");
+    cy.get("@getUsers.all").should("have.length", 0);
+  });
+
   it("shows the proctor tabs and the trimmed dashboard nav", () => {
     stubDepartments();
     cy.intercept("GET", "/api/admin/registrations*", {

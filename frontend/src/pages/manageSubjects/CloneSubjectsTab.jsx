@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import {
   CheckCircle2,
   Copy,
@@ -24,11 +24,12 @@ const STATUS_STYLES = {
   ERROR: "text-red-600",
 };
 
-let rowKeySeq = 0;
-
 // Clone a department's subjects into the next academic year. Presentational tab: the shell
 // supplies departments and the dept-lock context.
 function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDeptId }) {
+  // Per-instance, not module scope: a shared counter outlives every mount and only ever grows.
+  // Its sole job is a stable React key for rows that have no id until they are created.
+  const rowKeySeq = useRef(0);
   const [deptId, setDeptId] = useState("");
   const [sourceYear, setSourceYear] = useState("");
   const [targetYear, setTargetYear] = useState("");
@@ -73,7 +74,7 @@ function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDept
       );
       const previewed = (res.data?.rows || []).map((r) => ({
         ...r,
-        _key: ++rowKeySeq,
+        _key: ++rowKeySeq.current,
         removed: false,
       }));
       setRows(previewed);
@@ -93,8 +94,14 @@ function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDept
 
   // ERROR rows are excluded too: they cannot be created (e.g. a course code with no year prefix),
   // so submitting them would just produce guaranteed per-row failures on apply.
-  const applicableRows = (rows || []).filter(
-    (r) => !r.removed && r.status !== "WOULD_SKIP" && r.status !== "ERROR",
+  // Memoised on `rows`: rebuilding this array every render gave runApply's useCallback a new
+  // dependency each time, so the memoisation below was doing nothing.
+  const applicableRows = useMemo(
+    () =>
+      (rows || []).filter(
+        (r) => !r.removed && r.status !== "WOULD_SKIP" && r.status !== "ERROR",
+      ),
+    [rows],
   );
 
   const runApply = useCallback(async () => {
@@ -220,7 +227,7 @@ function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDept
                   data-cy={`clone-sem-${s}`}
                   className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition-colors ${
                     on
-                      ? "border-primary bg-[rgba(145,25,28,0.08)] text-primary-ink"
+                      ? "border-primary bg-primary-tint text-primary-ink"
                       : "border-stroke bg-surface-muted text-ink"
                   }`}
                 >
@@ -275,6 +282,7 @@ function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDept
                     <th className="px-3 py-2">Course code</th>
                     <th className="px-3 py-2">Credits</th>
                     <th className="px-3 py-2">Status</th>
+                    <th className="px-3 py-2">Detail</th>
                     <th className="px-3 py-2"></th>
                   </tr>
                 </thead>
@@ -315,6 +323,12 @@ function CloneSubjectsTab({ departments, adminDepartment, deptLocked, pinnedDept
                       </td>
                       <td className={`px-3 py-2 font-semibold ${STATUS_STYLES[r.status] || ""}`}>
                         {r.status === "WOULD_SKIP" ? "Exists" : r.status === "ERROR" ? "Error" : "New"}
+                      </td>
+                      {/* The server's per-row reason. Without this an ERROR row read just "Error",
+                          so a subject that silently failed to clone into the new year gave the
+                          admin nothing to act on. Same Detail column as ImportStudentsTab. */}
+                      <td className="px-3 py-2 text-ink-muted" data-cy={`clone-row-detail-${r.semester}`}>
+                        {r.message || ""}
                       </td>
                       <td className="px-3 py-2">
                         <button

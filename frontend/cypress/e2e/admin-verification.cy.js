@@ -33,6 +33,97 @@ describe("Admin verification flow", () => {
     cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
   };
 
+  const seedAdmin = (win) => {
+    win.sessionStorage.setItem("adminRole", "ADMIN");
+    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
+    win.sessionStorage.setItem("adminUsername", "admin");
+  };
+
+  // A failed counts fetch used to leave the initial zeros on screen: four confident zeros above a
+  // table full of rows, reading as "the queue is empty".
+  it("shows a dash, not zero, when the totals fail to load", () => {
+    cy.intercept("GET", "/api/admin/registrations*", { statusCode: 200, body: pageOf([row()]) });
+    cy.intercept("GET", "/api/admin/registrations/summary-counts*", {
+      statusCode: 500,
+      body: { message: "Counts backend is down." },
+    }).as("counts");
+    stubSideCalls();
+
+    cy.visit("/admin", { onBeforeLoad: seedAdmin });
+    cy.wait("@counts");
+
+    cy.get('[data-cy="admin-counts-error"]').should("contain", "Counts backend is down.");
+    cy.contains("Total").parent().should("contain", "—").and("not.contain", "0");
+    // the table itself is unaffected
+    cy.contains("1MS22CS001").should("be.visible");
+  });
+
+  // A failed exam-cycle fetch left examCycleId empty, which the export read as "every cycle".
+  it("refuses to export when the cycle list failed and warns the list is unscoped", () => {
+    cy.intercept("GET", "/api/admin/registrations*", { statusCode: 200, body: pageOf([row()]) });
+    stubCounts();
+    // stubSideCalls first, then override exam-cycles — Cypress resolves intercepts most-recent-first
+    stubSideCalls();
+    cy.intercept("GET", "/api/admin/exam-cycles*", {
+      statusCode: 500,
+      body: { message: "Cycle service unavailable." },
+    }).as("cycles");
+    cy.intercept("POST", "/api/admin/export-pdf", { statusCode: 200, body: {} }).as("export");
+
+    cy.visit("/admin", { onBeforeLoad: seedAdmin });
+    cy.wait("@cycles");
+
+    cy.get('[data-cy="admin-cycles-error"]').should("contain", "Cycle service unavailable.");
+    cy.get('[data-cy="admin-scope-warning"]').should("be.visible");
+
+    cy.get('[data-cy="admin-export-pdf"]').click();
+    cy.get('[data-cy="admin-export-error"]').should("contain", "scope is unknown");
+    // the crucial part: no unscoped PDF was ever requested
+    cy.get("@export.all").should("have.length", 0);
+  });
+
+  // Regression guard: the warning is driven by a THREE-state cycles status, not a boolean. With a
+  // boolean it was true from first paint, so this banner claimed "the cycle list failed to load"
+  // on every single admin page load while the request was still in flight.
+  it("never shows the unscoped warning when the cycles load fine", () => {
+    cy.intercept("GET", "/api/admin/registrations*", { statusCode: 200, body: pageOf([row()]) });
+    stubCounts();
+    stubSideCalls(); // exam-cycles returns 200 with []
+    cy.intercept("POST", "/api/admin/export-pdf", {
+      statusCode: 200,
+      headers: { "content-type": "application/pdf" },
+      body: "%PDF-1.4",
+    }).as("export");
+
+    cy.visit("/admin", { onBeforeLoad: seedAdmin });
+    cy.contains("1MS22CS001").should("be.visible");
+    cy.get('[data-cy="admin-scope-warning"]').should("not.exist");
+    cy.get('[data-cy="admin-cycles-error"]').should("not.exist");
+
+    // an empty-but-LOADED cycle list is a real "all cycles" answer, so export still works
+    cy.get('[data-cy="admin-export-pdf"]').click();
+    cy.wait("@export").its("request.body.allCycles").should("eq", true);
+  });
+
+  // Ticked rows name their own regIds, so they stay exportable even with the cycle list down.
+  it("still exports ticked rows when the cycle list failed", () => {
+    cy.intercept("GET", "/api/admin/registrations*", { statusCode: 200, body: pageOf([row()]) });
+    stubCounts();
+    stubSideCalls();
+    cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 500, body: {} });
+    cy.intercept("POST", "/api/admin/export-pdf", {
+      statusCode: 200,
+      headers: { "content-type": "application/pdf" },
+      body: "%PDF-1.4",
+    }).as("export");
+
+    cy.visit("/admin", { onBeforeLoad: seedAdmin });
+    cy.get('[data-cy="admin-select-REG-2026-1001"]').check();
+    cy.get('[data-cy="admin-export-pdf"]').click();
+
+    cy.wait("@export").its("request.body").should("deep.equal", { regIds: ["REG-2026-1001"] });
+  });
+
   it("logs in as admin and verifies pending registration", () => {
     cy.intercept("POST", "/api/auth/login", {
       statusCode: 200,

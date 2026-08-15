@@ -85,6 +85,53 @@ describe("Clone Subjects tab", () => {
     cy.get('[data-cy="clone-result"]').should("contain", "1 created");
   });
 
+  // The server explains per-row why a clone was skipped or failed. That reason used to be stored
+  // and never rendered, so a failed row read only "Error" and the subject silently went missing
+  // from the new year's catalogue.
+  it("shows the server's per-row reason in the Detail column", () => {
+    cy.intercept("POST", "/api/admin/subjects/clone/preview", {
+      statusCode: 200,
+      body: {
+        sourceYear: 2024,
+        targetYear: 2025,
+        deptId: 1,
+        rows: [
+          { subjectName: "Data Structures", courseCode: "25CSL44", semester: 4, credits: 4, subjectType: "REGULAR", eligibleDeptIds: [], status: "WOULD_CREATE", message: null },
+          { subjectName: "Compiler Design", courseCode: "25CSL61", semester: 6, credits: 3, subjectType: "REGULAR", eligibleDeptIds: [], status: "WOULD_SKIP", message: "Already exists for the target year" },
+        ],
+      },
+    }).as("preview");
+
+    cy.intercept("POST", "/api/admin/subjects/clone/apply", {
+      statusCode: 200,
+      body: {
+        created: 0,
+        skipped: 0,
+        errors: 1,
+        rows: [{ courseCode: "25CSL44", semester: 4, status: "ERROR", message: "Semester must be between 1 and 8." }],
+      },
+    }).as("apply");
+
+    visit();
+    cy.wait("@getDepartments");
+
+    cy.get('[data-cy="clone-dept"]').select("1");
+    cy.get('[data-cy="clone-source-year"]').type("2024-25");
+    cy.get('[data-cy="clone-target-year"]').type("2025-26");
+    cy.get('[data-cy="clone-preview"]').click();
+    cy.wait("@preview");
+
+    // a skip reason is visible straight from the preview
+    cy.get('[data-cy="clone-row-detail-6"]').should("contain", "Already exists for the target year");
+
+    cy.get('[data-cy="clone-apply"]').click();
+    cy.wait("@apply");
+
+    // the failure reason reaches the admin instead of a bare "Error"
+    cy.get('[data-cy="clone-row-detail-4"]').should("contain", "Semester must be between 1 and 8.");
+    cy.get('[data-cy="clone-result"]').should("contain", "1 error(s)");
+  });
+
   it("narrows to odd semesters via the shortcut", () => {
     cy.intercept("POST", "/api/admin/subjects/clone/preview", {
       statusCode: 200,

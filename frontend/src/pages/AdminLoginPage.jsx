@@ -17,6 +17,36 @@ import { rememberExpiry } from "../lib/session";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
 
+// The five designation cards. Titles are load-bearing: several Cypress specs select a card by its
+// exact text, and `role` is what the login request sends.
+const ROLES = [
+  { role: "ADMIN", title: "Administrator", blurb: "Full system access", Icon: ShieldCheck },
+  {
+    role: "PRINCIPAL",
+    title: "Principal / Registrar / COE",
+    blurb: "High-level overview and final approvals",
+    Icon: GraduationCap,
+  },
+  {
+    role: "HOD",
+    title: "Head of Department (HOD)",
+    blurb: "Department level verification and tracking",
+    Icon: Briefcase,
+  },
+  {
+    role: "DEPT_OFFICE",
+    title: "Department Office",
+    blurb: "Manage physical form submissions",
+    Icon: Building2,
+  },
+  {
+    role: "PROCTOR",
+    title: "Proctor",
+    blurb: "Supervise and manage your assigned students",
+    Icon: UserCheck,
+  },
+];
+
 function AdminLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -177,91 +207,25 @@ function AdminLoginPage() {
 
         {step === 1 ? (
           <div className="flex flex-col gap-4">
-            <button
-              onClick={() => handleRoleSelect("Administrator", "ADMIN")}
-              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
-                <ShieldCheck size={24} />
-              </div>
-              <div>
-                <h3 className="admin-login-heading font-semibold text-secondary-ink">
-                  Administrator
-                </h3>
-                <p className="mt-0.5 text-xs text-ink">
-                  Full system access
-                </p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => handleRoleSelect("Principal / Registrar / COE", "PRINCIPAL")}
-              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
-                <GraduationCap size={24} />
-              </div>
-              <div>
-                <h3 className="admin-login-heading font-semibold text-secondary-ink">
-                  Principal / Registrar / COE
-                </h3>
-                <p className="mt-0.5 text-xs text-ink">
-                  High-level overview and final approvals
-                </p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => handleRoleSelect("Head of Department (HOD)", "HOD")}
-              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
-                <Briefcase size={24} />
-              </div>
-              <div>
-                <h3 className="admin-login-heading font-semibold text-secondary-ink">
-                  Head of Department (HOD)
-                </h3>
-                <p className="mt-0.5 text-xs text-ink">
-                  Department level verification and tracking
-                </p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => handleRoleSelect("Department Office", "DEPT_OFFICE")}
-              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
-                <Building2 size={24} />
-              </div>
-              <div>
-                <h3 className="admin-login-heading font-semibold text-secondary-ink">
-                  Department Office
-                </h3>
-                <p className="mt-0.5 text-xs text-ink">
-                  Manage physical form submissions
-                </p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => handleRoleSelect("Proctor", "PROCTOR")}
-              className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-[rgba(145,25,28,0.05)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-              data-cy="role-proctor"
-            >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
-                <UserCheck size={24} />
-              </div>
-              <div>
-                <h3 className="admin-login-heading font-semibold text-secondary-ink">
-                  Proctor
-                </h3>
-                <p className="mt-0.5 text-xs text-ink">
-                  Supervise and manage your assigned students
-                </p>
-              </div>
-            </button>
+            {/* `card.Icon`, not a destructured `Icon`: eslint-plugin-react is not enabled, so JSX
+                use of a destructured PARAM isn't seen as a use and no-unused-vars fires (the
+                config's varsIgnorePattern covers vars, not args). */}
+            {ROLES.map((card) => (
+              <button
+                key={card.role}
+                onClick={() => handleRoleSelect(card.title, card.role)}
+                data-cy={`role-${card.role.toLowerCase().replace("_", "-")}`}
+                className="flex items-center gap-4 rounded-2xl border border-stroke bg-surface-muted p-4 text-left transition-all duration-200 hover:border-primary hover:bg-primary-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-surface-1 text-primary-ink shadow-sm">
+                  <card.Icon size={24} />
+                </div>
+                <div>
+                  <h3 className="admin-login-heading font-semibold text-secondary-ink">{card.title}</h3>
+                  <p className="mt-0.5 text-xs text-ink">{card.blurb}</p>
+                </div>
+              </button>
+            ))}
           </div>
         ) : (
           <div className="space-y-4">

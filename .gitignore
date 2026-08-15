@@ -31,3 +31,8 @@ frontend/.env
 
 # Environment — NEVER push this
 backend/backlog/src/main/resources/application.properties
+
+# Cypress run artifacts
+frontend/cypress/downloads/
+frontend/cypress/screenshots/
+frontend/cypress/videos/

@@ -55,12 +55,14 @@ function ManageUsersPage() {
   const [busyUser, setBusyUser] = useState(""); // username currently being reset/deleted
   const [copied, setCopied] = useState(false);
 
-  // Only ADMIN / PRINCIPAL / HOD may be here.
+  // Only ADMIN / PRINCIPAL / HOD may be here — the redirect below and the fetch guard share this.
+  const canManageUsers = creatableRoles.length > 0;
+
   useEffect(() => {
-    if (!creatableRoles.length) {
+    if (!canManageUsers) {
       navigate("/admin");
     }
-  }, [creatableRoles.length, navigate]);
+  }, [canManageUsers, navigate]);
 
   const loadUsers = useCallback(() => {
     setLoading(true);
@@ -74,6 +76,10 @@ function ManageUsersPage() {
   }, []);
 
   useEffect(() => {
+    // Roles with nothing to manage are redirected by the effect above, which commits in the same
+    // pass — fetching regardless fired a guaranteed 403 and flashed its error banner before the
+    // redirect landed. Guarded inside the effect, as DepartmentsPage/ExamCyclePage do.
+    if (!canManageUsers) return;
     // NOTE: react-hooks/set-state-in-effect flags this (loadUsers setStates internally).
     // Intended and correct — fetch-on-mount into an external system, state lands in the async
     // .then/.finally. A knowing lint error, deliberately not disabled.
@@ -84,7 +90,7 @@ function ManageUsersPage() {
       .catch(() =>
         setError("Could not load departments. Creating a department-scoped user may be unavailable."),
       );
-  }, [loadUsers]);
+  }, [loadUsers, canManageUsers]);
 
   // pin the department to the HOD's own once departments load
   // NOTE: react-hooks/set-state-in-effect flags the setNewDeptId below. Intended and correct —
@@ -372,7 +378,7 @@ function ManageUsersPage() {
                                 Pending first login
                               </span>
                             ) : (
-                              <span className="inline-flex rounded-full bg-[rgba(145,25,28,0.08)] px-2.5 py-1 text-xs font-medium text-primary-ink">
+                              <span className="inline-flex rounded-full bg-primary-tint px-2.5 py-1 text-xs font-medium text-primary-ink">
                                 Active
                               </span>
                             )}

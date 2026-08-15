@@ -90,6 +90,16 @@
      navy on the light fill (dark). Resolves correctly in both themes with no override. */
   --color-cta-text: var(--color-surface-1);
 
+  /* The brand accent at low alpha, for "selected"/"active" fills — chosen chips, the active tab,
+     a ticked subject card, a status pill. Added 2026-08-15 to replace 18 hardcoded
+     `bg-[rgba(145,25,28,0.0x)]` values across 11 files: being raw rgba, NO [data-theme="dark"] rule
+     could reach them, so every one painted the LIGHT maroon wash onto the dark navy page. Four
+     near-identical alphas (0.05/0.06/0.08/0.1) collapsed to this one — the differences were not
+     perceptible and a token that comes in four strengths is not a token. The dark value follows
+     --hero-badge-open-bg, which already solved this exact tint: the salmon, slightly stronger, so
+     it reads at all against the dark surface. */
+  --color-primary-tint: rgba(145, 25, 28, 0.08);
+
   --color-surface-1: #ffffff;
   --color-surface-muted: #f5f5f5;
   /* "ink" = a color whose purpose is text. --color-ink is the default body text, --color-ink-muted
@@ -167,6 +177,9 @@
   --text-on-dark-primary: #f0888b;
   --color-primary-ink: var(--text-on-dark-primary);
   --color-secondary-ink: var(--text-on-dark-secondary);
+  /* Salmon, not maroon: the maroon tint is invisible against the dark navy page. Matches
+     --hero-badge-open-bg's dark value. */
+  --color-primary-tint: rgba(240, 136, 139, 0.15);
 
   /* CTA goes LIGHTER here so the button reads as a shape against the dark navy page (7.00 vs the
      3.0 floor); --color-cta-text follows --color-surface-1 and lands on dark navy, so the label flips

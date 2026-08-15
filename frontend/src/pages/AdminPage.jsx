@@ -22,11 +22,20 @@ import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getAdminHeaders, logoutAdmin } from "../lib/api";
-import { readBlobErrorMessage } from "../lib/downloadPdf";
+import { savePdfBlob, readBlobErrorMessage } from "../lib/downloadPdf";
 
 const PAGE_SIZE = 25;
 // 1..8 is the programme, matching Semesters.java on the server
 const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+
+/** VERIFIED / REJECTED / anything-else pill classes, shared by the table rows and the history
+ *  modal. Only the neutral fallback differs — a row sits on the card, an event on a muted panel —
+ *  so the caller passes it rather than the two copies drifting apart. */
+function outcomeBadgeClass(outcome, neutralBg) {
+  if (outcome === "VERIFIED") return "bg-primary-tint text-primary-ink";
+  if (outcome === "REJECTED") return "bg-red-50 text-red-600";
+  return `${neutralBg} text-secondary-ink`;
+}
 
 /** The subject dropdown's single value split into the two params the API takes. */
 function splitSubjectToken(token) {
@@ -60,6 +69,11 @@ function AdminPage() {
   // stat-card counts come from the server (summary-counts), so they span the whole filtered set,
   // not just the loaded page
   const [counts, setCounts] = useState({ total: 0, submitted: 0, verified: 0, rejected: 0 });
+  // Set when the counts fetch fails. The cards then read "—" rather than the initial zeros, which
+  // rendered as four confident zeros above a table full of rows — "the queue is empty" is the one
+  // claim these cards must never make on their own failure. On a post-action refetch failure the
+  // stale pre-action numbers are just as wrong, so both paths go through this.
+  const [countsError, setCountsError] = useState("");
   const [verifyingRegId, setVerifyingRegId] = useState("");
   const [rejectingRegId, setRejectingRegId] = useState("");
   // two-step arm→confirm for rejecting an already-VERIFIED registration
@@ -90,6 +104,16 @@ function AdminPage() {
   const [searchInput, setSearchInput] = useState("");
   const [examCycles, setExamCycles] = useState([]);
   const [cycleFilter, setCycleFilter] = useState("");
+  // Splits the two meanings an empty `examCycleId` used to carry: "the user chose All Cycles" and
+  // "we never learned what the cycles are". Without the split a failed fetch silently listed every
+  // cycle including closed ones, and the PDF export followed it via allCycles — the same
+  // one-value-two-meanings shape as the 2026-08-11 auth fail-open.
+  // THREE states, not a boolean: pending must be distinguishable from failed, or the "cycles failed
+  // to load" banner renders on every page load while the request is still in flight, and a banner
+  // that cries wolf every time is ignored on the day it's true. "loaded" covers a successful fetch
+  // that found no ACTIVE cycle — that scope is a real answer, not an unknown one.
+  const [cyclesStatus, setCyclesStatus] = useState("loading"); // "loading" | "loaded" | "error"
+  const [cyclesError, setCyclesError] = useState("");
 
   // The states above are the DRAFT being edited; the registrations fetch keys off appliedFilters,
   // so the table updates only on Apply, never mid-edit on a half-built combo.
@@ -111,7 +135,16 @@ function AdminPage() {
   // regId the in-flight events request belongs to, so a superseded response can't clear the
   // spinner or post an error over a row the admin has since switched to.
   const historyReqRef = useRef("");
+  // Focus bookkeeping for the modal: the close button to move focus INTO the dialog, and the
+  // element that opened it so focus returns there rather than to the top of the document.
+  const historyCloseRef = useRef(null);
+  const historyTriggerRef = useRef(null);
   const historyEvents = historyCache[historyRegId] || [];
+
+  const closeHistory = () => {
+    setHistoryRegId("");
+    historyTriggerRef.current?.focus(); // back to the History button that opened it
+  };
 
   // Monotonic counter shared by every registrations fetch (the filter effect and the imperative
   // post-action resync). Each call captures the next value and applies its response only if still
@@ -207,6 +240,8 @@ function AdminPage() {
       .then((res) => {
         if (ignore) return;
         setExamCycles(res.data);
+        setCyclesStatus("loaded");
+        setCyclesError("");
         // default to the active cycle so the list and PDF export both scope to it;
         // "All Cycles" stays an explicit opt-in
         const active = Array.isArray(res.data) ? res.data.find((c) => c.active) : null;
@@ -220,6 +255,12 @@ function AdminPage() {
         if (ignore || err.code === "ERR_CANCELED") return;
         console.error("Failed to fetch exam cycles", err);
         setExamCycles([]);
+        if (err.response?.status === 401) return; // the interceptor is signing out
+        // "error", never "loaded": the scope is unknown, not "all cycles"
+        setCyclesStatus("error");
+        setCyclesError(
+          err.response?.data?.message || "Could not load exam cycles. Please refresh.",
+        );
       });
     return () => {
       ignore = true;
@@ -298,10 +339,17 @@ function AdminPage() {
         headers: getAdminHeaders(),
         signal: controller.signal,
       })
-      .then((res) => setCounts(res.data))
+      .then((res) => {
+        setCountsError("");
+        setCounts(res.data);
+      })
       .catch((err) => {
         if (err.code === "ERR_CANCELED") return; // superseded request aborted
         console.error("Failed to fetch summary counts", err);
+        if (err.response?.status === 401) return; // the interceptor is signing out
+        setCountsError(
+          err.response?.data?.message || "Could not load the totals. Please refresh.",
+        );
       });
   }, [isAdmin, adminToken, appendFilterParams]);
 
@@ -312,6 +360,18 @@ function AdminPage() {
   useEffect(() => {
     fetchCounts();
   }, [fetchCounts]);
+
+  // Escape closes the modal and focus moves into it on open. Not a full focus trap: Tab can still
+  // reach the page behind, which is a known limit rather than an oversight.
+  useEffect(() => {
+    if (!historyRegId) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") closeHistory();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    historyCloseRef.current?.focus();
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [historyRegId]);
 
   // leaving the page cancels whatever is still in flight
   useEffect(
@@ -431,6 +491,7 @@ function AdminPage() {
   };
 
   const openHistory = async (regId) => {
+    historyTriggerRef.current = document.activeElement;
     setHistoryRegId(regId);
     setHistoryError("");
     historyReqRef.current = regId;
@@ -479,19 +540,36 @@ function AdminPage() {
     if (appliedFilters.departmentId) body.departmentId = Number(appliedFilters.departmentId);
     if (appliedFilters.examCycleId) {
       body.examCycleId = Number(appliedFilters.examCycleId);
+    } else if (cyclesStatus === "loaded") {
+      // Only an INFORMED empty selection means "every cycle".
+      body.allCycles = true;
     } else {
-      body.allCycles = true; // the table is showing every cycle; the PDF must too
+      // The cycle list never loaded, so the scope is unknown rather than deliberately "all".
+      // Refusing HERE, where the body is built, keeps "what scope does this export have?" in one
+      // function — a second caller can't miss a guard that lives in the first caller.
+      return null;
     }
     body.status = filter; // "ALL" included — the server maps it to every status
     return body;
   };
 
+  // Only claim failure once it has actually failed — "loading" is not "error", or this banner
+  // renders on every page load while the fetch is still in flight.
+  const showScopeWarning = cyclesStatus === "error" && !appliedFilters.examCycleId;
+
   const handleExportPdf = () => {
+    const body = buildExportBody();
+    if (!body) {
+      setExportError(
+        "Exam cycles could not be loaded, so this export's scope is unknown — it would span every cycle. Refresh the page, or tick the rows you want.",
+      );
+      return;
+    }
     setIsExporting(true);
     setExportError("");
 
     api
-      .post("/admin/export-pdf", buildExportBody(), {
+      .post("/admin/export-pdf", body, {
         headers: getAdminHeaders(),
         responseType: "blob", // required for file downloads
       })
@@ -501,19 +579,11 @@ function AdminPage() {
         if (!contentType.includes("application/pdf")) {
           throw new Error(`Unexpected export content type: ${contentType}`);
         }
-        const url = window.URL.createObjectURL(
-          new Blob([res.data], { type: "application/pdf" }),
-        );
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute(
-          "download",
-          `registrations-summary-${Date.now()}.pdf`,
-        );
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        // savePdfBlob, not a hand-rolled anchor: it delays revokeObjectURL (iOS Safari consumes
+        // the blob URL asynchronously, so revoking right after click() cancels the download) and
+        // falls back to opening the blob where `download` is unsupported. Both were silent no-ops
+        // here — the spinner cleared, no error, no file.
+        savePdfBlob(res.data, `registrations-summary-${Date.now()}.pdf`);
       })
       .catch(async (err) => {
         console.error("Failed to export PDF", err);
@@ -528,14 +598,13 @@ function AdminPage() {
 
   // The table shows exactly the current server page: filtering and paging are server-side, so
   // there is no client-side slicing.
-  const filtered = registrations;
 
   // dropdown groups — the type distinction lives in the option list, not in a second control
   const regularSubjects = allSubjects.filter((s) => s.subjectType === "REGULAR");
   const electiveSubjects = allSubjects.filter((s) => s.subjectType === "ELECTIVE");
 
   // ---- export selection ----
-  const pageIds = filtered.map((r) => r.regId);
+  const pageIds = registrations.map((r) => r.regId);
   const allOnPageSelected =
     pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
 
@@ -557,10 +626,8 @@ function AdminPage() {
 
   // Stat cards come from the server counts endpoint and span every status of the filtered set
   // (the list's filters minus the status tab), whichever tab or page is open.
-  const totalCount = counts.total;
-  const pendingCount = counts.submitted;
-  const verifiedCount = counts.verified;
-  const rejectedCount = counts.rejected;
+  // A failed counts fetch must not render as a number: zero and stale both read as fact.
+  const statValue = (n) => (countsError ? "—" : n);
 
   if (!isAdmin || !adminToken) {
     return (
@@ -671,7 +738,7 @@ function AdminPage() {
               <Users size={13} /> Total
             </p>
             <p className="mt-1 text-3xl font-semibold text-secondary-ink">
-              {totalCount}
+              {statValue(counts.total)}
             </p>
           </div>
           <div className="rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
@@ -679,7 +746,7 @@ function AdminPage() {
               <CircleDashed size={13} /> Pending
             </p>
             <p className="mt-1 text-3xl font-semibold text-secondary-ink">
-              {pendingCount}
+              {statValue(counts.submitted)}
             </p>
           </div>
           <div className="rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
@@ -687,7 +754,7 @@ function AdminPage() {
               <Shield size={13} /> Verified
             </p>
             <p className="mt-1 text-3xl font-semibold text-secondary-ink">
-              {verifiedCount}
+              {statValue(counts.verified)}
             </p>
           </div>
           <div className="rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
@@ -695,15 +762,35 @@ function AdminPage() {
               <XCircle size={13} /> Rejected
             </p>
             <p className="mt-1 text-3xl font-semibold text-red-600">
-              {rejectedCount}
+              {statValue(counts.rejected)}
             </p>
           </div>
         </section>
+
+        {countsError && (
+          <p
+            className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800"
+            role="status"
+            data-cy="admin-counts-error"
+          >
+            Totals unavailable — {countsError} The table below is unaffected.
+          </p>
+        )}
 
         <section className="mb-6 rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
           <h3 className="mb-3 text-lg font-semibold text-secondary-ink">
             Filters
           </h3>
+
+          {cyclesError && (
+            <p
+              className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+              role="alert"
+              data-cy="admin-cycles-error"
+            >
+              {cyclesError}
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {/* Exam Cycle Filter */}
             <div className="flex flex-col gap-1.5">
@@ -943,6 +1030,17 @@ function AdminPage() {
             </p>
           )}
 
+          {showScopeWarning && (
+            <p
+              className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800"
+              role="status"
+              data-cy="admin-scope-warning"
+            >
+              Not scoped to an exam cycle — the cycle list failed to load, so this table spans every
+              cycle, including closed ones. Refresh before actioning anything.
+            </p>
+          )}
+
           {loadError && (
             <p
               className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
@@ -987,7 +1085,7 @@ function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((reg) => (
+                  {registrations.map((reg) => (
                     <tr
                       key={reg.regId}
                       className="border-t border-stroke align-top"
@@ -1021,13 +1119,10 @@ function AdminPage() {
                       <td className="px-4 py-3">{reg.subjects.join(", ")}</td>
                       <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                            reg.status === "VERIFIED"
-                              ? "bg-[rgba(145,25,28,0.1)] text-primary-ink"
-                              : reg.status === "REJECTED"
-                                ? "bg-red-50 text-red-600"
-                                : "bg-surface-muted text-secondary-ink"
-                          }`}
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${outcomeBadgeClass(
+                            reg.status,
+                            "bg-surface-muted",
+                          )}`}
                         >
                           {reg.status}
                         </span>
@@ -1207,19 +1302,27 @@ function AdminPage() {
       {historyRegId && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onClick={() => setHistoryRegId("")}
+          onClick={closeHistory}
+          role="presentation"
         >
           <div
             className="w-full max-w-lg rounded-2xl border border-stroke bg-surface-1 p-6 shadow-soft"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="history-dialog-title"
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink">
+              <h3
+                id="history-dialog-title"
+                className="inline-flex items-center gap-2 text-lg font-semibold text-secondary-ink"
+              >
                 <History size={18} /> Registration History
               </h3>
               <button
                 type="button"
-                onClick={() => setHistoryRegId("")}
+                ref={historyCloseRef}
+                onClick={closeHistory}
                 className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-muted"
                 aria-label="Close history"
               >
@@ -1251,13 +1354,10 @@ function AdminPage() {
                     className="flex items-start gap-3 rounded-xl border border-stroke bg-surface-muted px-3 py-2.5"
                   >
                     <span
-                      className={`mt-0.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                        ev.action === "VERIFIED"
-                          ? "bg-[rgba(145,25,28,0.1)] text-primary-ink"
-                          : ev.action === "REJECTED"
-                            ? "bg-red-50 text-red-600"
-                            : "bg-surface-1 text-secondary-ink"
-                      }`}
+                      className={`mt-0.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${outcomeBadgeClass(
+                        ev.action,
+                        "bg-surface-1",
+                      )}`}
                     >
                       {ev.action}
                     </span>
