@@ -18,7 +18,7 @@ describe("Student registration — closed cycle, duplicate, expired token", () =
     win.sessionStorage.setItem("studentName", profile.name);
   };
 
-  it("shows the Registration Closed card when no cycle is open", () => {
+  it("shows the No Open Registrations card when no cycle is open", () => {
     cy.intercept("GET", "/api/student/me", { statusCode: 200, body: profile });
     cy.intercept("GET", "/api/registration-status", {
       statusCode: 200,
@@ -28,7 +28,7 @@ describe("Student registration — closed cycle, duplicate, expired token", () =
     cy.visit("/register", { onBeforeLoad: visitRegister });
     cy.wait("@getStatus");
 
-    cy.contains("Registration Closed").should("be.visible");
+    cy.contains("No Open Registrations").should("be.visible");
     cy.get('[data-cy="reg-submit"]').should("not.exist");
   });
 

@@ -205,10 +205,12 @@ function RegistrationPage() {
 
   if (regStatus.open === false) {
     return (
-      <CenteredCard icon={<CalendarX size={24} />} title="Registration Closed">
+      <CenteredCard icon={<CalendarX size={24} />} title="No Open Registrations">
+        {/* Also the fail-closed landing spot for a failed status check, so the copy names no
+            cause (an exam cycle may well be open) and the refresh doubles as the retry. */}
         <p className="mb-6 text-ink">
-          Backlog registration is not open right now. There is no active exam cycle accepting
-          submissions. Please check back when your department announces the next registration window.
+          There are no backlog registrations open right now. If your department has announced a
+          registration window, refresh the page.
         </p>
         <BackLink to="/student" label="Back to Dashboard" />
       </CenteredCard>

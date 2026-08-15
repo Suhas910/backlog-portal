@@ -11,8 +11,12 @@ import java.util.List;
 public interface SubjectRepository extends JpaRepository<Subject, Long>, JpaSpecificationExecutor<Subject> {
 
     // Subjects resolve by the academic year the student actually studied the semester (from
-    // their progression), never a client-supplied year.
-    List<Subject> findByAcademicYearOfferedAndSemester(int academicYearOffered, int semester);
+    // their progression), never a client-supplied year. Param order is (semester, year) to match
+    // the rest of the codebase — both are int, so a swap here compiles and returns empty.
+    // Served by ix_subjects_year_semester (V5, named there under this method's former name
+    // findByAcademicYearOfferedAndSemester); both columns are equality-matched, so the index
+    // works either way round.
+    List<Subject> findBySemesterAndAcademicYearOffered(int semester, int academicYearOffered);
 
     // Clone source: a department's offerings for one academic year, optionally narrowed to
     // specific semesters. Ordered for a stable preview grid.

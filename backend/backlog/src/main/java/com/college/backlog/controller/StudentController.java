@@ -96,7 +96,7 @@ public class StudentController {
         int academicYear = term.getAcademicYear();
         String branchCode = Usn.branchCode(student.getRollNo());
         List<Subject> subjects = subjectRepository
-            .findByAcademicYearOfferedAndSemester(academicYear, semester).stream()
+            .findBySemesterAndAcademicYearOffered(semester, academicYear).stream()
             .filter(s -> branchMatches(s, branchCode))
             .collect(Collectors.toList());
 
