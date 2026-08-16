@@ -8,8 +8,9 @@ import {
   Phone,
   TriangleAlert,
 } from "lucide-react";
+import AlertBanner from "../components/AlertBanner";
 import { Link, useNavigate } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
+import BrandHeader from "../components/layout/BrandHeader";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentHeaders } from "../lib/api";
 import { formatAcademicYear } from "../lib/academicYear";
@@ -246,13 +247,14 @@ function RegistrationPage() {
           Please download your form, print it, and get it signed by your Proctor and HOD.
         </p>
         {downloadError && (
-          <p
-            className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+          <AlertBanner
+            tone="error"
             role="alert"
             data-cy="download-error"
+            className="mb-4"
           >
             {downloadError}
-          </p>
+          </AlertBanner>
         )}
         <div className="flex flex-wrap gap-3">
           <MagneticCta onClick={handleDownloadPdf} disabled={downloading} className="gap-2">
@@ -274,8 +276,7 @@ function RegistrationPage() {
   return (
     <div className="min-h-screen bg-surface-1 text-ink">
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
-          <BrandIdentity compact />
+        <BrandHeader className="mb-6">
           <Link
             to="/student"
             aria-label="Back to dashboard"
@@ -283,7 +284,7 @@ function RegistrationPage() {
           >
             <ArrowLeft size={15} className="mr-1" /> Dashboard
           </Link>
-        </header>
+        </BrandHeader>
 
         <div
           className="rounded-3xl border border-stroke bg-surface-1 p-5 shadow-soft sm:p-8"
@@ -415,9 +416,7 @@ function RegistrationPage() {
                 <LoaderCircle size={16} className="animate-spin" /> Loading subjects...
               </p>
             ) : subjectsError ? (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {subjectsError}
-              </p>
+              <AlertBanner tone="error">{subjectsError}</AlertBanner>
             ) : subjects.length === 0 ? (
               <p className="rounded-xl border border-stroke bg-surface-muted px-4 py-3 text-sm">
                 {searchSemester
@@ -477,13 +476,14 @@ function RegistrationPage() {
           </section>
 
           {submitError ? (
-            <p
+            <AlertBanner
+              tone="error"
               role="alert"
               aria-live="polite"
-              className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              className="mb-4"
             >
               {submitError}
-            </p>
+            </AlertBanner>
           ) : null}
 
           <MagneticCta
@@ -525,8 +525,7 @@ function CenteredCard({ icon, eyebrow, title, children }) {
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto mb-6 w-full max-w-2xl">
-        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
-          <BrandIdentity compact />
+        <BrandHeader>
           <Link
             to="/student"
             aria-label="Back to dashboard"
@@ -534,7 +533,7 @@ function CenteredCard({ icon, eyebrow, title, children }) {
           >
             <ArrowLeft size={15} className="mr-1" /> Dashboard
           </Link>
-        </header>
+        </BrandHeader>
       </div>
       <div
         className="mx-auto w-full max-w-2xl rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft sm:p-8"

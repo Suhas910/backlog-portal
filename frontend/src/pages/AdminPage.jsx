@@ -18,8 +18,9 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import AlertBanner from "../components/AlertBanner";
 import { Link, useNavigate } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
+import BrandHeader from "../components/layout/BrandHeader";
 import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getAdminHeaders, logoutAdmin } from "../lib/api";
@@ -670,17 +671,18 @@ function AdminPage() {
       </a>
 
       <div id="admin-main" className="mx-auto w-full max-w-7xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary px-4 py-4 text-white shadow-soft sm:px-6">
-          <div>
-            <BrandIdentity compact />
-            {adminDepartment && (
+        <BrandHeader
+          className="mb-6"
+          badge={
+            adminDepartment && (
               <div className="mt-2 flex flex-wrap gap-2">
                 <p className="inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
                   {adminDepartment}
                 </p>
               </div>
-            )}
-          </div>
+            )
+          }
+        >
           <div className="flex flex-wrap gap-2">
             {adminRole === "ADMIN" && (
               <Link
@@ -748,7 +750,7 @@ function AdminPage() {
               <LogOut size={14} /> Logout
             </button>
           </div>
-        </header>
+        </BrandHeader>
 
         <section className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
@@ -786,13 +788,14 @@ function AdminPage() {
         </section>
 
         {countsError && (
-          <p
-            className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800"
+          <AlertBanner
+            tone="warning"
             role="status"
             data-cy="admin-counts-error"
+            className="mb-6"
           >
             Totals unavailable — {countsError} The table below is unaffected.
-          </p>
+          </AlertBanner>
         )}
 
         <section className="mb-6 rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft">
@@ -801,23 +804,25 @@ function AdminPage() {
           </h3>
 
           {cyclesError && (
-            <p
-              className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+            <AlertBanner
+              tone="error"
               role="alert"
               data-cy="admin-cycles-error"
+              className="mb-3"
             >
               {cyclesError}
-            </p>
+            </AlertBanner>
           )}
           {/* Amber, not red: the table still works, only this dropdown's options are unknown. */}
           {(subjectsError || departmentsError) && (
-            <p
-              className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-ink"
+            <AlertBanner
+              tone="warning"
               role="alert"
               data-cy="admin-filter-options-error"
+              className="mb-3"
             >
               {[subjectsError, departmentsError].filter(Boolean).join(" ")}
-            </p>
+            </AlertBanner>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {/* Exam Cycle Filter */}
@@ -1049,34 +1054,37 @@ function AdminPage() {
           </p>
 
           {exportError && (
-            <p
-              className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+            <AlertBanner
+              tone="error"
               role="alert"
               data-cy="admin-export-error"
+              className="mb-3"
             >
               {exportError}
-            </p>
+            </AlertBanner>
           )}
 
           {showScopeWarning && (
-            <p
-              className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800"
+            <AlertBanner
+              tone="warning"
               role="status"
               data-cy="admin-scope-warning"
+              className="mb-3"
             >
               Not scoped to an exam cycle — the cycle list failed to load, so this table spans every
               cycle, including closed ones. Refresh before actioning anything.
-            </p>
+            </AlertBanner>
           )}
 
           {loadError && (
-            <p
-              className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+            <AlertBanner
+              tone="error"
               role="alert"
               data-cy="admin-load-error"
+              className="mb-3"
             >
               {loadError}
-            </p>
+            </AlertBanner>
           )}
 
           {loading ? (

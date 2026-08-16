@@ -12,13 +12,6 @@ describe("403 denials surface in place and never sign the user out", () => {
   };
 
   describe("admin dashboard", () => {
-    const seedAdminSession = (win) => {
-      win.sessionStorage.setItem("adminRole", "HOD");
-      win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-      win.sessionStorage.setItem("adminUsername", "hodcse");
-      win.sessionStorage.setItem("adminDepartment", "Computer Science");
-    };
-
     beforeEach(() => {
       cy.intercept("GET", "/api/admin/exam-cycles*", { statusCode: 200, body: [] });
       cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
@@ -31,7 +24,7 @@ describe("403 denials surface in place and never sign the user out", () => {
 
     it("shows the server's message and stays on the dashboard", () => {
       cy.intercept("GET", "/api/admin/registrations*", DENIED).as("denied");
-      cy.visit("/admin", { onBeforeLoad: seedAdminSession });
+      cy.visitAsAdmin("/admin", { role: "HOD", username: "hodcse", department: "Computer Science" });
       cy.wait("@denied");
 
       cy.get('[data-cy="admin-load-error"]')
@@ -44,7 +37,7 @@ describe("403 denials surface in place and never sign the user out", () => {
 
     it("stops the loading spinner instead of hanging on it", () => {
       cy.intercept("GET", "/api/admin/registrations*", DENIED).as("denied");
-      cy.visit("/admin", { onBeforeLoad: seedAdminSession });
+      cy.visitAsAdmin("/admin", { role: "HOD", username: "hodcse", department: "Computer Science" });
       cy.wait("@denied");
 
       // setLoading(false) ran only on success before, so a failure left this up forever
@@ -56,7 +49,7 @@ describe("403 denials surface in place and never sign the user out", () => {
         statusCode: 401,
         body: { message: "Unknown account. Please sign in again." },
       }).as("expired");
-      cy.visit("/admin", { onBeforeLoad: seedAdminSession });
+      cy.visitAsAdmin("/admin", { role: "HOD", username: "hodcse", department: "Computer Science" });
       cy.wait("@expired");
 
       cy.location("pathname").should("eq", "/admin/login");
@@ -64,12 +57,6 @@ describe("403 denials surface in place and never sign the user out", () => {
   });
 
   describe("student pages", () => {
-    const seedStudentSession = (win) => {
-      win.sessionStorage.setItem("studentToken", "student-jwt-token");
-      win.sessionStorage.setItem("studentRollNo", "1MS24CS001");
-      win.sessionStorage.setItem("studentName", "Test Student");
-    };
-
     it("dashboard: renders the denial instead of a blank page", () => {
       cy.intercept("GET", "/api/student/me", {
         statusCode: 403,
@@ -77,7 +64,7 @@ describe("403 denials surface in place and never sign the user out", () => {
       }).as("denied");
       cy.intercept("GET", "/api/student/registrations", { statusCode: 200, body: [] });
 
-      cy.visit("/student", { onBeforeLoad: seedStudentSession });
+      cy.visitAsStudent("/student");
       cy.wait("@denied");
 
       cy.contains("not available for registration").should("be.visible");
@@ -95,7 +82,7 @@ describe("403 denials surface in place and never sign the user out", () => {
         body: { open: true },
       });
 
-      cy.visit("/register", { onBeforeLoad: seedStudentSession });
+      cy.visitAsStudent("/register");
       cy.wait("@denied");
 
       cy.contains("closed for your department").should("be.visible");

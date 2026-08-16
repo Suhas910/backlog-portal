@@ -9,8 +9,9 @@ import {
   ShieldCheck,
   UserCheck,
 } from "lucide-react";
+import AlertBanner from "../components/AlertBanner";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
+import BrandHeader from "../components/layout/BrandHeader";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminToken, logoutAdmin } from "../lib/api";
 import { rememberExpiry } from "../lib/session";
@@ -173,9 +174,7 @@ function AdminLoginPage() {
         className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft sm:p-8"
       >
         <div className="mb-6 text-left">
-          <div className="mb-4 flex items-center rounded-2xl border border-stroke bg-secondary px-4 py-3 text-white shadow-soft">
-            <BrandIdentity compact />
-          </div>
+          <BrandHeader className="mb-4" />
           <p className="mb-2 inline-flex rounded-full border border-primary/30 bg-surface-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary-ink">
             Restricted Access
           </p>
@@ -190,13 +189,14 @@ function AdminLoginPage() {
         </div>
 
         {sessionExpired ? (
-          <p
+          <AlertBanner
+            tone="warning"
             role="status"
-            className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
             data-cy="session-expired"
+            className="mb-4"
           >
             Your session expired. Please sign in again.
-          </p>
+          </AlertBanner>
         ) : null}
 
         {step === 1 ? (
@@ -277,25 +277,21 @@ function AdminLoginPage() {
                   ))}
                 </select>
                 {departmentsError ? (
-                  <p
+                  <AlertBanner
+                    tone="error"
                     role="alert"
-                    className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
                     data-cy="admin-departments-error"
                   >
                     {departmentsError}
-                  </p>
+                  </AlertBanner>
                 ) : null}
               </>
             )}
 
             {error ? (
-              <p
-                role="alert"
-                aria-live="polite"
-                className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-              >
+              <AlertBanner tone="error" role="alert" aria-live="polite">
                 {error}
-              </p>
+              </AlertBanner>
             ) : null}
 
             <MagneticCta

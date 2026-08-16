@@ -33,12 +33,6 @@ describe("Admin verification flow", () => {
     cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
   };
 
-  const seedAdmin = (win) => {
-    win.sessionStorage.setItem("adminRole", "ADMIN");
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", "admin");
-  };
-
   // A failed counts fetch used to leave the initial zeros on screen: four confident zeros above a
   // table full of rows, reading as "the queue is empty".
   it("shows a dash, not zero, when the totals fail to load", () => {
@@ -49,7 +43,7 @@ describe("Admin verification flow", () => {
     }).as("counts");
     stubSideCalls();
 
-    cy.visit("/admin", { onBeforeLoad: seedAdmin });
+    cy.visitAsAdmin("/admin");
     cy.wait("@counts");
 
     cy.get('[data-cy="admin-counts-error"]').should("contain", "Counts backend is down.");
@@ -70,7 +64,7 @@ describe("Admin verification flow", () => {
     }).as("cycles");
     cy.intercept("POST", "/api/admin/export-pdf", { statusCode: 200, body: {} }).as("export");
 
-    cy.visit("/admin", { onBeforeLoad: seedAdmin });
+    cy.visitAsAdmin("/admin");
     cy.wait("@cycles");
 
     cy.get('[data-cy="admin-cycles-error"]').should("contain", "Cycle service unavailable.");
@@ -95,7 +89,7 @@ describe("Admin verification flow", () => {
       body: "%PDF-1.4",
     }).as("export");
 
-    cy.visit("/admin", { onBeforeLoad: seedAdmin });
+    cy.visitAsAdmin("/admin");
     cy.contains("1MS22CS001").should("be.visible");
     cy.get('[data-cy="admin-scope-warning"]').should("not.exist");
     cy.get('[data-cy="admin-cycles-error"]').should("not.exist");
@@ -117,7 +111,7 @@ describe("Admin verification flow", () => {
       body: "%PDF-1.4",
     }).as("export");
 
-    cy.visit("/admin", { onBeforeLoad: seedAdmin });
+    cy.visitAsAdmin("/admin");
     cy.get('[data-cy="admin-select-REG-2026-1001"]').check();
     cy.get('[data-cy="admin-export-pdf"]').click();
 

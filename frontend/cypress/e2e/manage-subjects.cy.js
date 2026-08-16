@@ -13,12 +13,6 @@ describe("Manage Subjects page", () => {
     eligibleDepartments: [],
   };
 
-  const seed = (win) => {
-    win.sessionStorage.setItem("adminRole", "ADMIN");
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", "admin");
-  };
-
   const visitAndLoad = () => {
     cy.intercept("GET", "/api/departments", {
       statusCode: 200,
@@ -29,7 +23,7 @@ describe("Manage Subjects page", () => {
       statusCode: 200,
       body: { content: [subject], number: 0, totalPages: 1, totalElements: 1 },
     }).as("getSubjects");
-    cy.visit("/admin/manage-subjects", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/manage-subjects");
     cy.wait("@getDepartments");
     cy.get('[data-cy="subjects-load"]').click();
     cy.wait("@getSubjects");
@@ -94,7 +88,7 @@ describe("Manage Subjects page", () => {
       statusCode: 200,
       body: [{ id: 1, deptName: "Computer Science" }],
     }).as("getDepartments");
-    cy.visit("/admin/manage-subjects", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/manage-subjects");
     cy.wait("@getDepartments");
 
     // defaults to the Manage tab

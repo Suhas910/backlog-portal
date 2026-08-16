@@ -29,9 +29,30 @@ class PdfServiceTest {
     private final PdfService service = new PdfService();
 
     private static Registration sampleRegistration() {
-        Student student = new Student("1MS22CS001", "Asha Rao", "1MS22CS001@msrit.edu", "9999912345", 2022, 5, "CS");
-        Subject s1 = new Subject(1L, "Data Structures", "22CSL44", 4, 4, 2022, null);
-        Subject s2 = new Subject(2L, "Operating Systems", "22CS53", 3, 3, 2022, null);
+        Student student = new Student();
+        student.setRollNo("1MS22CS001");
+        student.setName("Asha Rao");
+        student.setEmail("1MS22CS001@msrit.edu");
+        student.setPhone("9999912345");
+        student.setYearOfJoining(2022);
+        student.setCurrentSemester(5);
+        student.setBranch("CS");
+
+        Subject s1 = new Subject();
+        s1.setId(1L);
+        s1.setSubjectName("Data Structures");
+        s1.setCourseCode("22CSL44");
+        s1.setSemester(4);
+        s1.setCredits(4);
+        s1.setAcademicYearOffered(2022);
+
+        Subject s2 = new Subject();
+        s2.setId(2L);
+        s2.setSubjectName("Operating Systems");
+        s2.setCourseCode("22CS53");
+        s2.setSemester(3);
+        s2.setCredits(3);
+        s2.setAcademicYearOffered(2022);
 
         Registration reg = new Registration();
         reg.setRegId("REG-TEST-0001");
@@ -154,8 +175,16 @@ class PdfServiceTest {
     void stillRendersWhenOnlyTheOptionalContactFieldsAreMissing() throws Exception {
         // phone is optional by design and email is auto-assigned — neither invalidates the form,
         // so these must NOT refuse the download
-        Registration reg = withStudent(
-                new Student("1MS22CS001", "Asha Rao", null, null, 2022, 5, "CS"));
+        Student noContact = new Student();
+        noContact.setRollNo("1MS22CS001");
+        noContact.setName("Asha Rao");
+        noContact.setEmail(null);   // explicit: the point of this case
+        noContact.setPhone(null);
+        noContact.setYearOfJoining(2022);
+        noContact.setCurrentSemester(5);
+        noContact.setBranch("CS");
+
+        Registration reg = withStudent(noContact);
         reg.setSnapEmail(null);
         reg.setSnapPhone(null);
 

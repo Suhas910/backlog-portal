@@ -1,14 +1,7 @@
 describe("Department code edit — concurrent-edit conflict detection", () => {
   // Drop onto the page with an admin session in place, so the test exercises the save/conflict
   // path rather than re-driving the login UI.
-  const authedVisit = (path) => {
-    cy.visit(path, {
-      onBeforeLoad(win) {
-        win.sessionStorage.setItem("adminRole", "ADMIN");
-        win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-      },
-    });
-  };
+  const authedVisit = (path) => cy.visitAsAdmin(path);
 
   it("resyncs to the server value when a code save hits a 409 conflict", () => {
     // First load is "CS" at version 0; the conflicting PUT flips the flag, so the automatic

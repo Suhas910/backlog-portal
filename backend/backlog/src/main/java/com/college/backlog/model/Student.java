@@ -38,17 +38,10 @@ public class Student {
 
     private String branch;
 
+    // No all-args constructor on purpose: rollNo/name/email/phone are four adjacent Strings, so a
+    // positional swap compiles and throws nothing. Build with setters (as StudentManagementService
+    // already does) — each line names its own field. Don't reintroduce one.
     public Student() {}
-
-    public Student(String rollNo, String name, String email, String phone, int yearOfJoining, int currentSemester, String branch) {
-        this.rollNo = rollNo;
-        this.name = name;
-        this.email = email;
-        this.phone = phone;
-        this.yearOfJoining = yearOfJoining;
-        this.currentSemester = currentSemester;
-        this.branch = branch;
-    }
 
     public String getRollNo() { return rollNo; }
     public void setRollNo(String rollNo) { this.rollNo = rollNo; }

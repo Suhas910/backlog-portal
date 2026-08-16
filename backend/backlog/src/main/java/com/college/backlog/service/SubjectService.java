@@ -65,8 +65,15 @@ public class SubjectService {
         Department department = departmentRepository.findById(request.getDeptId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown department."));
 
-        Subject subject = new Subject(null, request.getSubjectName(), request.getCourseCode(),
-                request.getSemester(), request.getCredits(), request.getAcademicYearOffered(), department);
+        // Setters, not an all-args constructor — semester/credits/academicYearOffered are three
+        // ints and a positional swap would compile silently. id is left to @GeneratedValue.
+        Subject subject = new Subject();
+        subject.setSubjectName(request.getSubjectName());
+        subject.setCourseCode(request.getCourseCode());
+        subject.setSemester(request.getSemester());
+        subject.setCredits(request.getCredits());
+        subject.setAcademicYearOffered(request.getAcademicYearOffered());
+        subject.setDepartment(department);
 
         SubjectType type = resolveSubjectType(request.getSubjectType());
         subject.setSubjectType(type);

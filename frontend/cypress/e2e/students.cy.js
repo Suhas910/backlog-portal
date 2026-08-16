@@ -13,12 +13,6 @@ describe("Students page", () => {
     progressionComplete: false,
   };
 
-  const seed = (win) => {
-    win.sessionStorage.setItem("adminRole", "ADMIN");
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", "admin");
-  };
-
   const stubDepartments = () =>
     cy.intercept("GET", "/api/departments", {
       statusCode: 200,
@@ -32,7 +26,7 @@ describe("Students page", () => {
       statusCode: 200,
       body: { content: [student], number: 0, totalPages: 1, totalElements: 1 },
     }).as("getStudents");
-    cy.visit("/admin/students", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/students");
     cy.wait("@getDepartments");
     cy.get('[data-cy="students-load"]').click();
     cy.wait("@getStudents");
@@ -148,7 +142,7 @@ describe("Students page", () => {
     cy.intercept("POST", "/api/admin/students", { statusCode: 201, body: { ...student } }).as("createStudent");
 
     stubDepartments();
-    cy.visit("/admin/students?tab=add", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/students?tab=add");
     cy.wait("@getDepartments");
 
     cy.get('[data-cy="student-usn"]').type("1ms22cs001");
@@ -176,7 +170,7 @@ describe("Students page", () => {
     }).as("createStudent");
 
     stubDepartments();
-    cy.visit("/admin/students?tab=add", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/students?tab=add");
     cy.wait("@getDepartments");
 
     cy.get('[data-cy="student-usn"]').type("1ms22cs001");
@@ -203,7 +197,7 @@ describe("Students page", () => {
     }).as("importStudents");
 
     stubDepartments();
-    cy.visit("/admin/students?tab=import", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/students?tab=import");
     cy.wait("@getDepartments");
 
     cy.get('[data-cy="students-import-csv"]').type(
@@ -221,7 +215,7 @@ describe("Students page", () => {
 
   it("switches between the Manage, Add and Import tabs", () => {
     stubDepartments();
-    cy.visit("/admin/students", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/students");
     cy.wait("@getDepartments");
 
     cy.get('[data-cy="students-load"]').should("be.visible"); // default Manage tab

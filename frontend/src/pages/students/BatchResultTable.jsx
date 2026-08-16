@@ -3,6 +3,7 @@
 // three copies the rows guard was written three times and had already drifted to a weaker operator.
 
 import { batchRows } from "./batchResult";
+import AlertBanner from "../../components/AlertBanner";
 
 // Superset of the three endpoints' statuses: progression adds the WOULD_* previews and the conflict
 // pair, import and claim emit subsets.
@@ -38,11 +39,11 @@ function BatchResultTable({ result, verb, showConflicts = false, renderRowAction
         {result.errors} error(s)
       </p>
       {showConflicts && conflicts > 0 && (
-        <p className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-ink">
+        <AlertBanner tone="warning" compact className="mb-2">
           A conflict means the year on file disagrees with this row. Nothing was changed — the
           recorded year is what a student&apos;s backlog subjects resolve against, so overwriting it
           is a per-student decision. Apply the ones that are genuinely corrections.
-        </p>
+        </AlertBanner>
       )}
       <div className="max-h-72 overflow-auto rounded-xl border border-stroke">
         <table className="w-full text-left text-sm">

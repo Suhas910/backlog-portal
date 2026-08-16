@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, CalendarRange, CheckCircle2, CircleSlash, LoaderCircle, PlusCircle } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
+import BrandHeader from "../components/layout/BrandHeader";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
 import { reportLoadError } from "../lib/loadError";
+import AlertBanner from "../components/AlertBanner";
 
 function ExamCyclePage() {
   const navigate = useNavigate();
@@ -107,25 +108,26 @@ function ExamCyclePage() {
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-3xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary px-4 py-4 text-white shadow-soft sm:px-6">
-          <div>
-            <BrandIdentity compact />
+        <BrandHeader
+          className="mb-6"
+          badge={
             <p className="mt-2 inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
               Manage Exam Cycles
             </p>
-          </div>
+          }
+        >
           <Link
             to="/admin"
             className="inline-flex items-center gap-1 rounded-full border border-white/35 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/10"
           >
             <ArrowLeft size={14} /> Dashboard
           </Link>
-        </header>
+        </BrandHeader>
 
         {error && (
-          <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+          <AlertBanner tone="error" className="mb-4">
             {error}
-          </p>
+          </AlertBanner>
         )}
 
         <section className="mb-6 rounded-2xl border border-stroke bg-surface-1 p-5 shadow-soft">

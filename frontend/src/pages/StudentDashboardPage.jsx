@@ -10,8 +10,9 @@ import {
   Check,
   X,
 } from "lucide-react";
+import AlertBanner from "../components/AlertBanner";
 import { Link, useNavigate } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
+import BrandHeader from "../components/layout/BrandHeader";
 import MagneticCta from "../components/ui/MagneticCta";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import api, { getStudentHeaders, logoutStudent } from "../lib/api";
@@ -143,8 +144,7 @@ function StudentDashboardPage() {
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-4xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
-          <BrandIdentity compact />
+        <BrandHeader className="mb-6">
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <Link
@@ -161,19 +161,16 @@ function StudentDashboardPage() {
               <LogOut size={15} /> Log out
             </button>
           </div>
-        </header>
+        </BrandHeader>
 
         {loading ? (
           <p className="inline-flex items-center gap-2 text-sm text-ink-muted">
             <LoaderCircle size={18} className="animate-spin" /> Loading your dashboard...
           </p>
         ) : error ? (
-          <p
-            role="alert"
-            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
+          <AlertBanner tone="error" role="alert">
             {error}
-          </p>
+          </AlertBanner>
         ) : (
           <>
             {/* Profile */}
@@ -306,19 +303,23 @@ function StudentDashboardPage() {
                           ) : null}
                         </div>
                         <p className="text-sm break-words text-ink">
-                          {(reg.subjects || []).join(", ") || "No subjects"}
+                          {/* Bare on purpose: StudentController builds `subjects` from a stream
+                              collect, so it is always a list. A guard here would turn a contract
+                              break into a silent "No subjects" on a form that has some. */}
+                          {reg.subjects.join(", ") || "No subjects"}
                         </p>
                         <p className="text-xs text-ink-muted">
                           {reg.registeredAt ? new Date(reg.registeredAt).toLocaleString() : ""}
                         </p>
                         {downloadError?.regId === reg.regId && (
-                          <p
-                            className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
+                          <AlertBanner
+                            tone="error"
                             role="alert"
                             data-cy="download-error"
+                            className="mt-2"
                           >
                             {downloadError.message}
-                          </p>
+                          </AlertBanner>
                         )}
                       </div>
                       <button

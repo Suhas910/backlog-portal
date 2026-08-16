@@ -8,8 +8,9 @@ import {
   Users,
   X,
 } from "lucide-react";
+import AlertBanner from "../components/AlertBanner";
 import { Link, useNavigate } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
+import BrandHeader from "../components/layout/BrandHeader";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
 import { reportLoadError } from "../lib/loadError";
@@ -188,8 +189,7 @@ function ManageUsersPage() {
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-5xl pb-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
-          <BrandIdentity compact />
+        <BrandHeader className="mb-6">
           <div className="flex gap-2">
             <Link
               to="/admin/change-password"
@@ -205,7 +205,7 @@ function ManageUsersPage() {
               <ArrowLeft size={15} className="mr-1" /> Dashboard
             </Link>
           </div>
-        </header>
+        </BrandHeader>
 
         <div
           className="space-y-6"
@@ -221,24 +221,21 @@ function ManageUsersPage() {
           </div>
 
           {error && (
-            <p
-              role="alert"
-              className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-            >
+            <AlertBanner tone="error" role="alert">
               {error}
-            </p>
+            </AlertBanner>
           )}
 
           {/* Its own banner: the create form below depends on this list, and folding it into
               `error` let a user action's message overwrite it (or vice versa). */}
           {departmentsError && (
-            <p
+            <AlertBanner
+              tone="warning"
               role="alert"
               data-cy="users-departments-error"
-              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-ink"
             >
               {departmentsError}
-            </p>
+            </AlertBanner>
           )}
 
           {/* No secret to transport: the password is derived from the username, so this states the

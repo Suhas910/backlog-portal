@@ -12,15 +12,6 @@
 // cover only what is genuinely observable.
 import { reportLoadError } from "../../src/lib/loadError";
 
-function seedAdmin(role = "ADMIN", department) {
-  return (win) => {
-    win.sessionStorage.setItem("adminRole", role);
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", role.toLowerCase());
-    if (department) win.sessionStorage.setItem("adminDepartment", department);
-  };
-}
-
 const EXPIRED = { statusCode: 401, body: { message: "Token expired" } };
 
 describe("reportLoadError decides which failures a page may show", () => {
@@ -60,7 +51,7 @@ describe("reportLoadError decides which failures a page may show", () => {
 describe("An expired session ends in a sign-out, not a stuck page", () => {
   it("exam cycles: a 401 during load redirects to the admin login", () => {
     cy.intercept("GET", "/api/admin/exam-cycles", EXPIRED).as("cycles");
-    cy.visit("/admin/exam-cycles", { onBeforeLoad: seedAdmin() });
+    cy.visitAsAdmin("/admin/exam-cycles");
     cy.wait("@cycles");
 
     cy.location("pathname").should("eq", "/admin/login");
@@ -69,7 +60,7 @@ describe("An expired session ends in a sign-out, not a stuck page", () => {
   it("manage users: a 401 during load redirects to the admin login", () => {
     cy.intercept("GET", "/api/admin/users", EXPIRED).as("users");
     cy.intercept("GET", "/api/departments", { statusCode: 200, body: [] });
-    cy.visit("/admin/users", { onBeforeLoad: seedAdmin() });
+    cy.visitAsAdmin("/admin/users");
     cy.wait("@users");
 
     cy.location("pathname").should("eq", "/admin/login");
@@ -79,7 +70,7 @@ describe("An expired session ends in a sign-out, not a stuck page", () => {
 describe("A real failure is still visible — the 401 guard is scoped, not a blanket mute", () => {
   it("exam cycles: a 500 shows the message", () => {
     cy.intercept("GET", "/api/admin/exam-cycles", { statusCode: 500, body: {} }).as("cycles");
-    cy.visit("/admin/exam-cycles", { onBeforeLoad: seedAdmin() });
+    cy.visitAsAdmin("/admin/exam-cycles");
     cy.wait("@cycles");
 
     cy.contains("Could not load exam cycles").should("be.visible");
@@ -87,7 +78,7 @@ describe("A real failure is still visible — the 401 guard is scoped, not a bla
 
   it("departments: a 500 shows the message", () => {
     cy.intercept("GET", "/api/admin/departments", { statusCode: 500, body: {} }).as("depts");
-    cy.visit("/admin/departments", { onBeforeLoad: seedAdmin() });
+    cy.visitAsAdmin("/admin/departments");
     cy.wait("@depts");
 
     cy.contains("Could not load departments").should("be.visible");
@@ -96,7 +87,7 @@ describe("A real failure is still visible — the 401 guard is scoped, not a bla
   it("manage users: a 500 shows the failure instead of claiming an empty list", () => {
     cy.intercept("GET", "/api/admin/users", { statusCode: 500, body: {} }).as("users");
     cy.intercept("GET", "/api/departments", { statusCode: 200, body: [] });
-    cy.visit("/admin/users", { onBeforeLoad: seedAdmin() });
+    cy.visitAsAdmin("/admin/users");
     cy.wait("@users");
 
     cy.contains("Could not load users").should("be.visible");
@@ -106,7 +97,7 @@ describe("A real failure is still visible — the 401 guard is scoped, not a bla
   it("manage users: the departments warning has its own slot and outlives a submit", () => {
     cy.intercept("GET", "/api/admin/users", { statusCode: 200, body: [] }).as("users");
     cy.intercept("GET", "/api/departments", { statusCode: 500, body: {} }).as("depts");
-    cy.visit("/admin/users", { onBeforeLoad: seedAdmin() });
+    cy.visitAsAdmin("/admin/users");
     cy.wait(["@users", "@depts"]);
 
     cy.get('[data-cy="users-departments-error"]').should("be.visible");
@@ -124,7 +115,7 @@ describe("A real failure is still visible — the 401 guard is scoped, not a bla
       statusCode: 200,
       body: { content: [], totalPages: 0, totalElements: 0, number: 0 },
     });
-    cy.visit("/admin", { onBeforeLoad: seedAdmin() });
+    cy.visitAsAdmin("/admin");
     cy.wait("@depts");
 
     cy.get('[data-cy="admin-filter-options-error"]').should("be.visible");

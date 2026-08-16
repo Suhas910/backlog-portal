@@ -2,13 +2,6 @@
 // scoping, which stubs can't prove; these lock down the frontend-observable side — department
 // badge, the default filter for dept roles, role-gated navigation, PRINCIPAL read-only.
 describe("Admin dashboard — role & department scoped access", () => {
-  const seedSession = (win, role, department) => {
-    win.sessionStorage.setItem("adminRole", role);
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", role.toLowerCase());
-    if (department) win.sessionStorage.setItem("adminDepartment", department);
-  };
-
   const stubDashboard = (registrations) => {
     // paginated: honor the server-side status filter (dept roles default to SUBMITTED) and
     // return the Spring Page envelope
@@ -62,9 +55,7 @@ describe("Admin dashboard — role & department scoped access", () => {
       },
     ]);
 
-    cy.visit("/admin", {
-      onBeforeLoad: (win) => seedSession(win, "HOD", "Computer Science"),
-    });
+    cy.visitAsAdmin("/admin", { role: "HOD", department: "Computer Science" });
     cy.wait("@getRegistrations");
 
     // department badge in the header
@@ -98,9 +89,7 @@ describe("Admin dashboard — role & department scoped access", () => {
       },
     ]);
 
-    cy.visit("/admin", {
-      onBeforeLoad: (win) => seedSession(win, "PRINCIPAL"),
-    });
+    cy.visitAsAdmin("/admin", { role: "PRINCIPAL" });
     cy.wait("@getRegistrations");
 
     cy.contains("td", "Pending Pam").should("exist");
@@ -122,9 +111,7 @@ describe("Admin dashboard — role & department scoped access", () => {
     cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
 
-    cy.visit("/admin", {
-      onBeforeLoad: (win) => seedSession(win, "ADMIN"),
-    });
+    cy.visitAsAdmin("/admin", { role: "ADMIN" });
 
     cy.location("pathname").should("eq", "/admin/login");
   });

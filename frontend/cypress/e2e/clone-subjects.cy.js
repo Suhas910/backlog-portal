@@ -2,18 +2,12 @@
 // grid is editable with removable rows, and apply posts the approved ones. Years are entered in
 // span format and sent as start-year ints; WOULD_SKIP rows (already existing) are excluded.
 describe("Clone Subjects tab", () => {
-  const seed = (win) => {
-    win.sessionStorage.setItem("adminRole", "ADMIN");
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", "admin");
-  };
-
   const visit = () => {
     cy.intercept("GET", "/api/departments", {
       statusCode: 200,
       body: [{ id: 1, deptName: "Computer Science" }],
     }).as("getDepartments");
-    cy.visit("/admin/manage-subjects?tab=clone", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/manage-subjects?tab=clone");
   };
 
   it("previews, edits, and applies a clone", () => {

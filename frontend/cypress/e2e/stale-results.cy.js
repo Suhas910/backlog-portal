@@ -4,15 +4,9 @@
 // filtered list: a failed re-fetch left the previous department's subjects on screen as the new
 // department's.
 describe("A failed run never leaves the previous result standing", () => {
-  const seed = (win, role = "ADMIN") => {
-    win.sessionStorage.setItem("adminRole", role);
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", role.toLowerCase());
-  };
-
   const visitProgression = () => {
     cy.intercept("GET", "/api/departments", { statusCode: 200, body: [] }).as("getDepartments");
-    cy.visit("/admin/students?tab=progression", { onBeforeLoad: (win) => seed(win) });
+    cy.visitAsAdmin("/admin/students?tab=progression");
     cy.wait("@getDepartments");
     cy.get('[data-cy="prog-tab-bulk"]').click();
   };
@@ -90,7 +84,7 @@ describe("A failed run never leaves the previous result standing", () => {
         totalElements: 1,
       },
     }).as("subjectsOk");
-    cy.visit("/admin/manage-subjects", { onBeforeLoad: (win) => seed(win) });
+    cy.visitAsAdmin("/admin/manage-subjects");
     cy.wait("@getDepartments");
     // the list is not fetched on mount — `subjects` starts null ("not loaded yet")
     cy.get('[data-cy="subjects-load"]').click();

@@ -4,6 +4,7 @@ import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
 import { formatAcademicYear, buildCourseCode, courseCodeSuffix } from "../../lib/academicYear";
 import CourseCodeField from "../../components/ui/CourseCodeField";
+import AlertBanner from "../../components/AlertBanner";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring";
@@ -348,21 +349,15 @@ function AddSubjectTab({ departments, adminDepartment, deptLocked, pinnedDeptId 
         )}
 
         {error && (
-          <p
-            role="alert"
-            className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
+          <AlertBanner tone="error" role="alert" className="mt-4">
             {error}
-          </p>
+          </AlertBanner>
         )}
 
         {success && (
-          <p
-            role="status"
-            className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800"
-          >
+          <AlertBanner tone="success" role="status" className="mt-4">
             {success}
-          </p>
+          </AlertBanner>
         )}
 
         <div className="border-t border-stroke pt-4">

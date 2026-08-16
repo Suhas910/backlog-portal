@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, CalendarClock, GraduationCap, UploadCloud, UserCheck, UserPlus, Users } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import BrandIdentity from "../../components/layout/BrandIdentity";
+import BrandHeader from "../../components/layout/BrandHeader";
 import api from "../../lib/api";
 import { reportLoadError } from "../../lib/loadError";
 import StudentsManageTab from "./StudentsManageTab";
@@ -10,6 +10,7 @@ import ImportStudentsTab from "./ImportStudentsTab";
 import ProgressionTab from "./ProgressionTab";
 import ClaimStudentsTab from "./ClaimStudentsTab";
 import { findOwnDepartment } from "../../lib/session";
+import AlertBanner from "../../components/AlertBanner";
 
 const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
 const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"];
@@ -94,15 +95,14 @@ function StudentsPage() {
   return (
     <div className="min-h-screen bg-surface-1 px-4 py-8 text-ink sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-5xl pb-8">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stroke bg-secondary p-4 text-white shadow-soft sm:px-6">
-          <BrandIdentity compact />
+        <BrandHeader className="mb-6">
           <Link
             to="/admin"
             className="inline-flex items-center rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
           >
             <ArrowLeft size={15} className="mr-1" /> Dashboard
           </Link>
-        </header>
+        </BrandHeader>
 
         <div className="mb-3">
           <h1 className="inline-flex items-center gap-2 text-2xl font-semibold text-secondary-ink sm:text-3xl">
@@ -116,13 +116,14 @@ function StudentsPage() {
           </p>
         </div>
         {deptError ? (
-          <p
+          <AlertBanner
+            tone="error"
             role="alert"
-            className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600"
             data-cy="dept-load-error"
+            className="mb-3"
           >
             {deptError}
-          </p>
+          </AlertBanner>
         ) : null}
 
 

@@ -259,10 +259,10 @@
 [data-theme="dark"] .text-red-700 {
   color: #f87171;
 }
+/* -900 dropped 2026-08-16: AlertBanner standardised warning text on -800, leaving no -900 user. */
 [data-theme="dark"] .text-amber-600,
 [data-theme="dark"] .text-amber-700,
-[data-theme="dark"] .text-amber-800,
-[data-theme="dark"] .text-amber-900 {
+[data-theme="dark"] .text-amber-800 {
   color: #fbbf24;
 }
 /* -700 is the link-hover shade inside success banners; it needs a dark value too, or the hover

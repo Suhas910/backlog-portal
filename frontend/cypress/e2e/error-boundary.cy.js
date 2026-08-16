@@ -8,11 +8,7 @@ describe("error boundary", () => {
   it("shows a recoverable message when a page chunk fails to load", () => {
     cy.intercept("GET", "/src/pages/AdminPage.jsx*", { statusCode: 500, body: "" }).as("chunk");
 
-    cy.visit("/admin", {
-      onBeforeLoad(win) {
-        win.sessionStorage.setItem("adminRole", "ADMIN");
-        win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-      },
+    cy.visitAsAdmin("/admin", {
       // the module failure surfaces as an uncaught exception; the boundary is what we're testing
       failOnStatusCode: false,
     });

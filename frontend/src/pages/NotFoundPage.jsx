@@ -1,6 +1,6 @@
 import { FileQuestion } from "lucide-react";
 import { Link } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
+import BrandHeader from "../components/layout/BrandHeader";
 import MagneticCta from "../components/ui/MagneticCta";
 
 // Catch-all for any unmatched URL. Without this React Router rendered NOTHING — a blank page with
@@ -11,9 +11,7 @@ function NotFoundPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface-1 px-4 py-10 text-ink sm:px-6 lg:px-8">
       <div className="w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft sm:p-8">
-        <div className="mb-4 flex items-center rounded-2xl border border-stroke bg-secondary px-4 py-3 text-white shadow-soft">
-          <BrandIdentity compact />
-        </div>
+        <BrandHeader className="mb-4" />
 
         <p className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-surface-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary-ink">
           <FileQuestion size={12} /> Page not found

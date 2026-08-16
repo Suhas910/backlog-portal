@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
 import { findOwnDepartment } from "../../lib/session";
+import AlertBanner from "../../components/AlertBanner";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
@@ -108,53 +109,51 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
       </p>
 
       {createdRollNo && createdComplete && (
-        <div
-          className="mb-6 flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-800"
+        <AlertBanner
+          tone="success"
           role="status"
           data-cy="student-created-complete"
+          icon={<BadgeCheck size={20} className="mt-0.5 shrink-0" />}
+          className="mb-6"
         >
-          <BadgeCheck size={20} className="mt-0.5 shrink-0" />
-          <div className="text-sm">
-            <p className="font-semibold">{createdRollNo} added — full semester timeline seeded.</p>
-            <p className="mt-1">
-              Every semester's academic year (sems 1–8) was recorded automatically from the USN. Adjust
-              the current semester or fix any year on the{" "}
-              <Link
-                to="/admin/students?tab=progression"
-                className="font-semibold underline hover:text-green-700"
-              >
-                Progression page
-              </Link>{" "}
-              as the student progresses.
-            </p>
-          </div>
-        </div>
+          <p className="font-semibold">{createdRollNo} added — full semester timeline seeded.</p>
+          <p className="mt-1">
+            Every semester's academic year (sems 1–8) was recorded automatically from the USN. Adjust
+            the current semester or fix any year on the{" "}
+            <Link
+              to="/admin/students?tab=progression"
+              className="font-semibold underline hover:text-green-700"
+            >
+              Progression page
+            </Link>{" "}
+            as the student progresses.
+          </p>
+        </AlertBanner>
       )}
 
       {createdRollNo && !createdComplete && (
-        <div
-          className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900"
+        <AlertBanner
+          tone="warning"
           role="status"
           data-cy="student-created-warning"
+          icon={<AlertTriangle size={20} className="mt-0.5 shrink-0" />}
+          className="mb-6"
         >
-          <AlertTriangle size={20} className="mt-0.5 shrink-0" />
-          <div className="text-sm">
-            <p className="font-semibold">
-              {createdRollNo} added — but their progression is not fully set yet.
-            </p>
-            <p className="mt-1">
-              Until you record which academic year they studied each remaining semester, they can't
-              register those backlogs.{" "}
-              <Link
-                to="/admin/students?tab=progression"
-                className="font-semibold underline hover:text-amber-700"
-                data-cy="student-set-progression-link"
-              >
-                Set progression now →
-              </Link>
-            </p>
-          </div>
-        </div>
+          <p className="font-semibold">
+            {createdRollNo} added — but their progression is not fully set yet.
+          </p>
+          <p className="mt-1">
+            Until you record which academic year they studied each remaining semester, they can't
+            register those backlogs.{" "}
+            <Link
+              to="/admin/students?tab=progression"
+              className="font-semibold underline hover:text-amber-700"
+              data-cy="student-set-progression-link"
+            >
+              Set progression now →
+            </Link>
+          </p>
+        </AlertBanner>
       )}
 
       <form onSubmit={submit} className="space-y-4">
@@ -268,13 +267,9 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
         </p>
 
         {error && (
-          <p
-            role="alert"
-            data-cy="student-add-error"
-            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
+          <AlertBanner tone="error" role="alert" data-cy="student-add-error">
             {error}
-          </p>
+          </AlertBanner>
         )}
 
         <div className="border-t border-stroke pt-4">

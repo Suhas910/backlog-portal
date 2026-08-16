@@ -13,6 +13,7 @@ import {
   UserMinus,
   X,
 } from "lucide-react";
+import AlertBanner from "../../components/AlertBanner";
 import { Link } from "react-router-dom";
 import api, { getAdminHeaders } from "../../lib/api";
 import { reportLoadError } from "../../lib/loadError";
@@ -547,10 +548,15 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
       </div>
 
       {semesterChanged && (
-        <p className="mt-3 inline-flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <AlertTriangle size={14} className="mt-0.5 shrink-0" /> Changing the current semester changes
-          which backlogs this student is eligible to register.
-        </p>
+        <AlertBanner
+          tone="warning"
+          compact
+          icon={<AlertTriangle size={14} className="mt-0.5 shrink-0" />}
+          className="mt-3"
+        >
+          Changing the current semester changes which backlogs this student is eligible to
+          register.
+        </AlertBanner>
       )}
 
       {error && (

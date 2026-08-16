@@ -3,16 +3,6 @@
 // exactly where they are with the server's message. The old interceptor treated both as a dead
 // session, which is what made every scope denial log an admin out mid-task.
 describe("Session lifecycle — expiry, warning banner, 401 vs 403", () => {
-  const seedSession = (win, { minutesLeft = 60 } = {}) => {
-    win.sessionStorage.setItem("adminRole", "ADMIN");
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", "admin");
-    win.sessionStorage.setItem(
-      "adminExpiresAt",
-      String(Date.now() + minutesLeft * 60 * 1000),
-    );
-  };
-
   const stubDashboard = () => {
     cy.intercept("GET", "/api/admin/registrations*", {
       statusCode: 200,
@@ -29,13 +19,13 @@ describe("Session lifecycle — expiry, warning banner, 401 vs 403", () => {
 
   it("shows no warning banner with a full hour left", () => {
     stubDashboard();
-    cy.visit("/admin", { onBeforeLoad: (win) => seedSession(win, { minutesLeft: 60 }) });
+    cy.visitAsAdmin("/admin", { minutesLeft: 60 });
     cy.get('[data-cy="session-warning"]').should("not.exist");
   });
 
   it("warns inside the final 10 minutes, with the minutes remaining", () => {
     stubDashboard();
-    cy.visit("/admin", { onBeforeLoad: (win) => seedSession(win, { minutesLeft: 7 }) });
+    cy.visitAsAdmin("/admin", { minutesLeft: 7 });
     cy.get('[data-cy="session-warning"]')
       .should("be.visible")
       .and("contain", "7 minutes")
@@ -45,7 +35,7 @@ describe("Session lifecycle — expiry, warning banner, 401 vs 403", () => {
   it("signs out and returns to login when the session runs out", () => {
     stubDashboard();
     // already expired: the timer fires at 0 rather than waiting
-    cy.visit("/admin", { onBeforeLoad: (win) => seedSession(win, { minutesLeft: -1 }) });
+    cy.visitAsAdmin("/admin", { minutesLeft: -1 });
     cy.location("pathname").should("eq", "/admin/login");
     cy.location("search").should("eq", "?expired=1");
     cy.get('[data-cy="session-expired"]').should("be.visible");
@@ -61,7 +51,7 @@ describe("Session lifecycle — expiry, warning banner, 401 vs 403", () => {
       statusCode: 401,
       body: { message: "Session expired. Please sign in again." },
     });
-    cy.visit("/admin", { onBeforeLoad: (win) => seedSession(win) });
+    cy.visitAsAdmin("/admin", { minutesLeft: 60 });
     cy.location("pathname").should("eq", "/admin/login");
     cy.get('[data-cy="session-expired"]').should("be.visible");
   });
@@ -72,7 +62,7 @@ describe("Session lifecycle — expiry, warning banner, 401 vs 403", () => {
       statusCode: 403,
       body: { message: "Outside your department's scope." },
     });
-    cy.visit("/admin", { onBeforeLoad: (win) => seedSession(win) });
+    cy.visitAsAdmin("/admin", { minutesLeft: 60 });
     // the regression this guards: a scope denial used to clear the session and bounce to login
     cy.location("pathname").should("eq", "/admin");
     cy.window().then((win) => {

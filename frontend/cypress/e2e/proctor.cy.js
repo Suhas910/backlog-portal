@@ -4,11 +4,10 @@
 // extra Proctors tab with a target selector. All API responses are stubbed — the server-side scope
 // rules have their own backend tests.
 describe("Proctor role", () => {
-  const seedProctor = (win) => {
-    win.sessionStorage.setItem("adminRole", "PROCTOR");
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", "proc1");
-    win.sessionStorage.setItem("adminDepartment", "Computer Science");
+  const PROCTOR_SESSION = {
+    role: "PROCTOR",
+    username: "proc1",
+    department: "Computer Science",
   };
 
   const stubDepartments = () =>
@@ -31,7 +30,7 @@ describe("Proctor role", () => {
     stubDepartments();
     cy.intercept("GET", "/api/admin/users", { statusCode: 403, body: {} }).as("getUsers");
 
-    cy.visit("/admin/users", { onBeforeLoad: seedProctor });
+    cy.visitAsAdmin("/admin/users", PROCTOR_SESSION);
 
     cy.location("pathname").should("eq", "/admin");
     cy.get("@getUsers.all").should("have.length", 0);
@@ -51,7 +50,7 @@ describe("Proctor role", () => {
     cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
     cy.intercept("GET", "/api/admin/exam-cycles", { statusCode: 200, body: [] });
 
-    cy.visit("/admin", { onBeforeLoad: seedProctor });
+    cy.visitAsAdmin("/admin", PROCTOR_SESSION);
     cy.contains("My Students").should("be.visible");
     cy.contains("Exam Cycles").should("not.exist");
     // anchor-scoped: the dashboard legitimately contains "Subjects" elsewhere, e.g. the
@@ -98,7 +97,7 @@ describe("Proctor role", () => {
       },
     }).as("claim");
 
-    cy.visit("/admin/students?tab=claim", { onBeforeLoad: seedProctor });
+    cy.visitAsAdmin("/admin/students?tab=claim", PROCTOR_SESSION);
     cy.wait("@getDepartments");
 
     cy.get('[data-cy="claim-year"]').type("2024");
@@ -149,7 +148,7 @@ describe("Proctor role", () => {
       body: {},
     }).as("unassign");
 
-    cy.visit("/admin/students", { onBeforeLoad: seedProctor });
+    cy.visitAsAdmin("/admin/students", PROCTOR_SESSION);
     cy.wait("@getDepartments");
     cy.get('[data-cy="students-load"]').click();
     cy.wait("@myStudents");
@@ -168,12 +167,6 @@ describe("Proctor role", () => {
 
   it("lets staff manage a chosen proctor's assignments on the Proctors tab", () => {
     stubDepartments();
-    const seedHod = (win) => {
-      win.sessionStorage.setItem("adminRole", "HOD");
-      win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-      win.sessionStorage.setItem("adminUsername", "hod_cs");
-      win.sessionStorage.setItem("adminDepartment", "Computer Science");
-    };
     cy.intercept("GET", "/api/admin/users", {
       statusCode: 200,
       body: [
@@ -194,7 +187,11 @@ describe("Proctor role", () => {
       ],
     }).as("assigned");
 
-    cy.visit("/admin/students?tab=proctors", { onBeforeLoad: seedHod });
+    cy.visitAsAdmin("/admin/students?tab=proctors", {
+      role: "HOD",
+      username: "hod_cs",
+      department: "Computer Science",
+    });
     cy.wait("@users");
 
     // only proctor accounts appear in the selector

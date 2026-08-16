@@ -12,12 +12,6 @@ describe("Student registration — closed cycle, duplicate, expired token", () =
     eligibleSemesters: [1, 2, 3, 4],
   };
 
-  const visitRegister = (win) => {
-    win.sessionStorage.setItem("studentToken", "student-jwt-token");
-    win.sessionStorage.setItem("studentRollNo", profile.rollNo);
-    win.sessionStorage.setItem("studentName", profile.name);
-  };
-
   it("shows the No Open Registrations card when no cycle is open", () => {
     cy.intercept("GET", "/api/student/me", { statusCode: 200, body: profile });
     cy.intercept("GET", "/api/registration-status", {
@@ -25,7 +19,7 @@ describe("Student registration — closed cycle, duplicate, expired token", () =
       body: { open: false },
     }).as("getStatus");
 
-    cy.visit("/register", { onBeforeLoad: visitRegister });
+    cy.visitAsStudent("/register", { rollNo: profile.rollNo, name: profile.name });
     cy.wait("@getStatus");
 
     cy.contains("No Open Registrations").should("be.visible");
@@ -60,7 +54,7 @@ describe("Student registration — closed cycle, duplicate, expired token", () =
       },
     }).as("register");
 
-    cy.visit("/register", { onBeforeLoad: visitRegister });
+    cy.visitAsStudent("/register", { rollNo: profile.rollNo, name: profile.name });
 
     cy.get('[data-cy="reg-semester"]').select("4");
     cy.wait("@getSubjects");
@@ -83,7 +77,7 @@ describe("Student registration — closed cycle, duplicate, expired token", () =
       body: { open: true },
     });
 
-    cy.visit("/register", { onBeforeLoad: visitRegister });
+    cy.visitAsStudent("/register", { rollNo: profile.rollNo, name: profile.name });
 
     cy.location("pathname").should("eq", "/student/login");
   });

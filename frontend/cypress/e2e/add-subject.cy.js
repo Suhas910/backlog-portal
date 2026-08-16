@@ -2,18 +2,12 @@
 // the course code's locked two-digit prefix and the admin types only the suffix; the composed code
 // is what gets posted.
 describe("Add Subject tab", () => {
-  const seed = (win) => {
-    win.sessionStorage.setItem("adminRole", "ADMIN");
-    win.sessionStorage.setItem("adminToken", "admin-jwt-token");
-    win.sessionStorage.setItem("adminUsername", "admin");
-  };
-
   const visit = () => {
     cy.intercept("GET", "/api/departments", {
       statusCode: 200,
       body: [{ id: 1, deptName: "Computer Science" }],
     }).as("getDepartments");
-    cy.visit("/admin/manage-subjects?tab=add", { onBeforeLoad: seed });
+    cy.visitAsAdmin("/admin/manage-subjects?tab=add");
     cy.wait("@getDepartments");
   };
 

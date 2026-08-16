@@ -57,6 +57,31 @@ wrap this file in `@layer`.**
 stock `dark:` follows `prefers-color-scheme` and **ignores the toggle**. Current usage of `dark:`
 is zero; tokens plus override blocks are the house style.
 
+## Status banners are a component, because the palette classes are a hidden contract
+
+Mechanism (2) — the `[data-theme="dark"]` utility re-tints for the red/amber/green status tints —
+carries an implicit contract that nothing enforces: *a banner may only use classes that block
+covers*. A class without a re-tint ships as a bright light-mode patch on the dark navy page, and
+nothing catches it (Cypress asserts no styles, the build does not run eslint, eslint does not read
+class strings).
+
+For a long time that contract was re-typed by hand at **32 separate banner sites**, which had drifted
+to two red text shades, four amber ones, three paddings, two radii and an inconsistent
+`font-medium`. The revealing detail: **dark mode had already collapsed almost all of it** — the
+re-tints map `text-red-600` and `text-red-700` to the same `#f87171`, and all four amber shades to
+`#fbbf24`. The sprawl was visible in **light only**, so unifying it removed no distinction a user
+could perceive in dark.
+
+Decision (2026-08-16): `components/AlertBanner.jsx` owns the contract. `TONES` is the one allowed
+class triple per tone (`error`/`warning`/`success`), so there are exactly **9** palette classes in
+the banner system and each has a matching re-tint. Shades are the darkest available with a re-tint
+— dark is unchanged by construction, light gains contrast (red-700 on red-50 is 6.9:1 against
+red-600's 4.8:1). Adding a tone means adding its re-tints in the same edit.
+
+Explicitly **not** banners, and deliberately left hand-rolled: destructive buttons, status pills, and
+bare inline error text (`text-sm font-medium text-red-600`, no fill). Routing those through
+`AlertBanner` would put a filled box where the design wants a bare label.
+
 ## The CTA colour is theme-aware — and that is not decoration
 
 `--color-cta` is the one token that goes **brighter** in dark: `var(--color-primary)` maroon

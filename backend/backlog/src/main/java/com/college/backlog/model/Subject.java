@@ -54,17 +54,11 @@ public class Subject {
     )
     private List<Department> eligibleDepartments = new ArrayList<>();
 
+    // No all-args constructor on purpose: semester/credits/academicYearOffered are three adjacent
+    // ints with overlapping domains, so a positional swap compiles, throws nothing, and persists a
+    // plausible wrong row (a subject filed under the wrong semester silently skews the eligibility
+    // window). Build with setters — each line names its own field. Don't reintroduce one.
     public Subject() {}
-
-    public Subject(Long id, String subjectName, String courseCode, int semester, int credits, int academicYearOffered, Department department) {
-        this.id = id;
-        this.subjectName = subjectName;
-        this.courseCode = courseCode;
-        this.semester = semester;
-        this.credits = credits;
-        this.academicYearOffered = academicYearOffered;
-        this.department = department;
-    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

@@ -73,7 +73,14 @@ class RegistrationServiceTest {
 
         when(eligibilityService.eligibleSemesters(anyInt(), anyInt())).thenReturn(Set.of(4));
 
-        subject = new Subject(100L, "Data Structures", "22CSL44", 4, 4, 2022, cs);
+        subject = new Subject();
+        subject.setId(100L);
+        subject.setSubjectName("Data Structures");
+        subject.setCourseCode("22CSL44");
+        subject.setSemester(4);
+        subject.setCredits(4);
+        subject.setAcademicYearOffered(2022);
+        subject.setDepartment(cs);
         subject.setSubjectType(SubjectType.REGULAR);
         when(subjectRepository.findAllById(List.of(100L))).thenReturn(List.of(subject));
 

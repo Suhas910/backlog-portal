@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, LogIn, LoaderCircle } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import BrandIdentity from "../components/layout/BrandIdentity";
+import BrandHeader from "../components/layout/BrandHeader";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getStudentToken } from "../lib/api";
 import { rememberExpiry } from "../lib/session";
+import AlertBanner from "../components/AlertBanner";
 
 const USN_PATTERN = /^1MS\d{2}[A-Z]{2}\d{3}$/;
 
@@ -70,9 +71,7 @@ function StudentLoginPage() {
         className="mx-auto w-full max-w-md rounded-3xl border border-stroke bg-surface-1 p-6 shadow-soft sm:p-8"
       >
         <div className="mb-6 text-left">
-          <div className="mb-4 flex items-center rounded-2xl border border-stroke bg-secondary px-4 py-3 text-white shadow-soft">
-            <BrandIdentity compact />
-          </div>
+          <BrandHeader className="mb-4" />
           <p className="mb-2 inline-flex rounded-full border border-primary/30 bg-surface-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-primary-ink">
             Student Login
           </p>
@@ -83,13 +82,14 @@ function StudentLoginPage() {
         </div>
 
         {sessionExpired ? (
-          <p
+          <AlertBanner
+            tone="warning"
             role="status"
-            className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
             data-cy="session-expired"
+            className="mb-4"
           >
             Your session expired. Please sign in again.
-          </p>
+          </AlertBanner>
         ) : null}
 
         <div className="space-y-4">
@@ -129,13 +129,9 @@ function StudentLoginPage() {
           </div>
 
           {error ? (
-            <p
-              role="alert"
-              aria-live="polite"
-              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-            >
+            <AlertBanner tone="error" role="alert" aria-live="polite">
               {error}
-            </p>
+            </AlertBanner>
           ) : null}
 
           <MagneticCta

@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import BrandIdentity from "../components/layout/BrandIdentity";
 import MagneticCta from "../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../lib/api";
+import AlertBanner from "../components/AlertBanner";
 
 // One flow: a signed-in admin-type user changing their own password. Nothing forces them here —
 // accounts start on the derived default (username + "4321") and stay on it until they choose
@@ -122,12 +123,9 @@ function ChangePasswordPage() {
           </div>
 
           {error && (
-            <p
-              role="alert"
-              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-            >
+            <AlertBanner tone="error" role="alert">
               {error}
-            </p>
+            </AlertBanner>
           )}
 
           <MagneticCta
