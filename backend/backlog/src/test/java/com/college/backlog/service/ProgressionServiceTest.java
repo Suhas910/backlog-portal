@@ -36,112 +36,42 @@ class ProgressionServiceTest {
         return s;
     }
 
-    private StudentSemesterTerm term(String rollNo, int semester, int academicYear) {
-        return new StudentSemesterTerm(rollNo, semester, academicYear);
-    }
-
-    @Test
-    void recordsWhenAbsentAndAdvancesCurrentSemester() {
-        Student s = student("1MS24CS191", 2);
-        when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
-        when(termRepository.findByRollNoAndSemester("1MS24CS191", 3)).thenReturn(Optional.empty());
-
-        ProgressionService.Result r = service.recordProgression("1MS24CS191", 3, 2025);
-
-        assertThat(r.outcome()).isEqualTo(ProgressionService.Outcome.CREATED);
-        assertThat(r.heldAcademicYear()).isNull();
-        verify(termRepository).save(any(StudentSemesterTerm.class));
-        assertThat(s.getCurrentSemester()).isEqualTo(3);
-        verify(studentRepository).save(s);
-    }
-
-    @Test
-    void skipsExistingRowWithTheSameYearAndDoesNotLowerCurrentSemester() {
-        Student s = student("1MS24CS191", 6);
-        when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
-        when(termRepository.findByRollNoAndSemester("1MS24CS191", 3))
-                .thenReturn(Optional.of(term("1MS24CS191", 3, 2025)));
-
-        ProgressionService.Result r = service.recordProgression("1MS24CS191", 3, 2025);
-
-        // same year: genuinely nothing to do, and it must stay quiet
-        assertThat(r.outcome()).isEqualTo(ProgressionService.Outcome.SKIPPED_EXISTS);
-        assertThat(r.heldAcademicYear()).isNull();
-        verify(termRepository, never()).save(any());
-        assertThat(s.getCurrentSemester()).isEqualTo(6);
-        verify(studentRepository, never()).save(any());
-    }
-
-    @Test
-    void reportsConflictWhenTheStoredYearDiffersAndNeverOverwritesIt() {
-        // the case the whole outcome exists for: backfillLinear seeded sem 5 as 2026 (no-detention
-        // guess), the department's CSV says the student really sat it in 2025. Before CONFLICT this
-        // returned SKIPPED_EXISTS and the 2025 was discarded without a trace.
-        Student s = student("1MS24CS191", 5);
-        when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
-        when(termRepository.findByRollNoAndSemester("1MS24CS191", 5))
-                .thenReturn(Optional.of(term("1MS24CS191", 5, 2026)));
-
-        ProgressionService.Result r = service.recordProgression("1MS24CS191", 5, 2025);
-
-        assertThat(r.outcome()).isEqualTo(ProgressionService.Outcome.CONFLICT);
-        // both years must reach the caller, or the report can't be acted on
-        assertThat(r.heldAcademicYear()).isEqualTo(2026);
-        // write-once holds: overwriting is overrideProgression's audited job, never a bulk import's
-        verify(termRepository, never()).save(any());
-    }
-
-    @Test
-    void conflictStillAdvancesCurrentSemester() {
-        // the student demonstrably reached semester 7; the dispute is which YEAR, not whether.
-        // Easy to break by moving the advance into the create branch.
-        Student s = student("1MS24CS191", 6);
-        when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
-        when(termRepository.findByRollNoAndSemester("1MS24CS191", 7))
-                .thenReturn(Optional.of(term("1MS24CS191", 7, 2027)));
-
-        assertThat(service.recordProgression("1MS24CS191", 7, 2026).outcome())
-                .isEqualTo(ProgressionService.Outcome.CONFLICT);
-        assertThat(s.getCurrentSemester()).isEqualTo(7);
-        verify(studentRepository).save(s);
-        verify(termRepository, never()).save(any());
-    }
+    // ---- input validation: shared by both write paths, reached here via overrideProgression ----
 
     @Test
     void rejectsInvalidSemester() {
-        assertThatThrownBy(() -> service.recordProgression("1MS24CS191", 0, 2025))
+        assertThatThrownBy(() -> service.overrideProgression("1MS24CS191", 0, 2025, "admin"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void rejectsSemesterAboveEightAndNeverTouchesCurrentSemester() {
-        // 8 is the last semester. recordProgression assigns this value to currentSemester, so
-        // anything above 8 would leave the student with an empty eligibility window.
-        assertThatThrownBy(() -> service.recordProgression("1MS24CS191", 9, 2025))
+    void rejectsSemesterAboveEightAndNeverWrites() {
+        // 8 is the last semester, here and everywhere. Rejected before any write.
+        assertThatThrownBy(() -> service.overrideProgression("1MS24CS191", 9, 2025, "admin"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("between 1 and 8");
-        // rejected before any write: no term row, and currentSemester untouched
         verify(termRepository, never()).save(any());
-        verify(studentRepository, never()).save(any());
     }
 
     @Test
     void acceptsSemesterEightAsTheLastValidOne() {
-        Student s = student("1MS24CS191", 7);
-        when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.of(s));
+        when(studentRepository.findByRollNo("1MS24CS191"))
+                .thenReturn(Optional.of(student("1MS24CS191", 7)));
         when(termRepository.findByRollNoAndSemester("1MS24CS191", 8)).thenReturn(Optional.empty());
 
-        assertThat(service.recordProgression("1MS24CS191", 8, 2027).outcome())
-                .isEqualTo(ProgressionService.Outcome.CREATED);
-        assertThat(s.getCurrentSemester()).isEqualTo(8);
+        service.overrideProgression("1MS24CS191", 8, 2027, "admin");
+
+        verify(termRepository).save(any(StudentSemesterTerm.class));
     }
 
     @Test
     void rejectsUnknownStudent() {
         when(studentRepository.findByRollNo("1MS24CS191")).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.recordProgression("1MS24CS191", 3, 2025))
+        assertThatThrownBy(() -> service.overrideProgression("1MS24CS191", 3, 2025, "admin"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    // ---- backfillLinear: the seed path, run once at student creation ----
 
     @Test
     void backfillLinearSeedsMissingSemestersWithDerivedYears() {
@@ -215,6 +145,8 @@ class ProgressionServiceTest {
                 .containsExactly(2, 4, 5, 6, 7, 8);
     }
 
+    // ---- overrideProgression: the correction path, audited, overwrites ----
+
     @Test
     void overrideCreatesRowWhenAbsent() {
         Student s = student("1MS24CS191", 6);
@@ -224,5 +156,19 @@ class ProgressionServiceTest {
         service.overrideProgression("1MS24CS191", 3, 2025, "admin");
 
         verify(termRepository).save(any(StudentSemesterTerm.class));
+    }
+
+    @Test
+    void overrideOverwritesTheStoredYear() {
+        when(studentRepository.findByRollNo("1MS24CS191"))
+                .thenReturn(Optional.of(student("1MS24CS191", 6)));
+        StudentSemesterTerm held = new StudentSemesterTerm("1MS24CS191", 3, 2025);
+        when(termRepository.findByRollNoAndSemester("1MS24CS191", 3)).thenReturn(Optional.of(held));
+
+        service.overrideProgression("1MS24CS191", 3, 2026, "admin");
+
+        // the correction path is the ONE writer allowed to replace a recorded year
+        assertThat(held.getAcademicYear()).isEqualTo(2026);
+        verify(termRepository).save(held);
     }
 }

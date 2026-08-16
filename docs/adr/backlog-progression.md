@@ -102,6 +102,13 @@ Fail-closed: if an eligible semester has no progression row, the student gets a 
   advance currentSemester); Promote Batch UI (cohort + target sem + AY, preview, detention
   hold, dept-scoped); CSV import (idempotent, dry-run + error report); linear-default backfill
   seeder; single-row override for corrections (audited).
+  **Reduced 2026-08-16:** all of Phase 3 except the backfill seeder and the audited single-row
+  override was deleted. Once seeding at creation became total, the bulk tools could only ever report
+  "already recorded" — `recordProgression` was insert-if-absent onto rows that always exist, and the
+  gaps sweep scanned a range already fully written. What remains: `backfillLinear` (called only from
+  `createStudent`), `overrideProgression`, and `GET`/`PUT /api/admin/progression/{rollNo}...`. The
+  `CONFLICT` outcome went with them — it required two writers disagreeing, and there is now one
+  creator and one deliberate overwriter.
 - **Phase 4 — Submit hardening + snapshot.** Assert
   `subject.academicYearOffered == StudentSemesterTerm[student, subject.semester]`; add
   `snapAcademicYear`.
@@ -178,11 +185,14 @@ branch code exactly like `ProgressionController` (ADMIN/PRINCIPAL broad; HOD/DEP
   omits it); set at create, corrected via `POST /{rollNo}/reset-dob`.
 - **Delete only if unreferenced** (409 via `RegistrationRepository.existsByStudent_RollNo`) — same
   immutable-history rule as subjects.
-- **Progression is never auto-seeded** on create (no fabricated years — wrong years fail silently,
-  missing years fail loud). Instead: a post-create warning + a **"gaps" filter** on the Progression
-  page (`GET /api/admin/progression/gaps`) listing students missing term rows in their eligibility
-  window, plus a per-row "progression incomplete" badge on the Students list. The gaps check already
-  respects `entrySemester`, so a lateral entrant's pre-entry sems aren't flagged.
+- **Progression IS auto-seeded on create** (superseded 2026-07-06). The original decision was the
+  opposite — "no fabricated years; wrong years fail silently, missing years fail loud" — backed by a
+  post-create warning, a "gaps" filter, and an incomplete badge. Full seeding replaced all three:
+  `createStudent` calls `backfillLinear`, stamping `entrySemester..8` linearly from the admission
+  year. The trade-off is recorded in `claude-work/OPEN.md` §1 — a seeded year is indistinguishable
+  from a verified one, so "contact the department office" can no longer fire for a portal-created
+  student, and the no-detention assumption is wrong for exactly the population registering backlogs.
+  Correction is per-student, via the Semesters panel on the Manage tab.
 - All sensitive writes (create/update/delete/DOB-reset) are audit-logged (mirrors `PROGRESSION_OVERRIDE`).
 
 ## Cross-cutting

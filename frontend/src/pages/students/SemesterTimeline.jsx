@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { formatAcademicYear } from "../../lib/academicYear";
 
-// Shared editable "which academic year did the student study each semester" table, used by the
-// Progression and Manage-students tabs so view + edit stay identical in both. Presentational: the
-// parent loads the student (name/currentSemester/entrySemester/terms) and owns the save callback,
-// which PUTs the per-semester override. See docs/adr/backlog-progression.md.
+// Editable "which academic year did the student study each semester" table. Its one consumer is
+// the Semesters panel on the Manage-students tab (it was shared with a Progression tab until that
+// was deleted 2026-08-16). Presentational: the parent loads the student
+// (name/currentSemester/entrySemester/terms) and owns the save callback, which PUTs the
+// per-semester override. See docs/adr/backlog-progression.md.
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";

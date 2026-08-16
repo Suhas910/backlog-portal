@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
-import { AlertTriangle, BadgeCheck, LoaderCircle, UserPlus } from "lucide-react";
-import { Link } from "react-router-dom";
+import { BadgeCheck, LoaderCircle, UserPlus } from "lucide-react";
 import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
 import { findOwnDepartment } from "../../lib/session";
@@ -25,15 +24,12 @@ const cleanPhone = (v) => v.replace(/\D/g, "").slice(0, 10);
 
 // Create one student. Presentational tab: the shell supplies departments and the dept-lock
 // context. DOB is a write-only credential. The server seeds the full entry..8 academic-year
-// timeline on create, so the success banner normally confirms it rather than prompting.
+// timeline on create, so the success banner confirms it — corrections happen on the Manage tab.
 function AddStudentTab({ departments, adminDepartment, deptLocked }) {
   const [form, setForm] = useState(blank);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [createdRollNo, setCreatedRollNo] = useState("");
-  // whether the new student's progression is complete — normally true, since createStudent
-  // backfills the whole entry..8 timeline; the false branch is a defensive fallback
-  const [createdComplete, setCreatedComplete] = useState(false);
 
   // dept code a dept-scoped admin's USNs must carry, shown as a hint
   const myDeptCode = useMemo(() => {
@@ -51,7 +47,6 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
     e.preventDefault();
     setError("");
     setCreatedRollNo("");
-    setCreatedComplete(false);
 
     const rollNo = form.rollNo.trim().toUpperCase();
     if (!USN_RE.test(rollNo)) {
@@ -74,7 +69,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
 
     setLoading(true);
     try {
-      const res = await api.post(
+      await api.post(
         "/admin/students",
         {
           rollNo,
@@ -87,7 +82,6 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
         { headers: getAdminHeaders() },
       );
       setCreatedRollNo(rollNo);
-      setCreatedComplete(!!res.data?.progressionComplete);
       setForm(blank);
     } catch (err) {
       setError(err.response?.data?.message || "Could not create the student.");
@@ -108,7 +102,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
         {deptLocked && myDeptCode ? ` Your USNs must use the ${myDeptCode} branch code.` : ""}
       </p>
 
-      {createdRollNo && createdComplete && (
+      {createdRollNo && (
         <AlertBanner
           tone="success"
           role="status"
@@ -118,40 +112,9 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
         >
           <p className="font-semibold">{createdRollNo} added — full semester timeline seeded.</p>
           <p className="mt-1">
-            Every semester's academic year (sems 1–8) was recorded automatically from the USN. Adjust
-            the current semester or fix any year on the{" "}
-            <Link
-              to="/admin/students?tab=progression"
-              className="font-semibold underline hover:text-green-700"
-            >
-              Progression page
-            </Link>{" "}
-            as the student progresses.
-          </p>
-        </AlertBanner>
-      )}
-
-      {createdRollNo && !createdComplete && (
-        <AlertBanner
-          tone="warning"
-          role="status"
-          data-cy="student-created-warning"
-          icon={<AlertTriangle size={20} className="mt-0.5 shrink-0" />}
-          className="mb-6"
-        >
-          <p className="font-semibold">
-            {createdRollNo} added — but their progression is not fully set yet.
-          </p>
-          <p className="mt-1">
-            Until you record which academic year they studied each remaining semester, they can't
-            register those backlogs.{" "}
-            <Link
-              to="/admin/students?tab=progression"
-              className="font-semibold underline hover:text-amber-700"
-              data-cy="student-set-progression-link"
-            >
-              Set progression now →
-            </Link>
+            Every semester's academic year (entry through 8) was recorded automatically from the
+            USN, assuming no detention. Correct a year, or the current semester, from the student's
+            card on the Manage tab.
           </p>
         </AlertBanner>
       )}

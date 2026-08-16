@@ -105,22 +105,6 @@ public class StudentManagementService {
         return saved;
     }
 
-    /**
-     * Correct only current + entry semester, leaving name/email/phone/DOB untouched. Lets the
-     * progression "View & correct" screen adjust the semester where the timeline is shown,
-     * without round-tripping the other fields that a full update would overwrite.
-     */
-    @Transactional
-    public Student updateSemesters(Student existing, int currentSemester, int entrySemester) {
-        validateSemesters(currentSemester, entrySemester);
-        existing.setCurrentSemester(currentSemester);
-        existing.setEntrySemester(entrySemester);
-        Student saved = studentRepository.save(existing);
-        log.info("STUDENT_SEMESTER_UPDATE rollNo={} currentSem={} entrySem={}",
-                saved.getRollNo(), saved.getCurrentSemester(), saved.getEntrySemester());
-        return saved;
-    }
-
     /** Reset the login credential (DOB). The value is never logged. */
     @Transactional
     public void resetDob(Student existing, LocalDate dateOfBirth) {

@@ -65,8 +65,9 @@ describe("Admin dashboard — role & department scoped access", () => {
     cy.contains("td", "Pending Pam").should("exist");
     cy.contains("td", "Verified Vic").should("not.exist");
 
-    // HOD manages users, students (progression is a tab under Manage Students), and their own
-    // department's curriculum (add / clone / edit are tabs under Manage Subjects) — not departments
+    // HOD manages users, students (semester timelines are a per-student panel on Manage Students),
+    // and their own department's curriculum (add / clone / edit are tabs under Manage Subjects) —
+    // not departments
     cy.contains("a", "Users").should("exist");
     cy.contains("a", "Students").should("exist");
     cy.contains("a", "Progression").should("not.exist");

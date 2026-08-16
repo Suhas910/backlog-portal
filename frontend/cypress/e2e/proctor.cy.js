@@ -75,7 +75,6 @@ describe("Proctor role", () => {
     cy.get('[data-cy="tab-claim"]').should("contain", "Claim Students");
     cy.get('[data-cy="tab-add"]').should("not.exist");
     cy.get('[data-cy="tab-import"]').should("not.exist");
-    cy.get('[data-cy="tab-progression"]').should("not.exist");
   });
 
   it("claims students via the picker, surfacing one-proctor conflicts", () => {
@@ -145,7 +144,6 @@ describe("Proctor role", () => {
             branch: "Computer Science",
             currentSemester: 3,
             entrySemester: 1,
-            progressionComplete: true,
           },
         ],
         number: 0,

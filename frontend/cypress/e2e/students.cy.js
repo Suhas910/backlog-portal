@@ -1,6 +1,6 @@
 // The Students admin page (tabs: Manage / Add / Import): create, edit, delete (blocked when
-// referenced by registrations, allowed otherwise), the "progression incomplete" badge, and a
-// bulk-import dry-run.
+// referenced by registrations, allowed otherwise), the per-student semester timeline — the only
+// progression surface — and a bulk-import dry-run.
 describe("Students page", () => {
   const student = {
     rollNo: "1MS22CS001",
@@ -10,7 +10,6 @@ describe("Students page", () => {
     branch: "Computer Science",
     currentSemester: 4,
     entrySemester: 1,
-    progressionComplete: false,
   };
 
   const stubDepartments = () =>
@@ -32,13 +31,6 @@ describe("Students page", () => {
     cy.wait("@getStudents");
     cy.contains("Asha Rao").should("be.visible");
   };
-
-  it("shows the progression-incomplete badge linking to Progression", () => {
-    visitManageAndLoad();
-    cy.get('[data-cy="student-gap-1MS22CS001"]')
-      .should("contain", "Progression incomplete")
-      .and("have.attr", "href", "/admin/students?tab=progression");
-  });
 
   it("edits a student's name and semester", () => {
     cy.intercept("PUT", "/api/admin/students/1MS22CS001", {
@@ -103,6 +95,8 @@ describe("Students page", () => {
     cy.get('[data-cy="prog-term-year-1"]').should("have.value", "2022-23");
     cy.get('[data-cy="prog-term-year-4"]').should("have.value", "");
     cy.get('[data-cy="prog-term-missing-4"]').should("contain", "not set");
+    // the timeline runs to sem 8, not just to the current semester
+    cy.get('[data-cy="prog-term-year-8"]').should("exist");
 
     // fill the blank sem and save -> the PUT override carries the parsed start-year int
     cy.get('[data-cy="prog-term-year-4"]').type("2023-24");
@@ -138,7 +132,7 @@ describe("Students page", () => {
     cy.get('[data-cy="students-empty"]').should("be.visible");
   });
 
-  it("creates a student via the Add tab and warns that progression isn't set", () => {
+  it("creates a student via the Add tab and confirms the seeded timeline", () => {
     cy.intercept("POST", "/api/admin/students", { statusCode: 201, body: { ...student } }).as("createStudent");
 
     stubDepartments();
@@ -157,31 +151,8 @@ describe("Students page", () => {
       expect(request.body.entrySemester).to.eq(1);
       expect(request.body.dateOfBirth).to.eq("2004-05-01");
     });
-    cy.get('[data-cy="student-created-warning"]').should("contain", "progression is not fully set");
-    cy.get('[data-cy="student-set-progression-link"]').should("have.attr", "href", "/admin/students?tab=progression");
-  });
-
-  it("shows the seeded-timeline banner when create returns a complete progression", () => {
-    // the full sem 1-8 timeline is auto-seeded on create, so the student returns
-    // progression-complete and the green "timeline seeded" banner shows
-    cy.intercept("POST", "/api/admin/students", {
-      statusCode: 201,
-      body: { ...student, currentSemester: 2, progressionComplete: true },
-    }).as("createStudent");
-
-    stubDepartments();
-    cy.visitAsAdmin("/admin/students?tab=add");
-    cy.wait("@getDepartments");
-
-    cy.get('[data-cy="student-usn"]').type("1ms22cs001");
-    cy.get('[data-cy="student-name"]').type("Asha Rao");
-    cy.get('[data-cy="student-dob"]').type("2004-05-01");
-    cy.get('[data-cy="student-current-sem"]').select("2");
-    cy.get('[data-cy="student-add-submit"]').click();
-
-    cy.wait("@createStudent");
+    // the server seeds entry..8 on create, so the banner confirms rather than prompts
     cy.get('[data-cy="student-created-complete"]').should("contain", "full semester timeline seeded");
-    cy.get('[data-cy="student-created-warning"]').should("not.exist");
   });
 
   it("previews a bulk import (dry-run) on the Import tab", () => {

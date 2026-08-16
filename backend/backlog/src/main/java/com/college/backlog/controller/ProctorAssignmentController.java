@@ -187,8 +187,7 @@ public class ProctorAssignmentController {
                 errors++;
             }
         }
-        // 0 conflicts: assignment has no academic year to contradict
-        return new BatchResult(false, assigned, skipped, 0, errors, results);
+        return new BatchResult(false, assigned, skipped, errors, results);
     }
 
     // ---- remove from supervision ----

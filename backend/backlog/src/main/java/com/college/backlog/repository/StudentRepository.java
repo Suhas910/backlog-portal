@@ -13,9 +13,6 @@ import java.util.Optional;
 public interface StudentRepository extends JpaRepository<Student, String>, JpaSpecificationExecutor<Student> {
     Optional<Student> findByRollNo(String rollNo);
 
-    // Cohort selection keys off the USN, the single source of truth for branch + admission year.
-    // SQL LIKE patterns: "1MS24CS%" is the 2024 CS batch, "1MS__CS%" all CS years.
-    List<Student> findByRollNoLikeOrderByRollNo(String pattern);
     List<Student> findByRollNoInOrderByRollNo(Collection<String> rollNos);
 
     // Department-delete guard: students carry their branch as the 2-letter code with no FK, so a

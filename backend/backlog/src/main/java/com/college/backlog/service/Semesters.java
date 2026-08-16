@@ -5,9 +5,10 @@ package com.college.backlog.service;
  * eligibility, current/entry semester, subject offerings, cloning and progression — see
  * docs/adr/backlog-progression.md.
  *
- * Keep it single. {@code ProgressionService.recordProgression} assigns the validated semester to
- * {@code Student.currentSemester}, and {@code EligibilityService} returns an EMPTY window above 8,
- * so a wider range on any progression write path silently locks the student out of registering.
+ * Keep it single. {@code StudentManagementService.validateSemesters} bounds
+ * {@code Student.currentSemester} by this range and {@code EligibilityService} returns an EMPTY
+ * window above 8, so a wider range anywhere silently locks the student out of registering.
+ * {@code ProgressionService.backfillLinear} seeds up to {@link #MAX} for the same reason.
  *
  * Sibling of {@link AcademicYears} and {@link CourseCodes}. Enforced in application code only —
  * {@code student_semester_terms.semester} is a plain integer with no CHECK, by decision.

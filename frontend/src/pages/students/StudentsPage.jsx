@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, CalendarClock, GraduationCap, UploadCloud, UserCheck, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, GraduationCap, UploadCloud, UserCheck, UserPlus, Users } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandHeader from "../../components/layout/BrandHeader";
 import api from "../../lib/api";
@@ -7,7 +7,6 @@ import { reportLoadError } from "../../lib/loadError";
 import StudentsManageTab from "./StudentsManageTab";
 import AddStudentTab from "./AddStudentTab";
 import ImportStudentsTab from "./ImportStudentsTab";
-import ProgressionTab from "./ProgressionTab";
 import ClaimStudentsTab from "./ClaimStudentsTab";
 import { findOwnDepartment } from "../../lib/session";
 import AlertBanner from "../../components/AlertBanner";
@@ -16,13 +15,12 @@ const DEPT_ROLES = new Set(["HOD", "DEPT_OFFICE", "PROCTOR"]);
 const ALLOWED_ROLES = ["ADMIN", "PRINCIPAL", "HOD", "DEPT_OFFICE", "PROCTOR"];
 
 // Tab set varies by role: a PROCTOR gets only their supervised roster and the claim picker (no
-// create/import/bulk-progression — the server refuses those anyway); HOD and above also manage
-// proctor assignments; DEPT_OFFICE keeps the original four, without proctor management.
+// create/import — the server refuses those anyway); HOD and above also manage proctor
+// assignments; DEPT_OFFICE keeps the base three, without proctor management.
 const STAFF_TABS = [
   { key: "manage", label: "Manage", icon: Users },
   { key: "add", label: "Add", icon: UserPlus },
   { key: "import", label: "Import", icon: UploadCloud },
-  { key: "progression", label: "Progression", icon: CalendarClock },
 ];
 const PROCTORS_TAB = { key: "proctors", label: "Proctors", icon: UserCheck };
 const PROCTOR_TABS = [
@@ -36,10 +34,10 @@ function tabsForRole(role) {
   return STAFF_TABS;
 }
 
-// Admin student management behind one route as four tabs (Manage / Add / Import / Progression).
-// The shell owns what they share — role guard, the single departments fetch, dept-pin resolution
-// — leaving each tab presentational. Auth/dept scope is enforced server-side on
-// /api/admin/students/** and /api/admin/progression/**.
+// Admin student management behind one route as tabs (Manage / Add / Import). The shell owns what
+// they share — role guard, the single departments fetch, dept-pin resolution — leaving each tab
+// presentational. Auth/dept scope is enforced server-side on /api/admin/students/** and
+// /api/admin/progression/**.
 function StudentsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -111,7 +109,7 @@ function StudentsPage() {
           <p className="mt-1 text-sm text-ink-muted">
             {adminRole === "PROCTOR"
               ? "Manage the students under your supervision — details, semester timeline, and DOB resets — and claim new ones from your department."
-              : "Create and manage student accounts, then set their academic-year progression in the Progression tab so their backlogs resolve to the right year."}
+              : "Create and manage student accounts. Each semester's academic year is seeded on create; correct one from a student's Semesters panel on the Manage tab."}
             {deptLocked && adminDepartment ? ` Scoped to ${adminDepartment}.` : ""}
           </p>
         </div>
@@ -154,7 +152,6 @@ function StudentsPage() {
         {activeTab === "manage" && <StudentsManageTab {...shared} />}
         {activeTab === "add" && <AddStudentTab {...shared} />}
         {activeTab === "import" && <ImportStudentsTab {...shared} />}
-        {activeTab === "progression" && <ProgressionTab {...shared} />}
         {(activeTab === "claim" || activeTab === "proctors") && <ClaimStudentsTab {...shared} />}
       </div>
     </div>

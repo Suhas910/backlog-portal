@@ -97,6 +97,14 @@ Measured (WCAG 2.1, recomputed from the live token values):
 | Dark CTA: salmon fill, navy label | **7.00** | 4.5 |
 | Maroon fill on the dark page | **1.92** | 3.0 (non-text) — fails |
 | Navy fill on the dark page | **1.24** | 3.0 (non-text) — fails |
+| `text-amber-600` on white, small text | **3.19** | 4.5 — fails; use `amber-700` |
+| `text-red-600` on white, small text | **4.83** | 4.5 |
+
+That amber row is why small amber status text is `text-amber-700`, never `-600` — measured when the
+batch-result table needed an amber that sits beside `text-red-600` without dropping below AA. Both
+shades share one `[data-theme="dark"]` re-tint, so it is a light-only correction. (Recorded here
+2026-08-16 when the conflict-status styles that carried this note were deleted; `text-amber-700` is
+still live in `SemesterTimeline`'s "not set" flag.)
 
 Those last two rows are why a single flat brand colour cannot work: the dark page *is* dark navy,
 so a maroon or navy button sinks into it. Brightening maroon until it clears the 3:1 floor lands on

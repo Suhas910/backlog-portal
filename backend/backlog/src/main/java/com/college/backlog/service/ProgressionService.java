@@ -11,9 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Single write path for "student X studied semester N in academic year Y". Promote Batch and CSV
- * import both funnel through {@link #recordProgression}, so the write-once and current-semester
- * rules can't diverge between them. See docs/adr/backlog-progression.md.
+ * Writes for "student X studied semester N in academic year Y". Two producers only:
+ * {@link #backfillLinear} seeds the full entry..8 timeline at student creation (write-once, onto an
+ * empty timeline), and {@link #overrideProgression} corrects one semester (overwrites, audited).
+ * See docs/adr/backlog-progression.md.
  */
 @Service
 public class ProgressionService {
@@ -26,65 +27,8 @@ public class ProgressionService {
     @Autowired
     private StudentSemesterTermRepository termRepository;
 
-    /**
-     * CONFLICT = a row already exists for this (rollNo, semester) but holds a DIFFERENT academic
-     * year. Split out from SKIPPED_EXISTS deliberately: "already correct, nothing to do" and "we
-     * are discarding a year that contradicts what we hold" are opposite events, and one enum value
-     * for both meant the second inherited the first's silence.
-     */
-    public enum Outcome { CREATED, SKIPPED_EXISTS, CONFLICT }
-
-    /**
-     * @param heldAcademicYear the year already on file. Set only for CONFLICT (null otherwise), so
-     *     callers can report both years — a conflict a human can't see both sides of is unactionable.
-     */
-    public record Result(Outcome outcome, Integer heldAcademicYear) {}
-
-    /**
-     * Stamp the academic year a student studied a semester, write-once: inserts a
-     * (rollNo, semester) row only if absent, so a retake never overwrites the original
-     * "first studied" year, and advances {@code currentSemester} if {@code semester} is higher
-     * (current = highest semester entered).
-     *
-     * <p>A requested year that contradicts the stored one is NEVER written here and returns
-     * CONFLICT. Overwriting is a deliberate, audited, per-student act — that is
-     * {@link #overrideProgression}, which logs actor and previous→new. Letting a bulk CSV do it
-     * would rewrite a cohort's history from one mis-mapped column with no trace.
-     *
-     * @throws IllegalArgumentException on invalid input — callers map it to a per-row error in
-     *         bulk flows, or a 400 in single-row flows
-     */
-    @Transactional
-    public Result recordProgression(String rollNo, int semester, int academicYear) {
-        Student student = validate(rollNo, semester, academicYear);
-
-        StudentSemesterTerm existing = termRepository.findByRollNoAndSemester(rollNo, semester)
-                .orElse(null);
-        Result result;
-        if (existing == null) {
-            termRepository.save(new StudentSemesterTerm(rollNo, semester, academicYear));
-            result = new Result(Outcome.CREATED, null);
-        } else if (existing.getAcademicYear() == academicYear) {
-            result = new Result(Outcome.SKIPPED_EXISTS, null);
-        } else {
-            // logged at WARN: the row is dropped on purpose, but silently dropping department
-            // ground truth is what made this invisible for the whole life of the import feature
-            log.warn("PROGRESSION_CONFLICT rollNo={} semester={} held={} requested={} (not written)",
-                    rollNo, semester, existing.getAcademicYear(), academicYear);
-            result = new Result(Outcome.CONFLICT, existing.getAcademicYear());
-        }
-
-        // Current semester tracks the furthest the student has reached — advanced on CONFLICT too:
-        // the student demonstrably sat this semester, the dispute is which YEAR, not whether.
-        if (student.getCurrentSemester() < semester) {
-            student.setCurrentSemester(semester);
-            studentRepository.save(student);
-        }
-        return result;
-    }
-
-    /** Correct an existing (or missing) row — unlike recordProgression this OVERWRITES the
-     *  academic year. Audited. Does not touch currentSemester. */
+    /** Correct an existing (or missing) row — OVERWRITES the academic year, unlike the write-once
+     *  {@link #backfillLinear}. Audited. Does not touch currentSemester. */
     @Transactional
     public void overrideProgression(String rollNo, int semester, int academicYear, String actor) {
         validate(rollNo, semester, academicYear);
@@ -138,11 +82,8 @@ public class ProgressionService {
         return created;
     }
 
-    /**
-     * Range-check a semester + academic year. Shared by the write path and the CSV import dry-run,
-     * so the preview flags the rows apply would reject (no WOULD_CREATE that then errors).
-     */
-    public void validateSemesterAndYear(int semester, int academicYear) {
+    /** Range-check a semester + academic year. */
+    private void validateSemesterAndYear(int semester, int academicYear) {
         Semesters.assertStudiable(semester);
         AcademicYears.assertInRange(academicYear);
     }

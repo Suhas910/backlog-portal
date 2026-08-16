@@ -2,8 +2,7 @@ package com.college.backlog.controller.dto;
 
 /**
  * Roster row for the admin Students list. Omits dateOfBirth deliberately — it is the student login
- * credential and write-only, never returned by any endpoint. {@code progressionComplete} is false
- * when a term row is missing for any semester in the eligibility window (the Progression "gaps" view).
+ * credential and write-only, never returned by any endpoint.
  */
 public class StudentSummaryResponse {
     private final String rollNo;
@@ -13,11 +12,9 @@ public class StudentSummaryResponse {
     private final String branch;
     private final int currentSemester;
     private final int entrySemester;
-    private final boolean progressionComplete;
 
     public StudentSummaryResponse(String rollNo, String name, String email, String phone,
-                                  String branch, int currentSemester, int entrySemester,
-                                  boolean progressionComplete) {
+                                  String branch, int currentSemester, int entrySemester) {
         this.rollNo = rollNo;
         this.name = name;
         this.email = email;
@@ -25,7 +22,6 @@ public class StudentSummaryResponse {
         this.branch = branch;
         this.currentSemester = currentSemester;
         this.entrySemester = entrySemester;
-        this.progressionComplete = progressionComplete;
     }
 
     public String getRollNo() { return rollNo; }
@@ -35,5 +31,4 @@ public class StudentSummaryResponse {
     public String getBranch() { return branch; }
     public int getCurrentSemester() { return currentSemester; }
     public int getEntrySemester() { return entrySemester; }
-    public boolean isProgressionComplete() { return progressionComplete; }
 }

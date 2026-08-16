@@ -14,7 +14,6 @@ import {
   X,
 } from "lucide-react";
 import AlertBanner from "../../components/AlertBanner";
-import { Link } from "react-router-dom";
 import api, { getAdminHeaders } from "../../lib/api";
 import { reportLoadError } from "../../lib/loadError";
 import { parseAcademicYear } from "../../lib/academicYear";
@@ -355,25 +354,6 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
               {student.email ? ` · ${student.email}` : ""}
               {student.phone ? ` · ${student.phone}` : ""}
             </p>
-            {!student.progressionComplete &&
-              (proctorMode ? (
-                // proctors have no Progression tab, so the badge is informational — they fix
-                // years via the Semesters panel below
-                <span
-                  data-cy={`student-gap-${student.rollNo}`}
-                  className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800"
-                >
-                  <AlertTriangle size={12} /> Progression incomplete — set years under Semesters
-                </span>
-              ) : (
-                <Link
-                  to="/admin/students?tab=progression"
-                  data-cy={`student-gap-${student.rollNo}`}
-                  className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-100"
-                >
-                  <AlertTriangle size={12} /> Progression incomplete
-                </Link>
-              ))}
             {notice && <p className="mt-1.5 text-xs font-semibold text-primary-ink">{notice}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -587,10 +567,10 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
   );
 }
 
-// Per-student sem-year timeline, loaded on demand under a student's card. Same view + edit as the
-// Progression tab (shared SemesterTimeline), so an admin can correct a year mapping (e.g. after a
-// year-back) from Manage Students. This panel covers only the per-semester years — current/entry
-// semester stay editable in the row's Edit form and on the Progression page.
+// Per-student sem-year timeline, loaded on demand under a student's card. THE progression surface:
+// creation seeds entry..8 linearly (no detention assumed), and this is where a wrong year gets
+// corrected — e.g. after a year-back, where the seeded year is wrong by construction. Covers only
+// the per-semester years; current/entry semester stay in the row's Edit form.
 function StudentSemesters({ rollNo }) {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -644,8 +624,10 @@ function StudentSemesters({ rollNo }) {
   return (
     <div className="mt-3 border-t border-stroke pt-3" data-cy={`student-sems-panel-${rollNo}`}>
       <p className="mb-2 text-xs text-ink-muted">
-        Academic year the student studied each semester (entry through 8). Blank rows aren't set yet;
-        semesters past the current one are muted but still editable.
+        Academic year the student studied each semester (entry through 8) — this is what their
+        backlog subjects resolve against. Seeded on create assuming no detention, so correct any
+        year a year-back changed. Blank rows aren't set yet; semesters past the current one are
+        muted but still editable.
       </p>
       {busy && !data ? (
         <p className="inline-flex items-center gap-2 text-sm text-ink-muted">

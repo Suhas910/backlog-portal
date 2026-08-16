@@ -2,13 +2,10 @@ package com.college.backlog.controller;
 
 import com.college.backlog.controller.dto.*;
 import com.college.backlog.model.Student;
-import com.college.backlog.model.StudentSemesterTerm;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.DepartmentRepository;
 import com.college.backlog.repository.StudentRepository;
-import com.college.backlog.repository.StudentSemesterTermRepository;
-import com.college.backlog.service.EligibilityService;
 import com.college.backlog.service.ProctorScopeService;
 import com.college.backlog.service.StudentManagementService;
 import com.college.backlog.service.StudentSpecification;
@@ -59,10 +56,8 @@ public class StudentManagementController {
     private static final int DEFAULT_PAGE_SIZE = 25;
 
     @Autowired private StudentRepository studentRepository;
-    @Autowired private StudentSemesterTermRepository termRepository;
     @Autowired private DepartmentRepository departmentRepository;
     @Autowired private StudentManagementService studentService;
-    @Autowired private EligibilityService eligibilityService;
     @Autowired private ProctorScopeService proctorScope;
 
     // ---- list ----
@@ -94,13 +89,7 @@ public class StudentManagementController {
         }
         StudentSpecification spec = new StudentSpecification(
             rollNoLike, semester.orElse(null), query.orElse(null), assigned);
-        Page<Student> studentsPage = studentRepository.findAll(spec, pageable);
-
-        // term lookup batched over this page's roll numbers, so progressionComplete is 1 query, not N
-        Map<String, Set<Integer>> termsByRoll = termsByRoll(
-            studentsPage.getContent().stream().map(Student::getRollNo).collect(Collectors.toList()));
-
-        return studentsPage.map(s -> toSummary(s, termsByRoll.getOrDefault(s.getRollNo(), Set.of())));
+        return studentRepository.findAll(spec, pageable).map(this::toSummary);
     }
 
     // ---- create ----
@@ -124,8 +113,7 @@ public class StudentManagementController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
-        return toSummary(saved, termsByRoll(List.of(saved.getRollNo()))
-            .getOrDefault(saved.getRollNo(), Set.of()));
+        return toSummary(saved);
     }
 
     // ---- edit ----
@@ -142,8 +130,7 @@ public class StudentManagementController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
-        return toSummary(saved, termsByRoll(List.of(saved.getRollNo()))
-            .getOrDefault(saved.getRollNo(), Set.of()));
+        return toSummary(saved);
     }
 
     // ---- reset DOB ----
@@ -242,8 +229,7 @@ public class StudentManagementController {
                 errors++;
             }
         }
-        // 0 conflicts: student import creates accounts, it doesn't restate a studied year
-        return new BatchResult(req.isDryRun(), created, skipped, 0, errors, results);
+        return new BatchResult(req.isDryRun(), created, skipped, errors, results);
     }
 
     // ---- helpers ----
@@ -294,21 +280,10 @@ public class StudentManagementController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + roll));
     }
 
-    private Map<String, Set<Integer>> termsByRoll(List<String> rollNos) {
-        if (rollNos.isEmpty()) return Map.of();
-        return termRepository.findByRollNoIn(rollNos).stream()
-            .collect(Collectors.groupingBy(StudentSemesterTerm::getRollNo,
-                Collectors.mapping(StudentSemesterTerm::getSemester, Collectors.toSet())));
-    }
-
-    /** A student is progression-complete when every eligible semester has a term row. */
-    private StudentSummaryResponse toSummary(Student s, Set<Integer> recordedSemesters) {
-        Set<Integer> eligible =
-            eligibilityService.eligibleSemesters(s.getCurrentSemester(), s.getEntrySemester());
-        boolean complete = recordedSemesters.containsAll(eligible);
+    private StudentSummaryResponse toSummary(Student s) {
         return new StudentSummaryResponse(
             s.getRollNo(), s.getName(), s.getEmail(), s.getPhone(),
-            s.getBranch(), s.getCurrentSemester(), s.getEntrySemester(), complete);
+            s.getBranch(), s.getCurrentSemester(), s.getEntrySemester());
     }
 
     private int firstNonNull(Integer a, Integer b, int fallback) {
