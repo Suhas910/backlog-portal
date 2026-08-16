@@ -76,3 +76,21 @@ Cypress.Commands.add("visitAsAdmin", (path, options = {}) => {
     },
   });
 });
+
+// Names the endpoint when an unstubbed admin call sinks a test (it 401s and api.js signs the
+// session out mid-test). A DIAGNOSTIC, not a gate — it catches nothing extra. Defined FIRST so
+// spec-level intercepts win and this sees only genuine gaps.
+// The matcher must stay the GLOB with the scoping in JS: a RouteMatcher regex silently matches
+// NOTHING, installing clean and never firing. Scope mirrors api.js's isAdminScopedUrl — widening
+// it to all of /api only fabricates failures on the public endpoints.
+// Why it can't be a gate, the blast radius, and the audit that DOES find gaps:
+// claude-work/notes/unstubbed-api-audit.md
+beforeEach(() => {
+  cy.intercept({ url: "**/api/**" }, (req) => {
+    if (!/\/api\/(admin\/|register\/verify)/.test(req.url)) return req.continue();
+    throw new Error(
+      `Unstubbed admin API call: ${req.method} ${req.url}\n` +
+        `It will 401 and sign the session out mid-test. Add a cy.intercept for it.`
+    );
+  });
+});

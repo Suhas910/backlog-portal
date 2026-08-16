@@ -16,6 +16,24 @@ describe("Proctor role", () => {
       body: [{ id: 1, deptName: "Computer Science", code: "CS" }],
     }).as("getDepartments");
 
+  // Everything the /admin dashboard fetches on load. Any of these left unstubbed reaches the dev
+  // proxy, 401s, and api.js correctly signs the admin out to /admin/login — so a test that only
+  // meant to land on /admin gets bounced mid-assertion. summary-counts stays AFTER the list
+  // intercept so it wins the sub-path.
+  const stubDashboard = () => {
+    cy.intercept("GET", "/api/admin/registrations*", {
+      statusCode: 200,
+      body: { content: [], number: 0, totalPages: 0, totalElements: 0 },
+    });
+    cy.intercept("GET", "/api/admin/registrations/summary-counts*", {
+      statusCode: 200,
+      body: { total: 0, submitted: 0, verified: 0, rejected: 0 },
+    });
+    cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
+    cy.intercept("GET", "/api/admin/exam-cycles", { statusCode: 200, body: [] });
+  };
+
   const claimable = (rollNo, name, proctored, mine) => ({
     rollNo,
     name,
@@ -28,6 +46,8 @@ describe("Proctor role", () => {
   // in the same commit, so a guaranteed 403 and its red banner flashed before the redirect landed.
   it("redirects a proctor off /admin/users without firing a doomed request", () => {
     stubDepartments();
+    // the redirect lands on /admin, which loads the dashboard — stub it or its 401s eject us
+    stubDashboard();
     cy.intercept("GET", "/api/admin/users", { statusCode: 403, body: {} }).as("getUsers");
 
     cy.visitAsAdmin("/admin/users", PROCTOR_SESSION);
@@ -38,17 +58,7 @@ describe("Proctor role", () => {
 
   it("shows the proctor tabs and the trimmed dashboard nav", () => {
     stubDepartments();
-    cy.intercept("GET", "/api/admin/registrations*", {
-      statusCode: 200,
-      body: { content: [], number: 0, totalPages: 0, totalElements: 0 },
-    });
-    cy.intercept("GET", "/api/admin/registrations/summary-counts*", {
-      statusCode: 200,
-      body: { total: 0, submitted: 0, verified: 0, rejected: 0 },
-    });
-    cy.intercept("GET", "/api/admin/subjects-for-filter*", { statusCode: 200, body: [] });
-    cy.intercept("GET", "/api/admin/departments", { statusCode: 200, body: [] });
-    cy.intercept("GET", "/api/admin/exam-cycles", { statusCode: 200, body: [] });
+    stubDashboard();
 
     cy.visitAsAdmin("/admin", PROCTOR_SESSION);
     cy.contains("My Students").should("be.visible");

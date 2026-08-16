@@ -22,7 +22,7 @@
      brand      as a FILL   bg-/border-/accent-primary      bg-secondary
                 as TEXT     text-primary-ink                text-secondary-ink
                 bg-cta + text-cta-text — solid CTA fills only, NOT text/borders
-     homepage   --page-backdrop, --hero-* (raw vars, consumed by inline style — see below)
+     homepage   --hero-* (raw vars, consumed by inline style — see below)
 
    Brand fill vs brand text is a real distinction, not a style preference: maroon and navy read
    fine as fills on the dark page but not as text (1.92 / 1.24 vs the 3.0 floor), so the -ink
@@ -144,13 +144,6 @@
   --hero-btn-bg: transparent;
   --hero-btn-border: var(--color-secondary);
   --hero-btn-text: var(--color-secondary);
-  /* Page-wide fixed backdrop: a flat surface in light, the brand gradient in dark. */
-  --page-backdrop: var(--color-surface-1);
-  /* Decorative corner blobs, light-only — transparent in dark so the elements stay in the DOM
-     unconditionally instead of being branched away. */
-  --hero-blob-1: var(--color-primary);
-  /* navy, not the CTA accent — that now resolves to maroon, which would make both blobs one hue */
-  --hero-blob-2: var(--color-secondary);
 
   color-scheme: light;
   font-family: "Inter", system-ui, sans-serif;
@@ -200,9 +193,6 @@
   --hero-btn-bg: rgba(255, 255, 255, 0.06);
   --hero-btn-border: rgba(255, 255, 255, 0.55);
   --hero-btn-text: #ffffff;
-  --page-backdrop: linear-gradient(135deg, #1a2040 0%, #242a52 55%, #2d1a3a 100%);
-  --hero-blob-1: transparent;
-  --hero-blob-2: transparent;
 
   color-scheme: dark;
 }

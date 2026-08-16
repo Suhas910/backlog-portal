@@ -115,6 +115,14 @@ describe("A real failure is still visible — the 401 guard is scoped, not a bla
       statusCode: 200,
       body: { content: [], totalPages: 0, totalElements: 0, number: 0 },
     });
+    // Defined after the list intercept so it wins for the /summary-counts sub-path. Load-bearing,
+    // not tidiness: unstubbed it reaches the dev server, 401s, and api.js correctly signs the admin
+    // out — navigating away from /admin mid-assertion. That raced this test's banner lookup and
+    // failed it ~3 runs in 5, looking like an app bug in the error path.
+    cy.intercept("GET", "/api/admin/registrations/summary-counts*", {
+      statusCode: 200,
+      body: { total: 0, submitted: 0, verified: 0, rejected: 0 },
+    });
     cy.visitAsAdmin("/admin");
     cy.wait("@depts");
 

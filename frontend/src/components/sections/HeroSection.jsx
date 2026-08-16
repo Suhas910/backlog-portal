@@ -17,19 +17,17 @@ export default function HeroSection() {
   }, []);
 
   return (
-    // Transparent: HomePage's page-wide fixed backdrop provides the gradient (dark) / blobs
-    // (light), and the text scrolls over it.
+    // Transparent: the page background comes from HomePage's bg-surface-1, same as every other
+    // page. The section carried position/z-index only to layer over a fixed backdrop that no
+    // longer exists.
     <section
       style={{
-        position: "relative",
         padding: "3rem 1rem 5rem",
       }}
     >
       {/* Content */}
       <div
         style={{
-          position: "relative",
-          zIndex: 1,
           margin: "0 auto",
           maxWidth: "80rem",
         }}
