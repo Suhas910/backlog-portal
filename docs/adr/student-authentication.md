@@ -33,8 +33,10 @@ reviews; treat USN+DOB as a fixed requirement.
   (`1MS<YY><BR><NNN>`, see `Usn`).
 - **DOB is write-only**: it is never returned by any endpoint (`StudentSummaryResponse`
   omits it); admins reset it via `POST /{rollNo}/reset-dob`.
-- **Brute-force throttling** (`LoginThrottleService`): 5 failures per
-  `scope:username:ip` → 15-minute lock. Admin and student failures never cross-count.
+- **There is no brute-force throttling.** Correct USN+DOB gets in; a wrong pair gets a
+  401 and nothing is counted, locked, or rate-limited. `LoginThrottleService` and the
+  `login_throttle` table were **removed 2026-08-17 (owner-directed, V10)** — see
+  Trade-offs. Do not re-add a lock, counter, or 429 without an owner decision.
 - Identity for all student actions comes from the authenticated session, never the
   request body.
 
@@ -44,16 +46,19 @@ not a bug.
 ## Trade-offs (accepted)
 
 - DOB is low-entropy and immutable, and USNs are enumerable, so the credential is
-  effectively a known-username + weak-secret pair. The per-IP throttle bounds a
-  single attacker but does not impose a global per-account ceiling, so a distributed
-  (many-IP) attacker has more room. **Accepted** given the low-stakes surface and the
-  in-person downstream verification.
-- Recommended defence-in-depth *if ever desired later* (all optional, none change the
-  USN+DOB model): a global per-account attempt ceiling on top of the per-IP one, a
-  failed-login-spike alert per USN, or a CAPTCHA after N failures. Not required.
+  effectively a known-username + weak-secret pair. **Since 2026-08-17 nothing bounds
+  online guessing at all** — a script can walk a cohort's plausible DOBs against a
+  known USN at full speed. The owner was told this when removing the throttle and
+  **accepted it deliberately**, given the low-stakes student surface (view eligibility,
+  print a form) and the in-person verification of the signed form downstream.
+  **Accepted — do not re-propose the throttle as a review finding.**
+- Defence-in-depth *if the posture is ever revisited* (none change the USN+DOB model):
+  a per-account attempt ceiling, a failed-login-spike alert per USN, a CAPTCHA after N
+  failures, or edge rate-limiting at the host rather than in application code. All
+  explicitly **not** wanted today.
 
 ## Related
 
 - Auth transport: the JWT rides in an httpOnly cookie with CSRF protection (see the
   cookie-migration work on `rejectStatus`); this is orthogonal to the credential choice.
-- `LoginThrottleService`, `StudentAuthController`, `Usn`.
+- `StudentAuthController`, `Usn`. (`LoginThrottleService` is deleted — see above.)

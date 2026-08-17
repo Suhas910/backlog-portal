@@ -76,8 +76,10 @@ change-password. That is gone: V8 drops the column, and create/reset now install
 `username + "4321"`. Owner's decision — the ceremony was judged excessive for a college portal whose
 managers hand out credentials in person. The cost is explicit and accepted: a staff account's
 password is derivable from its username, which is displayed in Manage Users, so the login endpoint
-will accept a first guess from anyone who knows the convention. `LoginThrottleService` throttles
-repeated *failures* and does nothing about that. What preserves a way out is that
+will accept a first guess from anyone who knows the convention. Throttling never mitigated this —
+the *first* guess succeeds, so a failure counter was irrelevant here even before
+`LoginThrottleService` was removed (2026-08-17, V10; see `student-authentication.md`). What
+preserves a way out is that
 `POST /api/auth/change-password` stays, and the dashboard header links it for **all five roles** —
 Manage Users only reaches ADMIN/PRINCIPAL/HOD, so before this change DEPT_OFFICE and PROCTOR would
 have had no route to it at all. `CreateUserRequest` also gained `@Size(min = 4)` on the username

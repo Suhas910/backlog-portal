@@ -28,16 +28,16 @@ import { saveBlob, readBlobErrorMessage } from "../lib/download";
 import { reportLoadError } from "../lib/loadError";
 
 const PAGE_SIZE = 25;
-// Focusable descendants for the history dialog's Tab trap. [tabindex="-1"] is excluded on purpose:
-// it means "focusable by script, not by Tab".
+// History dialog's Tab-trap descendants. [tabindex="-1"] excluded on purpose: it means
+// script-focusable, not Tab-focusable.
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 // 1..8 is the programme, matching Semesters.java on the server
 const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
-/** VERIFIED / REJECTED / anything-else pill classes, shared by the table rows and the history
- *  modal. Only the neutral fallback differs — a row sits on the card, an event on a muted panel —
- *  so the caller passes it rather than the two copies drifting apart. */
+/** VERIFIED/REJECTED/other pill classes, shared by the table rows and the history modal. Only the
+ *  neutral fallback differs (row sits on the card, event on a muted panel), so the caller passes it
+ *  rather than the two copies drifting apart. */
 function outcomeBadgeClass(outcome, neutralBg) {
   if (outcome === "VERIFIED") return "bg-primary-tint text-primary-ink";
   if (outcome === "REJECTED") return "bg-red-50 text-red-600";
@@ -59,11 +59,10 @@ function AdminPage() {
     adminRole,
   );
   const adminToken = sessionStorage.getItem("adminToken");
-  // Dept-pinned roles can't widen scope, so a department filter would be a no-op control for them
-  // (the server ignores the param for anyone with a pin).
+  // Dept-pinned roles can't widen scope — the server ignores the param for anyone pinned, so the
+  // control would be a no-op.
   const canFilterByDepartment = adminRole === "ADMIN" || adminRole === "PRINCIPAL";
-  // A proctor sees a few dozen students in one department; subject/semester/department narrowing
-  // is noise at that size.
+  // A proctor sees a few dozen students in one dept; subject/semester/dept narrowing is noise there.
   const isProctor = adminRole === "PROCTOR";
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,13 +72,12 @@ function AdminPage() {
   // server-side pagination: `page` is 0-based; pageInfo mirrors the Spring Page envelope
   const [page, setPage] = useState(0);
   const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0, number: 0 });
-  // stat-card counts come from the server (summary-counts), so they span the whole filtered set,
-  // not just the loaded page
+  // Stat-card counts come from the server (summary-counts), spanning the whole filtered set, not
+  // just the loaded page
   const [counts, setCounts] = useState({ total: 0, submitted: 0, verified: 0, rejected: 0 });
-  // Set when the counts fetch fails. The cards then read "—" rather than the initial zeros, which
-  // rendered as four confident zeros above a table full of rows — "the queue is empty" is the one
-  // claim these cards must never make on their own failure. On a post-action refetch failure the
-  // stale pre-action numbers are just as wrong, so both paths go through this.
+  // Counts-fetch failure ⇒ cards read "—", not the initial zeros: four confident zeros above a table
+  // full of rows claims "the queue is empty", the one thing they must never say on their own failure.
+  // Stale pre-action numbers are just as wrong, so the post-action refetch failure routes here too.
   const [countsError, setCountsError] = useState("");
   const [verifyingRegId, setVerifyingRegId] = useState("");
   const [rejectingRegId, setRejectingRegId] = useState("");
@@ -88,46 +86,44 @@ function AdminPage() {
   const [rowErrors, setRowErrors] = useState({});
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState("");
-  // Whole-list load failure (e.g. a 403 scope denial). Separate from rowErrors, which are per-row
+  // Whole-list load failure (e.g. a 403 scope denial) — distinct from rowErrors, which are per-row
   // verify/reject failures.
   const [loadError, setLoadError] = useState("");
 
-  // rows ticked for export, by regId. Kept across pages so a selection can span them; cleared
-  // whenever the filters change, since the ticked rows may no longer be in the result set.
+  // Rows ticked for export, by regId. Kept across pages so a selection can span them; cleared on any
+  // filter change, since the ticked rows may no longer be in the result set.
   const [selectedIds, setSelectedIds] = useState(() => new Set());
 
   // Filter states
   const [allSubjects, setAllSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
-  // One control for both subject axes: "" = all, "type:REGULAR"/"type:ELECTIVE" = a whole type,
-  // otherwise a subject id. subjectId already determines subjectType, so two controls meant
-  // keeping them in sync by hand — the dropdown carries the distinction instead.
+  // One control for both subject axes: "" = all, "type:REGULAR"/"type:ELECTIVE" = a whole type, else
+  // a subject id. subjectId already determines subjectType, so two controls meant hand-syncing them.
   const [subjectFilter, setSubjectFilter] = useState("");
   const [semesterFilter, setSemesterFilter] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [departments, setDepartments] = useState([]);
-  // raw text-box value, a DRAFT updated per keystroke; nothing fetches off it — it reaches the
-  // server only via appliedFilters on Apply
+  // Raw text-box DRAFT, updated per keystroke; nothing fetches off it — it reaches the server only
+  // via appliedFilters on Apply
   const [searchInput, setSearchInput] = useState("");
   const [examCycles, setExamCycles] = useState([]);
   const [cycleFilter, setCycleFilter] = useState("");
-  // Splits the two meanings an empty `examCycleId` used to carry: "the user chose All Cycles" and
-  // "we never learned what the cycles are". Without the split a failed fetch silently listed every
-  // cycle including closed ones, and the PDF export followed it via allCycles — the same
-  // one-value-two-meanings shape as the 2026-08-11 auth fail-open.
-  // THREE states, not a boolean: pending must be distinguishable from failed, or the "cycles failed
-  // to load" banner renders on every page load while the request is still in flight, and a banner
-  // that cries wolf every time is ignored on the day it's true. "loaded" covers a successful fetch
-  // that found no ACTIVE cycle — that scope is a real answer, not an unknown one.
+  // Splits the two meanings an empty `examCycleId` carried: "user chose All Cycles" vs "we never
+  // learned what the cycles are". Unsplit, a failed fetch silently listed every cycle including
+  // closed ones and the PDF export followed via allCycles — the one-value-two-meanings shape of the
+  // 2026-08-11 auth fail-open. THREE states, not a boolean: pending must be distinguishable from
+  // failed, or the "cycles failed to load" banner fires on every page load while the request is
+  // still in flight, and a banner that cries wolf is ignored on the day it's true. "loaded" covers a
+  // successful fetch that found no ACTIVE cycle — a real answer, not an unknown one.
   const [cyclesStatus, setCyclesStatus] = useState("loading"); // "loading" | "loaded" | "error"
   const [cyclesError, setCyclesError] = useState("");
-  // Same one-value-two-meanings trap for the other two filter dropdowns: an empty list reads as
-  // "none are configured", so a failed fetch needs a slot of its own to say otherwise.
+  // Same trap for the other two filter dropdowns: an empty list reads as "none are configured", so a
+  // failed fetch needs a slot of its own to say otherwise.
   const [subjectsError, setSubjectsError] = useState("");
   const [departmentsError, setDepartmentsError] = useState("");
 
-  // The states above are the DRAFT being edited; the registrations fetch keys off appliedFilters,
-  // so the table updates only on Apply, never mid-edit on a half-built combo.
+  // The states above are the DRAFT being edited; the registrations fetch keys off appliedFilters, so
+  // the table updates only on Apply, never mid-edit on a half-built combo.
   const [appliedFilters, setAppliedFilters] = useState({
     subject: "",
     searchQuery: "",
@@ -136,18 +132,18 @@ function AdminPage() {
     examCycleId: "",
   });
 
-  // Audit history modal. registration_events is append-only and the only writer reachable from
-  // this screen is this admin, so a fetched trail stays valid until we verify/reject that row —
-  // cache it per regId (invalidated below) and reopen instantly instead of re-paying the fetch.
+  // Audit history modal. registration_events is append-only and this admin is the only writer
+  // reachable from this screen, so a fetched trail stays valid until we verify/reject that row —
+  // cache per regId (invalidated below) and reopen instantly instead of re-paying the fetch.
   const [historyRegId, setHistoryRegId] = useState("");
   const [historyCache, setHistoryCache] = useState({});
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
-  // regId the in-flight events request belongs to, so a superseded response can't clear the
-  // spinner or post an error over a row the admin has since switched to.
+  // regId the in-flight events request belongs to, so a superseded response can't clear the spinner
+  // or post an error over a row the admin has since switched to.
   const historyReqRef = useRef("");
-  // Focus bookkeeping for the modal: the close button to move focus INTO the dialog, and the
-  // element that opened it so focus returns there rather than to the top of the document.
+  // Modal focus bookkeeping: the close button to move focus INTO the dialog, and the opener so focus
+  // returns there rather than to the top of the document.
   const historyCloseRef = useRef(null);
   const historyTriggerRef = useRef(null);
   const historyDialogRef = useRef(null); // the trap needs the dialog's focusable descendants
@@ -159,26 +155,26 @@ function AdminPage() {
   };
 
   // Monotonic counter shared by every registrations fetch (the filter effect and the imperative
-  // post-action resync). Each call captures the next value and applies its response only if still
-  // latest, so out-of-order completions from rapid filter changes can't clobber the table.
+  // post-action resync). Each captures the next value and applies its response only if still latest,
+  // so out-of-order completions from rapid filter changes can't clobber the table.
   const registrationsReqRef = useRef(0);
   // In-flight controllers: each fetch aborts its predecessor — whose response the seq guard would
   // drop anyway — freeing the backend connection early.
   const registrationsAbortRef = useRef(null);
   const countsAbortRef = useRef(null);
 
-  // Subject-dropdown options follow the APPLIED filters like the table, not the draft, so editing
-  // fires zero requests until Apply instead of a DISTINCT-join query per keystroke. Deps are the
-  // four fields the endpoint accepts rather than the whole appliedFilters object, so an Apply that
-  // only changes the exam cycle won't re-fetch identical options. A narrowed list never
-  // auto-clears the current selection — applying a now-unlisted subject just yields no rows.
+  // Subject-dropdown options follow the APPLIED filters like the table, not the draft: editing fires
+  // zero requests until Apply instead of a DISTINCT-join query per keystroke. Deps are the endpoint's
+  // four fields, not the whole appliedFilters object, so an Apply changing only the exam cycle won't
+  // re-fetch identical options. A narrowed list never auto-clears the current selection — applying a
+  // now-unlisted subject just yields no rows.
   useEffect(() => {
     if (!isAdmin || !adminToken) {
       return;
     }
 
-    // `ignore` drops a stale response landing after a newer filter change; the AbortController
-    // goes further and cancels the superseded request, freeing its backend connection
+    // `ignore` drops a stale response landing after a newer filter change; the AbortController goes
+    // further and cancels the superseded request, freeing its backend connection
     let ignore = false;
     const controller = new AbortController();
     // NOTE: react-hooks/set-state-in-effect flags this setState. Intended and correct — a

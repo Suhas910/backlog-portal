@@ -3,9 +3,7 @@ package com.college.backlog.controller;
 import com.college.backlog.model.Student;
 import com.college.backlog.repository.StudentRepository;
 import com.college.backlog.security.JwtService;
-import com.college.backlog.security.LoginThrottleService;
 import com.college.backlog.security.SessionCookieService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,8 +19,6 @@ import java.util.Map;
 @RequestMapping("/api/student/auth")
 public class StudentAuthController {
 
-    private static final String SCOPE = "STUDENT";
-
     @Autowired
     private StudentRepository studentRepository;
 
@@ -30,14 +26,11 @@ public class StudentAuthController {
     private JwtService jwtService;
 
     @Autowired
-    private LoginThrottleService throttle;
-
-    @Autowired
     private SessionCookieService sessionCookieService;
 
     @PostMapping("/login")
     public Map<String, String> login(@RequestBody Map<String, String> body,
-                                     HttpServletRequest request, HttpServletResponse response) {
+                                     HttpServletResponse response) {
 
         String rollNo = body.getOrDefault("rollNo", "").trim();
         String dob = body.getOrDefault("dateOfBirth", "").trim();
@@ -46,15 +39,10 @@ public class StudentAuthController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "USN and date of birth are required");
         }
 
-        if (throttle.isLocked(SCOPE, rollNo, request)) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many failed login attempts");
-        }
-
         LocalDate dateOfBirth;
         try {
             dateOfBirth = LocalDate.parse(dob); // expects ISO yyyy-MM-dd
         } catch (DateTimeParseException e) {
-            throttle.registerFailure(SCOPE, rollNo, request);
             throw invalidCredentials();
         }
 
@@ -62,11 +50,9 @@ public class StudentAuthController {
         if (student == null
                 || student.getDateOfBirth() == null
                 || !student.getDateOfBirth().equals(dateOfBirth)) {
-            throttle.registerFailure(SCOPE, rollNo, request);
             throw invalidCredentials();
         }
 
-        throttle.clearFailures(SCOPE, rollNo, request);
         String token = jwtService.generateToken(student.getRollNo(), "STUDENT");
         sessionCookieService.write(response, SessionCookieService.STUDENT_COOKIE, token);
 

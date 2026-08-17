@@ -5,10 +5,8 @@ import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
 import com.college.backlog.repository.UserRepository;
 import com.college.backlog.security.JwtService;
-import com.college.backlog.security.LoginThrottleService;
 import com.college.backlog.security.SessionCookieService;
 import com.college.backlog.service.CallerScope;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +24,6 @@ import java.util.Set;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private static final String SCOPE = "ADMIN";
-
     private static final Set<UserRole> DEPT_ROLES =
         Set.of(UserRole.HOD, UserRole.DEPT_OFFICE, UserRole.PROCTOR);
 
@@ -36,9 +32,6 @@ public class AuthController {
 
     @Autowired
     private CallerScope callerScope;
-
-    @Autowired
-    private LoginThrottleService throttle;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -51,7 +44,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public Map<String, String> login(@RequestBody Map<String, String> body,
-                                     HttpServletRequest request, HttpServletResponse response) {
+                                     HttpServletResponse response) {
 
         String username = body.getOrDefault("username", "").trim();
         String password = body.getOrDefault("password", "");
@@ -60,19 +53,10 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username and password are required");
         }
 
-        if (throttle.isLocked(SCOPE, username, request)) {
-            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many failed login attempts");
-        }
-
         User user = userRepository.findById(username).orElse(null);
-        if (user == null) {
-            throttle.registerFailure(SCOPE, username, request);
-            throw invalidCredentials(username);
-        }
-
-        if (!matchesPassword(user, password)) {
-            throttle.registerFailure(SCOPE, username, request);
-            throw invalidCredentials(username);
+        // Unknown user and wrong password are deliberately indistinguishable — same 401, same text
+        if (user == null || !matchesPassword(user, password)) {
+            throw invalidCredentials();
         }
 
         if (DEPT_ROLES.contains(user.getRole())) {
@@ -95,7 +79,6 @@ public class AuthController {
             }
         }
 
-        throttle.clearFailures(SCOPE, username, request);
         String token = jwtService.generateToken(user.getUsername(), user.getRole().name());
         // httpOnly cookie, not the body, so page scripts can't read the token
         sessionCookieService.write(response, SessionCookieService.ADMIN_COOKIE, token);
@@ -157,7 +140,7 @@ public class AuthController {
         return passwordEncoder.matches(rawPassword, storedPassword);
     }
 
-    private ResponseStatusException invalidCredentials(String username) {
+    private ResponseStatusException invalidCredentials() {
         return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
     }
 }
