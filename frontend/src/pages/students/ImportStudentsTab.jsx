@@ -4,6 +4,7 @@ import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
 import BatchResultTable from "./BatchResultTable";
 import { saveBlob } from "../../lib/download";
+import { CURRENT_SEMESTERS, ENTRY_SEMESTERS } from "../../lib/semesters";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
@@ -38,7 +39,7 @@ function parseCsv(text) {
 // defaults, existing USNs are skipped, and dryRun previews without writing.
 function ImportStudentsTab() {
   const [csv, setCsv] = useState("");
-  const [defaultCurrent, setDefaultCurrent] = useState("1");
+  const [defaultCurrent, setDefaultCurrent] = useState("2");
   const [defaultEntry, setDefaultEntry] = useState("1");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -102,7 +103,7 @@ function ImportStudentsTab() {
             onChange={(e) => setDefaultCurrent(e.target.value)}
             data-cy="students-import-default-current"
           >
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+            {CURRENT_SEMESTERS.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -117,7 +118,7 @@ function ImportStudentsTab() {
             onChange={(e) => setDefaultEntry(e.target.value)}
             data-cy="students-import-default-entry"
           >
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+            {ENTRY_SEMESTERS.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

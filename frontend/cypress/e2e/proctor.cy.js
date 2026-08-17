@@ -110,12 +110,12 @@ describe("Proctor role", () => {
     cy.wait("@getDepartments");
 
     cy.get('[data-cy="claim-year"]').type("2024");
-    cy.get('[data-cy="claim-sem"]').select("Semester 3");
+    cy.get('[data-cy="claim-sem"]').select("Semester 4");
     cy.get('[data-cy="claim-load"]').click();
     cy.wait("@claimable")
       .its("request.url")
       .should("include", "admissionYear=2024")
-      .and("include", "semester=3");
+      .and("include", "semester=4");
 
     // supervised students can't be selected, and badges say why
     cy.get('[data-cy="claim-select-1MS24CS002"]').should("be.disabled");

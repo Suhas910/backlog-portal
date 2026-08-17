@@ -1,19 +1,30 @@
 package com.college.backlog.controller;
 
+import com.college.backlog.controller.dto.BulkProgressionBatchDetailResponse;
+import com.college.backlog.controller.dto.BulkProgressionPreviewResponse;
+import com.college.backlog.controller.dto.BulkProgressionRequest;
+import com.college.backlog.controller.dto.BulkProgressionResultResponse;
 import com.college.backlog.controller.dto.ProgressionOverrideRequest;
 import com.college.backlog.controller.dto.StudentProgressionResponse;
+import com.college.backlog.model.ProgressionBatch;
+import com.college.backlog.model.ProgressionOutcome;
 import com.college.backlog.model.Student;
 import com.college.backlog.model.StudentSemesterTerm;
 import com.college.backlog.model.User;
 import com.college.backlog.model.UserRole;
+import com.college.backlog.repository.ProgressionBatchRepository;
+import com.college.backlog.repository.ProgressionBatchStudentRepository;
 import com.college.backlog.repository.StudentRepository;
 import com.college.backlog.repository.StudentSemesterTermRepository;
+import com.college.backlog.service.BulkProgressionService;
 import com.college.backlog.service.ProctorScopeService;
 import com.college.backlog.service.ProgressionService;
 import com.college.backlog.service.StudentManagementService;
 import com.college.backlog.service.Usn;
 import com.college.backlog.service.CallerScope;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -52,6 +63,9 @@ public class ProgressionController {
     @Autowired private StudentSemesterTermRepository termRepository;
     @Autowired private StudentManagementService studentService;
     @Autowired private ProctorScopeService proctorScope;
+    @Autowired private BulkProgressionService bulkProgressionService;
+    @Autowired private ProgressionBatchRepository batchRepository;
+    @Autowired private ProgressionBatchStudentRepository batchStudentRepository;
 
     // ---- view ----
 
@@ -85,6 +99,55 @@ public class ProgressionController {
         Student student = studentRepository.findByRollNo(roll)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found: " + roll));
         return toProgressionResponse(student);
+    }
+
+    // ---- bulk progression (ADMIN only) ----
+
+    // hasRole('ADMIN') deliberately excludes PRINCIPAL and every dept role: this is an
+    // institution-wide write, and the method-level annotation overrides the class-level one.
+    // Owner decision 2026-08-17 — the main admin account only.
+
+    @PostMapping("/bulk/preview")
+    @PreAuthorize("hasRole('ADMIN')")
+    public BulkProgressionPreviewResponse previewBulk(@RequestBody BulkProgressionRequest req,
+                                                      Authentication auth) {
+        callerScope.requireActor(auth);
+        return bulkProgressionService.preview(req);
+    }
+
+    @PostMapping("/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    public BulkProgressionResultResponse runBulk(@RequestBody BulkProgressionRequest req,
+                                                 Authentication auth) {
+        User actor = callerScope.requireActor(auth);
+        return new BulkProgressionResultResponse(bulkProgressionService.run(req, actor.getUsername()));
+    }
+
+    @GetMapping("/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<BulkProgressionResultResponse> bulkHistory(Pageable pageable, Authentication auth) {
+        callerScope.requireActor(auth);
+        return batchRepository.findAllByOrderByRunAtDesc(pageable)
+                .map(BulkProgressionResultResponse::new);
+    }
+
+    @GetMapping("/bulk/{batchId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public BulkProgressionBatchDetailResponse bulkDetail(@PathVariable Long batchId,
+                                                         Authentication auth) {
+        callerScope.requireActor(auth);
+        ProgressionBatch batch = batchRepository.findById(batchId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "No such progression batch: " + batchId));
+        // the non-promoted rows are the small, human-checkable set; promoted stays a count
+        List<BulkProgressionBatchDetailResponse.Row> notPromoted =
+            batchStudentRepository.findByBatchIdAndOutcomeNotOrderByRollNo(
+                    batchId, ProgressionOutcome.PROMOTED).stream()
+                .map(r -> new BulkProgressionBatchDetailResponse.Row(
+                    r.getRollNo(), r.getSemesterFrom(), r.getOutcome().name()))
+                .collect(Collectors.toList());
+        return new BulkProgressionBatchDetailResponse(new BulkProgressionResultResponse(batch), notPromoted);
     }
 
     // ---- helpers ----

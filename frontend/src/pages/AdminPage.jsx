@@ -28,6 +28,10 @@ import { saveBlob, readBlobErrorMessage } from "../lib/download";
 import { reportLoadError } from "../lib/loadError";
 
 const PAGE_SIZE = 25;
+// Focusable descendants for the history dialog's Tab trap. [tabindex="-1"] is excluded on purpose:
+// it means "focusable by script, not by Tab".
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 // 1..8 is the programme, matching Semesters.java on the server
 const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -146,6 +150,7 @@ function AdminPage() {
   // element that opened it so focus returns there rather than to the top of the document.
   const historyCloseRef = useRef(null);
   const historyTriggerRef = useRef(null);
+  const historyDialogRef = useRef(null); // the trap needs the dialog's focusable descendants
   const historyEvents = historyCache[historyRegId] || [];
 
   const closeHistory = () => {
@@ -372,12 +377,42 @@ function AdminPage() {
     fetchCounts();
   }, [fetchCounts]);
 
-  // Escape closes the modal and focus moves into it on open. Not a full focus trap: Tab can still
-  // reach the page behind, which is a known limit rather than an oversight.
+  // Escape closes the modal, focus moves into it on open, and Tab is trapped inside it.
+  //
+  // The trap is not polish: aria-modal="true" TELLS assistive tech the rest of the page is inert,
+  // so letting Tab reach it makes the markup a lie — a keyboard or screen-reader user lands on
+  // content that, as far as they've been told, isn't there.
+  //
+  // closeHistory is deliberately NOT in the deps: it's a plain function, so it changes identity
+  // every render and would re-register the listener each time. It only sets state and focuses a
+  // ref, so a stale closure is harmless.
   useEffect(() => {
     if (!historyRegId) return undefined;
     const onKeyDown = (e) => {
-      if (e.key === "Escape") closeHistory();
+      if (e.key === "Escape") {
+        closeHistory();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const dialog = historyDialogRef.current;
+      if (!dialog) return;
+      // getClientRects() over offsetParent: the dialog sits inside a fixed overlay, where
+      // offsetParent is an unreliable visibility test
+      const items = [...dialog.querySelectorAll(FOCUSABLE_SELECTOR)].filter(
+        (el) => el.getClientRects().length > 0,
+      );
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      // the !contains arm matters: focus can already be outside (a click on the backdrop, or a
+      // browser that moved it), and without it Tab would keep walking the page behind
+      if (e.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     historyCloseRef.current?.focus();
@@ -954,6 +989,7 @@ function AdminPage() {
                 id="search-filter"
                 type="text"
                 placeholder="Enter USN or name..."
+                data-cy="admin-search"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring"
@@ -1289,6 +1325,7 @@ function AdminPage() {
                         <button
                           type="button"
                           onClick={() => openHistory(reg.regId)}
+                          data-cy={`history-${reg.regId}`}
                           className="inline-flex items-center gap-1 rounded-lg border border-stroke bg-surface-1 px-3 py-1.5 text-xs font-semibold text-secondary-ink transition-colors hover:bg-surface-muted"
                         >
                           <History size={14} /> View
@@ -1342,11 +1379,13 @@ function AdminPage() {
           role="presentation"
         >
           <div
+            ref={historyDialogRef}
             className="w-full max-w-lg rounded-2xl border border-stroke bg-surface-1 p-6 shadow-soft"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="history-dialog-title"
+            data-cy="history-dialog"
           >
             <div className="mb-4 flex items-center justify-between">
               <h3
@@ -1359,6 +1398,7 @@ function AdminPage() {
                 type="button"
                 ref={historyCloseRef}
                 onClick={closeHistory}
+                data-cy="history-close"
                 className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-muted"
                 aria-label="Close history"
               >

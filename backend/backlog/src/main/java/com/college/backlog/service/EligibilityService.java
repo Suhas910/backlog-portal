@@ -6,17 +6,24 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * Backlog semester-eligibility rule: only the semesters of the current academic year plus the
- * previous one, capped at the current semester — so moving up a year retires the oldest backlogs.
+ * Backlog semester-eligibility rule: every semester the student has studied here, from entry
+ * through the current semester. A backlog is never retired by moving up a year.
  *
  * <pre>
- *   floor = max(currentSem &lt;= 4 ? 1 : currentSem &lt;= 6 ? 3 : 5, entrySemester)
- *   eligible = { floor .. currentSem }
+ *   eligible = { max(entrySemester, 1) .. currentSem }
  * </pre>
  *
- * Normal intake (entrySemester = 1): 1-{1} 2-{1,2} 3-{1,2,3} 4-{1,2,3,4} 5-{3,4,5} 6-{3,4,5,6}
- * 7-{5,6,7} 8-{5,6,7,8}. {@code entrySemester} raises the floor for a lateral/migrant student so
- * semesters they never studied here are never offered (entry 3, current 5 -&gt; {3,4,5}).
+ * Normal intake (entrySemester = 1): 2-{1,2} 4-{1..4} 6-{1..6} 8-{1..8}. {@code entrySemester}
+ * raises the floor for a lateral/migrant student so semesters they never studied here are never
+ * offered (entry 3, current 6 -&gt; {3,4,5,6}).
+ *
+ * Superseded the earlier retiring window (floor 1/3/5 by year), which dropped a backlog out of
+ * reach once the student moved up two years — owner decision 2026-08-17. Registering an old
+ * semester still fails closed on year-binding if that year's offering isn't in the catalog.
+ *
+ * {@code currentSemester} is even (2..8) and {@code entrySemester} odd (1..7) by
+ * {@link Semesters}, but this stays a pure function of whatever it is handed — parity is
+ * validated at the write path, not re-asserted here.
  *
  * Pure function of the admin-maintained current and entry semesters — see
  * docs/adr/backlog-progression.md.
@@ -34,9 +41,8 @@ public class EligibilityService {
         if (currentSemester < 1 || currentSemester > 8) {
             return eligible;
         }
-        int normalFloor = currentSemester <= 4 ? 1 : currentSemester <= 6 ? 3 : 5;
         // a lateral entrant's window starts no earlier than the semester they joined in
-        int floor = Math.max(normalFloor, Math.max(entrySemester, 1));
+        int floor = Math.max(entrySemester, 1);
         for (int sem = floor; sem <= currentSemester; sem++) {
             eligible.add(sem);
         }

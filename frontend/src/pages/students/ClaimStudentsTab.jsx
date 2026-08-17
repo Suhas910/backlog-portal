@@ -12,6 +12,7 @@ import {
 import api, { getAdminHeaders } from "../../lib/api";
 import { batchRows } from "./batchResult";
 import { reportLoadError } from "../../lib/loadError";
+import { ALL_SEMESTERS } from "../../lib/semesters";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
@@ -307,7 +308,8 @@ function ClaimStudentsTab({ adminRole, adminDepartment }) {
               data-cy="claim-sem"
             >
               <option value="">All</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+              {/* a filter READS data — keep the full range so odd-semester rows stay findable */}
+              {ALL_SEMESTERS.map((s) => (
                 <option key={s} value={s}>
                   Semester {s}
                 </option>

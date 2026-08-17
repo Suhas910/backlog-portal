@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, GraduationCap, UploadCloud, UserCheck, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, GraduationCap, TrendingUp, UploadCloud, UserCheck, UserPlus, Users } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BrandHeader from "../../components/layout/BrandHeader";
 import api from "../../lib/api";
@@ -8,6 +8,7 @@ import StudentsManageTab from "./StudentsManageTab";
 import AddStudentTab from "./AddStudentTab";
 import ImportStudentsTab from "./ImportStudentsTab";
 import ClaimStudentsTab from "./ClaimStudentsTab";
+import BulkProgressionTab from "./BulkProgressionTab";
 import { findOwnDepartment } from "../../lib/session";
 import AlertBanner from "../../components/AlertBanner";
 
@@ -23,6 +24,9 @@ const STAFF_TABS = [
   { key: "import", label: "Import", icon: UploadCloud },
 ];
 const PROCTORS_TAB = { key: "proctors", label: "Proctors", icon: UserCheck };
+// ADMIN only — an institution-wide write, not a dept one. PRINCIPAL is deliberately excluded too
+// (owner decision 2026-08-17); the server enforces it with hasRole('ADMIN').
+const BULK_TAB = { key: "bulk", label: "Bulk Progression", icon: TrendingUp };
 const PROCTOR_TABS = [
   { key: "manage", label: "My Students", icon: Users },
   { key: "claim", label: "Claim Students", icon: UserCheck },
@@ -30,7 +34,8 @@ const PROCTOR_TABS = [
 
 function tabsForRole(role) {
   if (role === "PROCTOR") return PROCTOR_TABS;
-  if (["ADMIN", "PRINCIPAL", "HOD"].includes(role)) return [...STAFF_TABS, PROCTORS_TAB];
+  if (role === "ADMIN") return [...STAFF_TABS, PROCTORS_TAB, BULK_TAB];
+  if (["PRINCIPAL", "HOD"].includes(role)) return [...STAFF_TABS, PROCTORS_TAB];
   return STAFF_TABS;
 }
 
@@ -153,6 +158,7 @@ function StudentsPage() {
         {activeTab === "add" && <AddStudentTab {...shared} />}
         {activeTab === "import" && <ImportStudentsTab {...shared} />}
         {(activeTab === "claim" || activeTab === "proctors") && <ClaimStudentsTab {...shared} />}
+        {activeTab === "bulk" && <BulkProgressionTab {...shared} />}
       </div>
     </div>
   );

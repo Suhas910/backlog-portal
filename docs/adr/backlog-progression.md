@@ -44,33 +44,85 @@ and the server validated only branch/elective membership of the chosen subjects
 ## Eligibility window (closed form)
 
 ```
-floor = max(currentSem <= 4 ? 1 : currentSem <= 6 ? 3 : 5, entrySemester)
-eligible = { floor .. currentSem }
+eligible = { max(entrySemester, 1) .. currentSem }
 ```
 
-For a normal intake (`entrySemester = 1`, the default for every existing student) the table below
-holds unchanged:
+For a normal intake (`entrySemester = 1`, the default for every existing student):
 
 | currentSem | eligible      |
 |------------|---------------|
-| 1          | {1}           |
 | 2          | {1,2}         |
-| 3          | {1,2,3}       |
 | 4          | {1,2,3,4}     |
-| 5          | {3,4,5}       |
-| 6          | {3,4,5,6}     |
-| 7          | {5,6,7}       |
-| 8          | {5,6,7,8}     |
+| 6          | {1,..,6}      |
+| 8          | {1,..,8}      |
 
-Rationale: eligible = (current academic-year's sems) ∪ (previous academic-year's sems),
-capped at the current sem. Promotion to 3rd year (sem 5) drops 1st-year backlogs by design.
+Rationale: a backlog is cleared or it isn't — moving up a year does not make it go away. Every
+semester the student has actually studied here stays registrable until they pass it.
 
 **Lateral entry (2026-06-29):** `Student.entrySemester` (int, default 1; `>1` = a migrant who joined
-mid-degree) raises the floor to `max(normalFloor, entrySemester)`, so e.g. a transfer at
-`entrySemester=3`, `currentSem=5` sees `{3,4,5}` — never the sems 1–2 they didn't study here. The
-change is in `EligibilityService.eligibleSemesters(currentSemester, entrySemester)` (the one-arg
-overload delegates with `entry=1`, so existing callers/tests are untouched), threaded through
-`RegistrationService.register` and `StudentController`. Backward-compatible by construction.
+mid-degree) is the floor, so e.g. a transfer at `entrySemester=3`, `currentSem=6` sees `{3,4,5,6}` —
+never the sems 1–2 they didn't study here.
+
+**Superseded (2026-08-17):** the window used to RETIRE old backlogs —
+`floor = max(currentSem <= 4 ? 1 : currentSem <= 6 ? 3 : 5, entrySemester)`, so a sem-8 student saw
+only `{5,6,7,8}` and a first-year backlog fell permanently out of reach. Owner decision: a student
+may register any semester from entry through current. Consequence to watch: the subject catalog must
+carry the old years' offerings, or year-binding fails closed and the student is told to contact the
+department office. `EligibilityService` is unchanged in shape — still the pure 3-arg
+`isEligible(current, entry, target)`, still consumed by `RegistrationService.register` and
+`StudentController`.
+
+## Semester parity (2026-08-17)
+
+An academic year is a semester **pair**, so:
+
+- `Student.currentSemester` ∈ **{2, 4, 6, 8}** — where a student sits
+- `Student.entrySemester` ∈ **{1, 3, 5, 7}** — where a student joined (entry is at a year boundary)
+- progression moves **+2**, which preserves the parity by construction
+
+**Parity is narrower than the studiable range and applies to `Student` ONLY.** `Semesters.MIN/MAX`
+stays 1..8 and governs `Subject.semester`, `StudentSemesterTerm.semester`, cloning and the
+eligibility window — a sem-2 student's backlogs are in sem 1, so odd semesters must remain
+registrable. Applying parity to subject pickers would silently hide half of every student's
+backlogs. Enforced by `Semesters.assertCurrentSemester` / `assertEntrySemester`, called from the
+single write path `StudentManagementService.validateSemesters` (create, update and import all route
+through it); mirrored in the UI by `frontend/src/lib/semesters.js`.
+
+Legacy rows with an odd `currentSemester` or even `entrySemester` are **reported, never guessed at**:
+bulk progression skips them as `SKIPPED_INVALID_SEMESTER`, and `EligibilityService` deliberately
+still resolves them (an empty window would hard-block the student rather than flag the data).
+
+## Bulk progression (2026-08-17)
+
+Year-end promotion of a whole cohort: `current_semester + 2` for everyone in the selection, minus an
+admin-supplied exclusion list. **ADMIN only** — `hasRole('ADMIN')`, which excludes PRINCIPAL and
+every dept role; this is an institution-wide write.
+
+**It writes `students.current_semester` and its own audit tables, and must NEVER touch
+`student_semester_terms`.** The timeline keeps exactly two writers (`backfillLinear` at creation,
+`overrideProgression` for a hand correction) — a third is what made progression disagreement
+possible in the deleted bulk tools. A detained student's *years* are corrected on the per-student
+Semesters panel; bulk progression only moves the integer.
+
+Cost is **4 statements regardless of cohort size** (~20k students): count, `INSERT ... SELECT` the
+promoted audit, `INSERT ... SELECT` the not-promoted audit, then one bulk `UPDATE`. The audit rows
+are built inside Postgres and never materialise in Java — an entity loop would be ~40k network round
+trips to Neon. The UPDATE runs **last**, so `semester_from` captures the pre-state.
+
+Four guards, all server-side (`BulkProgressionService`):
+
+| Guard | Status | Why |
+|---|---|---|
+| No active exam cycle | 409 | A wrong promotion is reversible; a registration made under it is not (immutable history). This is the only unrecoverable failure mode. |
+| Every excluded USN is a real student | 400 | A typo'd exclusion silently promotes someone meant to be held back — the exact failure the list exists to prevent. The whole request fails, naming the offender. |
+| `expectedCount` still matches | 409 | The double-click guard: after a successful run the candidate set has changed, so a stale confirmation can't re-fire. |
+| Audit count == update count | rollback | The audit would otherwise be a lie. |
+
+Audit lives in `progression_batches` + `progression_batch_students` (V9), written in the **same
+transaction** as the UPDATE — the `registration_events` precedent. Deliberately NOT `log.info`: the
+project has no logging configuration at all, so application logs are console-only and retain
+nothing, which is fine for a one-student override and not for a 20k-row write. `roll_no` is a plain
+column, not an FK, so the audit outlives the student.
 
 ## Data model
 

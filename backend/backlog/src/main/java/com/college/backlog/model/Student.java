@@ -27,9 +27,9 @@ public class Student {
     private int currentSemester;
 
     // Semester the student entered the programme here: 1 for a normal intake, >1 for a
-    // lateral-entry/migrant who joined mid-degree (3 for a 2nd-year transfer). Raises the
-    // eligibility floor to max(normalFloor, entrySemester), so they're never offered semesters
-    // they never studied here. @ColumnDefault("1") mirrors the column's `default 1` in the Flyway
+    // lateral-entry/migrant who joined mid-degree (3 for a 2nd-year transfer). IS the eligibility
+    // floor ({entry..current}), so they're never offered semesters they never studied here.
+    // Odd, 1..7 (Semesters.isEntrySemester) — entry is always at the start of an academic year. @ColumnDefault("1") mirrors the column's `default 1` in the Flyway
     // V1 baseline so the mapping matches under ddl-auto=validate; NOT NULL is enforced at the DB
     // level (also folded into V1), never via nullable=false. See docs/adr/backlog-progression.md.
     @Column(name = "entry_semester")

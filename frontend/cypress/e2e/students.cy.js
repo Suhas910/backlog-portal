@@ -35,20 +35,20 @@ describe("Students page", () => {
   it("edits a student's name and semester", () => {
     cy.intercept("PUT", "/api/admin/students/1MS22CS001", {
       statusCode: 200,
-      body: { ...student, name: "Asha R", currentSemester: 5 },
+      body: { ...student, name: "Asha R", currentSemester: 6 },
     }).as("updateStudent");
 
     visitManageAndLoad();
 
     cy.get('[data-cy="student-edit-1MS22CS001"]').click();
     cy.get('[data-cy="student-edit-name"]').clear().type("Asha R");
-    cy.get('[data-cy="student-edit-current-sem"]').select("5");
+    cy.get('[data-cy="student-edit-current-sem"]').select("6");
     cy.get('[data-cy="student-save"]').click();
 
     cy.wait("@updateStudent").its("request.body").should("deep.equal", {
       name: "Asha R",
       phone: "9999999999",
-      currentSemester: 5,
+      currentSemester: 6,
       entrySemester: 1,
     });
     cy.contains("Asha R").should("be.visible");
@@ -172,13 +172,13 @@ describe("Students page", () => {
     cy.wait("@getDepartments");
 
     cy.get('[data-cy="students-import-csv"]').type(
-      "1MS24CS001,Asha Rao,9999999999,2006-04-12,1,1",
+      "1MS24CS001,Asha Rao,9999999999,2006-04-12,2,1",
     );
     cy.get('[data-cy="students-import-preview"]').click();
 
     cy.wait("@importStudents").its("request.body").should("deep.include", {
       dryRun: true,
-      defaultCurrentSemester: 1,
+      defaultCurrentSemester: 2,
       defaultEntrySemester: 1,
     });
     cy.get('[data-cy="students-import-result"]').should("contain", "1 created");

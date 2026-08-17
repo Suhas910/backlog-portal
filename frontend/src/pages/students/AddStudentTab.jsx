@@ -4,6 +4,7 @@ import MagneticCta from "../../components/ui/MagneticCta";
 import api, { getAdminHeaders } from "../../lib/api";
 import { findOwnDepartment } from "../../lib/session";
 import AlertBanner from "../../components/AlertBanner";
+import { CURRENT_SEMESTERS, clampEntrySemester, entrySemestersUpTo } from "../../lib/semesters";
 
 const inputClass =
   "w-full rounded-xl border border-stroke bg-surface-1 px-3.5 py-2.5 text-sm text-ink outline-none transition-colors duration-200 placeholder:text-ink-muted focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60";
@@ -15,7 +16,7 @@ const blank = {
   name: "",
   phone: "",
   dateOfBirth: "",
-  currentSemester: "1",
+  currentSemester: "2",
   entrySemester: "1",
 };
 
@@ -39,9 +40,9 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
 
   const set = (name, value) => setForm((prev) => ({ ...prev, [name]: value }));
 
-  // entry semester can't be after the current semester
+  // entry semester is odd and can't be after the current semester
   const current = Number(form.currentSemester) || 0;
-  const entryOptions = current > 0 ? Array.from({ length: current }, (_, i) => i + 1) : [1];
+  const entryOptions = entrySemestersUpTo(form.currentSemester);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -190,14 +191,13 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
                   setForm((prev) => ({
                     ...prev,
                     currentSemester: v,
-                    // keep entry ≤ current
-                    entrySemester:
-                      Number(prev.entrySemester) > Number(v) ? v : prev.entrySemester,
+                    // keep entry ≤ current AND odd — snapping to v would produce an even entry
+                    entrySemester: String(clampEntrySemester(prev.entrySemester, v)),
                   }));
                 }}
                 data-cy="student-current-sem"
               >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+                {CURRENT_SEMESTERS.map((s) => (
                   <option key={s} value={s}>
                     {s}
                   </option>
@@ -227,6 +227,7 @@ function AddStudentTab({ departments, adminDepartment, deptLocked }) {
         <p className="text-xs text-ink-muted">
           Entry semester is 1 for a normal intake, or the semester a lateral-entry/migrant student
           joined at (e.g. 3 for a 2nd-year transfer). It raises their backlog-eligibility floor.
+          Students sit in even semesters and join at odd ones — an academic year is a semester pair.
         </p>
 
         {error && (

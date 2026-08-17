@@ -147,13 +147,14 @@ public class StudentManagementService {
                 "Unknown branch code '" + branchCode + "' in USN. Add the department first."));
     }
 
+    /**
+     * Parity is deliberate, not cosmetic: a year is a semester PAIR, so a student sits in an even
+     * semester and joins at an odd one. Progression's +2 preserves it. The one place both are
+     * written — create, update and import all route here.
+     */
     public void validateSemesters(int currentSemester, int entrySemester) {
-        if (currentSemester < 1 || currentSemester > 8) {
-            throw new IllegalArgumentException("Current semester must be between 1 and 8.");
-        }
-        if (entrySemester < 1 || entrySemester > 8) {
-            throw new IllegalArgumentException("Entry semester must be between 1 and 8.");
-        }
+        Semesters.assertCurrentSemester(currentSemester);
+        Semesters.assertEntrySemester(entrySemester);
         if (entrySemester > currentSemester) {
             throw new IllegalArgumentException(
                 "Entry semester (" + entrySemester + ") cannot be after the current semester ("
@@ -161,7 +162,9 @@ public class StudentManagementService {
         }
     }
 
-    private String trimToNull(String s) {
+    /** Blank-safe trim. Static and public so BulkProgressionService shares it rather than
+     *  keeping a third byte-identical copy. */
+    public static String trimToNull(String s) {
         if (s == null) return null;
         String t = s.trim();
         return t.isEmpty() ? null : t;

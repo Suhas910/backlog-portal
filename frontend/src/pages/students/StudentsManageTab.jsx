@@ -17,6 +17,13 @@ import AlertBanner from "../../components/AlertBanner";
 import api, { getAdminHeaders } from "../../lib/api";
 import { reportLoadError } from "../../lib/loadError";
 import { parseAcademicYear } from "../../lib/academicYear";
+import {
+  ALL_SEMESTERS,
+  CURRENT_SEMESTERS,
+  clampEntrySemester,
+  entrySemestersUpTo,
+  withLegacyValue,
+} from "../../lib/semesters";
 import { SemesterTimeline } from "./SemesterTimeline";
 
 const inputClass =
@@ -125,7 +132,10 @@ function StudentsManageTab({ departments, adminRole, adminDepartment, deptLocked
               data-cy="students-sem"
             >
               <option value="">All</option>
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
+              {/* ALL_SEMESTERS, not CURRENT_SEMESTERS: a filter READS existing data. Narrowing it
+                  to even would make legacy odd-semester students — the ones bulk progression
+                  reports as "fix by hand" — unfindable. */}
+              {ALL_SEMESTERS.map((s) => (
                 <option key={s} value={s}>
                   Semester {s}
                 </option>
@@ -337,7 +347,17 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
   };
 
   const card = "rounded-2xl border border-stroke bg-surface-1 p-4 shadow-soft";
-  const semOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+  // students sit in even semesters and join at odd ones — two different lists, not one.
+  // Legacy rows predate the parity rule, so a stored invalid value joins its list rather than
+  // rendering as a blank select that submits something the admin never saw.
+  const currentOptions = withLegacyValue(CURRENT_SEMESTERS, student.currentSemester);
+  const entryOptions = withLegacyValue(
+    entrySemestersUpTo(currentSemester),
+    student.entrySemester,
+  );
+  const semesterNeedsFixing =
+    !CURRENT_SEMESTERS.includes(Number(student.currentSemester)) ||
+    !entrySemestersUpTo(8).includes(Number(student.entrySemester));
 
   if (mode === "view") {
     return (
@@ -499,12 +519,17 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
             <select
               className={inputClass}
               value={currentSemester}
-              onChange={(e) => setCurrentSemester(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCurrentSemester(v);
+                // keep entry odd AND ≤ current when current shrinks
+                setEntrySemester(String(clampEntrySemester(entrySemester, v)));
+              }}
               data-cy="student-edit-current-sem"
             >
-              {semOptions.map((s) => (
+              {currentOptions.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {CURRENT_SEMESTERS.includes(s) ? s : `${s} — invalid, pick another`}
                 </option>
               ))}
             </select>
@@ -517,15 +542,29 @@ function StudentRow({ student, proctorMode, onUpdated, onRemoved }) {
               onChange={(e) => setEntrySemester(e.target.value)}
               data-cy="student-edit-entry-sem"
             >
-              {semOptions.map((s) => (
+              {entryOptions.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {entrySemestersUpTo(8).includes(s) ? s : `${s} — invalid, pick another`}
                 </option>
               ))}
             </select>
           </div>
         </div>
       </div>
+
+      {semesterNeedsFixing && (
+        <AlertBanner
+          tone="warning"
+          compact
+          icon={<AlertTriangle size={14} className="mt-0.5 shrink-0" />}
+          className="mt-3"
+          data-cy="student-invalid-semester"
+        >
+          This record predates the current/entry semester rule (students sit in an even semester and
+          join at an odd one). Pick valid values above — saving without changing them is rejected.
+          Bulk progression skips this student until it's fixed.
+        </AlertBanner>
+      )}
 
       {semesterChanged && (
         <AlertBanner
